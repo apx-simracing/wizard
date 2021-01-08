@@ -4,7 +4,7 @@ from django.http import JsonResponse
 from time import time
 import random
 from json import loads
-from webgui.models import Server
+from webgui.models import Event
 
 def get_random_string(length):
     # put your letters in the following string
@@ -13,7 +13,7 @@ def get_random_string(length):
     return result_str
 
 def get_json(request, server_id: int):
-  server = Server.objects.get(pk=server_id)
+  server = Event.objects.get(pk=server_id)
   ungrouped_vehicles = server.entries.all()
   vehicle_groups = {}
   for vehicle in ungrouped_vehicles:
