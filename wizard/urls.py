@@ -16,9 +16,6 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path
 
-from webgui.views import get_json
-
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('json/<int:server_id>/', get_json, name='get_json'),
 ]

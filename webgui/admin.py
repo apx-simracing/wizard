@@ -23,6 +23,11 @@ class EventAdmin(admin.ModelAdmin):
 class RaceConditionsAdmin(admin.ModelAdmin):
     pass
 class ServerAdmin(admin.ModelAdmin):
+    list_display = ("url", "event", "locked" )
+    def get_readonly_fields(self, request, obj):
+        if obj and obj.locked:
+            return self.readonly_fields + ("event", "packs_path", "build_path", "public_ip", "secret", "url", "status", "locked", "action", )
+        return self.readonly_fields + ("status", "locked", )
     pass
 
 

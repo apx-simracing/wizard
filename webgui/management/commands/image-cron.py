@@ -23,7 +23,7 @@ FILE_NAME_SUFFIXES = [
 ]
 
 class Command(BaseCommand):
-    help = 'Closes the specified poll for voting'
+    help = 'Handle uploads and moves them into file structures'
 
     def handle(self, *args, **options):
         # Filesystem discovery

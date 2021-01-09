@@ -70,6 +70,7 @@ class Server(models.Model):
   packs_path =  models.CharField(blank=False, max_length=500, default='')
   event = models.ForeignKey(Event, on_delete=models.DO_NOTHING, blank=True, null=True)
   action = models.CharField(max_length=3, choices=ServerStatus.choices, blank=True, default='')
-  
+  status = models.TextField(blank=True, null=True, default=None)
+  locked = models.BooleanField(default=False)
   def __str__(self):
     return self.url
