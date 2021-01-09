@@ -1,5 +1,6 @@
 from django.db import models
 from django.core.exceptions import ValidationError
+from django import forms
 
 class ComponentType(models.TextChoices):
   VEHICLE = 'VEH', 'Vehicle'
@@ -27,13 +28,24 @@ class Track(models.Model):
   def __str__(self):
     return "{}@{}".format(self.layout, self.component)
   
+
 class Entry(models.Model):
   component = models.ForeignKey(Component, on_delete=models.DO_NOTHING)
   team_name = models.CharField(default="Example Team", max_length=200)
   vehicle_number = models.IntegerField(default=1)
+
   def __str__(self):
     return "{}#{} ({})".format(self.team_name, self.vehicle_number, self.component)
 
+
+class EntryFile(models.Model):
+  file = models.FileField()
+  entry = models.ForeignKey(Entry, on_delete=models.DO_NOTHING, blank=False, null=False, default=None)
+
+  def __str__(self):
+    return str(self.file)
+
+  
 class Event(models.Model):
   overwrites_multiplayer = models.TextField(default="{}")
   overwrites_player = models.TextField(default="{}")

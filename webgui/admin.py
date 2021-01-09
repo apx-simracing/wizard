@@ -1,13 +1,19 @@
 from django.contrib import admin
-from webgui.models import Component, Track, Entry, Event, RaceConditions, Server
+from webgui.models import Component, Track, Entry, EntryFile, Event, RaceConditions, Server
 from django.utils.html import mark_safe
 
 class ComponentAdmin(admin.ModelAdmin):
     pass
 class TrackAdmin(admin.ModelAdmin):
     pass
-class EntryAdmin(admin.ModelAdmin):
+class EntryAdmin(admin.ModelAdmin): 
     pass
+class EntryFileAdmin(admin.ModelAdmin):
+    list_display  = ("pk", "file", "entry", 'is_grouped')
+    def is_grouped(self, obj):
+        component = obj.entry.component if obj.entry else None
+        return component is not None and component.component_name in str(obj.file)
+    is_grouped.short_description = 'Processed by Wizard'
 class EventAdmin(admin.ModelAdmin):
     list_display  = ("name", "json_link")
     def json_link(self, obj):
@@ -22,6 +28,7 @@ class ServerAdmin(admin.ModelAdmin):
 
 admin.site.register(Component, ComponentAdmin)
 admin.site.register(Track, TrackAdmin)
+admin.site.register(EntryFile, EntryFileAdmin)
 admin.site.register(Entry, EntryAdmin)
 admin.site.register(Event, EventAdmin)
 admin.site.register(RaceConditions, RaceConditionsAdmin)
