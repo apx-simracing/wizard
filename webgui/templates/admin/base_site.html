@@ -1,0 +1,66 @@
+{% extends "admin/base_site.html" %}
+{% block branding %}
+<h1 id="site-name">
+  <a href="/admin">APX Administration</a>
+</h1>
+{% endblock %}
+{% block extrahead %}
+<style>
+  a {
+    color: #081153 !important;
+  }
+
+  .breadcrumbs {
+    background-color: #081153 !important;
+    border: unset;
+  }
+
+  #toggle-nav-sidebar {
+    display: none !important
+  }
+
+
+  #header,
+  table caption {
+    background-color: #09003d !important;
+  }
+
+  table caption a,
+  .breadcrumbs a,
+  #site-name a,
+  #user-tools a {
+    color: white !important;
+  }
+
+  .content h1 {
+    color: black;
+    font-weight: initial;
+  }
+
+  #nav-sidebar {
+    border: unset;
+    left: 0px !important;
+  }
+
+  #nav-sidebar .current-model {
+    background: #7fc7ff !important;
+  }
+
+  ul.object-tools li a.addlink,
+  ul.object-tools li a.historylink,
+  .submit-row input[type='submit'] {
+    background-color: #081153 !important;
+    color: white !important;
+  }
+
+  .deletelink-box a {
+    background: #990101 !important;
+    color: white !important;
+  }
+
+  .module.aligned h2 {
+    background-color: #081153 !important;
+    color: white !important;
+  }
+</style>
+{% endblock %}

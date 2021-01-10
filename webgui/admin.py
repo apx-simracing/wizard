@@ -9,6 +9,11 @@ from webgui.models import (
     Server,
 )
 from django.utils.html import mark_safe
+from django.contrib.auth.models import User
+from django.contrib.auth.models import Group
+
+admin.site.unregister(User)
+admin.site.unregister(Group)
 
 
 class ComponentAdmin(admin.ModelAdmin):
@@ -24,13 +29,20 @@ class EntryAdmin(admin.ModelAdmin):
 
 
 class EntryFileAdmin(admin.ModelAdmin):
-    list_display = ("pk", "file", "entry", "is_grouped")
+    list_display = (
+        "computed_name",
+        "is_grouped",
+    )
+
+    def computed_name(self, obj):
+        return str(obj.entry) + ": " + str(obj.file)
 
     def is_grouped(self, obj):
         component = obj.entry.component if obj.entry else None
         return component is not None and component.component_name in str(obj.file)
 
     is_grouped.short_description = "Processed by Wizard"
+    computed_name.short_description = "Vehicle and filename"
 
 
 class EventAdmin(admin.ModelAdmin):
@@ -48,7 +60,28 @@ class RaceConditionsAdmin(admin.ModelAdmin):
 
 
 class ServerAdmin(admin.ModelAdmin):
-    list_display = ("url", "event", "locked")
+    list_display = ("name", "url", "event", "locked", "action", "is_running")
+    fieldsets = [
+        ("APX Settings", {"fields": ["name", "url", "public_ip", "secret"]}),
+        (
+            "Dedicated server settings",
+            {
+                "fields": [
+                    "event",
+                ]
+            },
+        ),
+        (
+            "Actions and status",
+            {
+                "fields": [
+                    "action",
+                    "locked",
+                    "status",
+                ]
+            },
+        ),
+    ]
 
     def get_readonly_fields(self, request, obj):
         if obj and obj.locked:
@@ -61,12 +94,16 @@ class ServerAdmin(admin.ModelAdmin):
                 "locked",
                 "action",
             )
-        return self.readonly_fields + (
-            "status",
-            "locked",
-        )
+        if self.is_running(obj):
+            return self.readonly_fields + ("event",)
+        return self.readonly_fields + ("status", "locked", "is_running")
 
-    pass
+    def is_running(self, obj):
+        if not obj:
+            return False
+        return "not_running" not in obj.status
+
+    is_running.short_description = "Running"
 
 
 admin.site.register(Component, ComponentAdmin)

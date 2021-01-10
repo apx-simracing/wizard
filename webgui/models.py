@@ -17,15 +17,23 @@ class Component(models.Model):
         max_length=3, choices=ComponentType.choices, default=ComponentType.VEHICLE
     )
     steam_id = models.IntegerField(default=0, blank=True)
-    component_version = models.CharField(default="1.0", max_length=20)
+    component_version = models.CharField(
+        default="1.0",
+        max_length=20,
+        help_text="The version to use. You can use 'latest' or 'latest-even' to either get the latest or the latest even version.",
+    )
     component_name = models.CharField(default="Example_Mod", max_length=200)
-    do_update = models.BooleanField(default=False)
-    short_name = models.CharField(default="", max_length=200)
+    do_update = models.BooleanField(
+        default=False, help_text="If you plan to add liveries on a car, check this."
+    )
+    short_name = models.CharField(
+        default="",
+        max_length=200,
+        help_text="The short name is required to idenitfy (livery) filenames belonging to this component. You only need this when 'Do update' is checked.",
+    )
 
     def __str__(self):
-        return "{} {} ({})".format(
-            self.type, self.component_name, self.component_version
-        )
+        return "{} ({})".format(self.component_name, self.component_version)
 
 
 class RaceConditions(models.Model):
@@ -60,7 +68,7 @@ class EntryFile(models.Model):
     )
 
     def __str__(self):
-        return str(self.file)
+        return str(self.entry)
 
 
 @receiver(models.signals.post_delete, sender=EntryFile)
@@ -94,15 +102,52 @@ class ServerStatus(models.TextChoices):
 
 
 class Server(models.Model):
-    url = models.CharField(blank=False, max_length=500, default="")
-    secret = models.CharField(blank=False, max_length=500, default="")
-    public_ip = models.CharField(blank=False, max_length=500, default="")
-    event = models.ForeignKey(Event, on_delete=models.DO_NOTHING, blank=True, null=True)
-    action = models.CharField(
-        max_length=3, choices=ServerStatus.choices, blank=True, default=""
+    name = models.CharField(
+        blank=True,
+        max_length=500,
+        default="",
+        null=True,
+        help_text="A organistory name for the server",
     )
-    status = models.TextField(blank=True, null=True, default=None)
-    locked = models.BooleanField(default=False)
+    url = models.CharField(
+        blank=False, max_length=500, default="", help_text="The URL to the APX reciever"
+    )
+    secret = models.CharField(
+        blank=False,
+        max_length=500,
+        default="",
+        help_text="The secret for the communication with the APX reciever",
+    )
+    public_ip = models.CharField(
+        blank=False,
+        max_length=500,
+        default="",
+        help_text="Not used currently. Use '0.0.0.0' if unkown.",
+    )
+    event = models.ForeignKey(
+        Event,
+        on_delete=models.DO_NOTHING,
+        blank=True,
+        null=True,
+        help_text="The event to deploy. Note: You can only change this if the server is not running.",
+    )
+    action = models.CharField(
+        max_length=3,
+        choices=ServerStatus.choices,
+        blank=True,
+        default="",
+        help_text="Runs an activity on the server. 'Change config' and 'pdate liveries and redeploy' require the server to be not running.",
+    )
+    status = models.TextField(
+        blank=True,
+        null=True,
+        default=None,
+        help_text="Shows the reported status of the server. Can be empty or a JSON blob.",
+    )
+    locked = models.BooleanField(
+        default=False,
+        help_text="Shows if the server is currently processed by the background worker. During processing, you cannot change settings.",
+    )
 
     def __str__(self):
-        return self.url
+        return self.url if not self.name else self.name
