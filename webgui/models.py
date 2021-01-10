@@ -97,8 +97,7 @@ class Event(models.Model):
 class ServerStatus(models.TextChoices):
     STARTREQUESTED = "S+", "Start"
     STOPREQUESTED = "R-", "Stop"
-    DEPLOY = "D", "Change config"
-    UPDATELIVERIES = "U", "Update liveries and redeploy"
+    DEPLOY = "D", "Update config and redeploy"
 
 
 class Server(models.Model):
@@ -136,7 +135,7 @@ class Server(models.Model):
         choices=ServerStatus.choices,
         blank=True,
         default="",
-        help_text="Runs an activity on the server. 'Change config' and 'pdate liveries and redeploy' require the server to be not running.",
+        help_text="Runs an activity on the server.",
     )
     status = models.TextField(
         blank=True,

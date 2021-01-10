@@ -59,40 +59,12 @@ class Command(BaseCommand):
             # save rfm
             rfm_path = join(MEDIA_ROOT, server.event.conditions.rfm.name)
 
-            command_line = "--cmd deploy --args {} {}".format(config_path, rfm_path)
-
             try:
                 server.locked = True
                 server.save()
-                run_apx_command(key, command_line)
-                server.action = ""
-                server.locked = False
-                server.save()
-            except:
-                pass
-
-        servers_to_update_liveries = Server.objects.filter(action="U").all()
-
-        for server in servers_to_update_liveries:
-            secret = server.secret
-            url = server.url
-            key = get_server_hash(url)
-
-            # save event json
-            event_config = get_event_config(server.event.pk)
-            config_path = join(APX_ROOT, "configs", key + ".json")
-            with open(config_path, "w") as file:
-                file.write(dumps(event_config))
-            # save rfm
-            rfm_path = join(MEDIA_ROOT, server.event.conditions.rfm.name)
-
-            command_line = "--cmd build_skins --args {} {}".format(
-                config_path, rfm_path
-            )
-
-            try:
-                server.locked = True
-                server.save()
+                command_line = "--cmd build_skins --args {} {}".format(
+                    config_path, rfm_path
+                )
                 run_apx_command(key, command_line)
                 command_line = "--cmd deploy --args {} {}".format(config_path, rfm_path)
                 run_apx_command(key, command_line)
