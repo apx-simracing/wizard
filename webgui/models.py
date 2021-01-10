@@ -37,6 +37,9 @@ class Component(models.Model):
 
 
 class RaceConditions(models.Model):
+    class Meta:
+        verbose_name_plural = "Race conditions"
+
     description = models.TextField(default="Add description")
     rfm = models.FileField()
 
