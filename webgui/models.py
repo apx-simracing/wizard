@@ -154,6 +154,23 @@ class Server(models.Model):
     def __str__(self):
         return self.url if not self.name else self.name
 
+    def save(self, *args, **kwargs):
+        if (
+            self.status is not None
+            and "not_running" in self.status
+            and self.action == "R-"
+        ):
+            raise ValidationError("The server is not running")
+
+        if (
+            self.status is not None
+            and "not_running" not in self.status
+            and self.action == "D"
+        ):
+            raise ValidationError("Stop the server first")
+
+        super(Server, self).save(*args, **kwargs)
+
 
 class Chat(models.Model):
     server = models.ForeignKey(Server, on_delete=models.DO_NOTHING)

@@ -26,7 +26,9 @@ class Command(BaseCommand):
                 server.locked = False
                 server.save()
             except:
-                pass
+                server.action = ""
+                server.locked = False
+                server.save()
 
         servers_to_stop = Server.objects.filter(action="R-").all()
 
@@ -42,7 +44,9 @@ class Command(BaseCommand):
                 server.locked = False
                 server.save()
             except:
-                pass
+                server.action = ""
+                server.locked = False
+                server.save()
 
         servers_to_deploy = Server.objects.filter(action="D").all()
 
@@ -72,4 +76,6 @@ class Command(BaseCommand):
                 server.locked = False
                 server.save()
             except:
-                pass
+                server.action = ""
+                server.locked = False
+                server.save()
