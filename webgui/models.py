@@ -90,14 +90,13 @@ class ServerStatus(models.TextChoices):
     STARTREQUESTED = "S+", "Start"
     STOPREQUESTED = "R-", "Stop"
     DEPLOY = "D", "Change config"
+    UPDATELIVERIES = "U", "Update liveries and redeploy"
 
 
 class Server(models.Model):
     url = models.CharField(blank=False, max_length=500, default="")
     secret = models.CharField(blank=False, max_length=500, default="")
     public_ip = models.CharField(blank=False, max_length=500, default="")
-    build_path = models.CharField(blank=False, max_length=500, default="")
-    packs_path = models.CharField(blank=False, max_length=500, default="")
     event = models.ForeignKey(Event, on_delete=models.DO_NOTHING, blank=True, null=True)
     action = models.CharField(
         max_length=3, choices=ServerStatus.choices, blank=True, default=""

@@ -1,4 +1,4 @@
-from wizard.settings import APX_ROOT, MEDIA_ROOT
+from wizard.settings import APX_ROOT, MEDIA_ROOT, PACKS_ROOT
 import hashlib
 import subprocess
 from os.path import join, exists
