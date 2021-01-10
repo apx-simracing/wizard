@@ -4,7 +4,7 @@ from django import forms
 from django.dispatch import receiver
 from os.path import isfile
 from os import remove
-from webgui.util import livery_filename
+from webgui.util import livery_filename, run_apx_command, get_server_hash
 
 
 class ComponentType(models.TextChoices):
@@ -150,3 +150,32 @@ class Server(models.Model):
 
     def __str__(self):
         return self.url if not self.name else self.name
+
+
+class Chat(models.Model):
+    server = models.ForeignKey(Server, on_delete=models.DO_NOTHING)
+    message = models.TextField(
+        blank=True,
+        null=True,
+        default=None,
+        max_length=50,
+        help_text="Submits a message or a command to the given server. Can't be longer than 50 chars",
+    )
+    success = models.BooleanField(default=False)
+    date = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return "{}@{}: {}".format(
+            self.server, self.date.strftime("%m/%d/%Y, %H:%M:%S"), self.message
+        )
+
+    def save(self, *args, **kwargs):
+        try:
+            key = get_server_hash(self.server.url)
+            run_apx_command(key, "--cmd chat --args {} ".format(self.message))
+            self.success = True
+        except:
+            self.success = False
+            pass
+
+        super(Chat, self).save(*args, **kwargs)

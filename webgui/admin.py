@@ -7,6 +7,7 @@ from webgui.models import (
     Event,
     RaceConditions,
     Server,
+    Chat,
 )
 from django.utils.html import mark_safe
 from django.contrib.auth.models import User
@@ -26,6 +27,16 @@ class TrackAdmin(admin.ModelAdmin):
 
 class EntryAdmin(admin.ModelAdmin):
     pass
+
+
+class ChatAdmin(admin.ModelAdmin):
+    readonly_fields = ("success", "date")
+    list_display = (
+        "server",
+        "message",
+        "success",
+        "date",
+    )
 
 
 class EntryFileAdmin(admin.ModelAdmin):
@@ -113,3 +124,4 @@ admin.site.register(Entry, EntryAdmin)
 admin.site.register(Event, EventAdmin)
 admin.site.register(RaceConditions, RaceConditionsAdmin)
 admin.site.register(Server, ServerAdmin)
+admin.site.register(Chat, ChatAdmin)
