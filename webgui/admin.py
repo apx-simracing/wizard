@@ -17,6 +17,9 @@ admin.site.unregister(User)
 admin.site.unregister(Group)
 
 
+admin.site.site_url = None
+
+
 class ComponentAdmin(admin.ModelAdmin):
     pass
 
