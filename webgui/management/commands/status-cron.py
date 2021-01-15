@@ -1,5 +1,5 @@
 from django.core.management.base import BaseCommand, CommandError
-from webgui.models import Server
+from webgui.models import Server, ServerStatustext
 from os.path import join, exists
 from os import mkdir
 from wizard.settings import APX_ROOT, MEDIA_ROOT, PACKS_ROOT
@@ -39,8 +39,16 @@ class Command(BaseCommand):
             secret = server.secret
             url = server.url
             key = get_server_hash(url)
-            got = run_apx_command(key, "--cmd status")
-            server.status = got
+            try:
+                got = run_apx_command(key, "--cmd status")
+                server.status = got
+
+                text = ServerStatustext()
+                text.server = server
+                text.status = got
+                text.save()
+            except:
+                pass
             # download server key, if needed:
             if not server.server_key:
                 try:

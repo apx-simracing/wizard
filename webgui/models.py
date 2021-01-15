@@ -219,3 +219,22 @@ class Chat(models.Model):
             pass
 
         super(Chat, self).save(*args, **kwargs)
+
+
+class ServerStatustext(models.Model):
+    class Meta:
+        verbose_name_plural = "Status history"
+
+    status = models.TextField(
+        blank=True,
+        null=True,
+        default=None,
+        help_text="Shows the reported status of the server. Can be empty or a JSON blob.",
+    )
+    date = models.DateTimeField(auto_now_add=True)
+    server = models.ForeignKey(
+        Server, on_delete=models.CASCADE, blank=False, null=False, default=None
+    )
+
+    def __str__(self):
+        return "{} @ {}".format(self.server, self.date.strftime("%m/%d/%Y, %H:%M:%S"))
