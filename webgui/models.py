@@ -4,7 +4,12 @@ from django import forms
 from django.dispatch import receiver
 from os.path import isfile
 from os import remove
-from webgui.util import livery_filename, run_apx_command, get_server_hash
+from webgui.util import (
+    livery_filename,
+    run_apx_command,
+    get_server_hash,
+    get_key_root_path,
+)
 
 
 class ComponentType(models.TextChoices):
@@ -149,6 +154,20 @@ class Server(models.Model):
     locked = models.BooleanField(
         default=False,
         help_text="Shows if the server is currently processed by the background worker. During processing, you cannot change settings.",
+    )
+    server_key = models.FileField(
+        upload_to=get_key_root_path,
+        help_text="Keyfile of the server. Will be filled automatically.",
+        blank=True,
+        default=None,
+        null=True,
+    )
+    server_unlock_key = models.FileField(
+        upload_to=get_key_root_path,
+        help_text="Unlock keyfile of the server, usually named ServerUnlock.bin, required to use paid content",
+        blank=True,
+        default=None,
+        null=True,
     )
 
     def __str__(self):

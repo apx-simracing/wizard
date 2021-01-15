@@ -46,6 +46,13 @@ def livery_filename(instance, filename):
     return new_file_path
 
 
+def get_key_root_path(instance, filename):
+    full_path = join(MEDIA_ROOT, "keys", str(instance.pk))
+    if not exists(full_path):
+        mkdir(full_path)
+    return join("keys", str(instance.pk), filename)
+
+
 def get_random_string(length):
     # put your letters in the following string
     sample_letters = "abcdefghi"

@@ -1,6 +1,7 @@
 from django.core.management.base import BaseCommand, CommandError
 from webgui.models import Server
-from os.path import join
+from os.path import join, exists
+from os import mkdir
 from wizard.settings import APX_ROOT, MEDIA_ROOT, PACKS_ROOT
 import subprocess
 from webgui.util import get_server_hash, run_apx_command
@@ -40,4 +41,35 @@ class Command(BaseCommand):
             key = get_server_hash(url)
             got = run_apx_command(key, "--cmd status")
             server.status = got
+            # download server key, if needed:
+            if not server.server_key:
+                try:
+                    key_root_path = join(MEDIA_ROOT, "keys", str(server.pk))
+                    if not exists(key_root_path):
+                        mkdir(key_root_path)
+                    key_path = join(key_root_path, "ServerKeys.bin")
+                    relative_path = join("keys", str(server.pk), "ServerKeys.bin")
+                    download_key_command = run_apx_command(
+                        key, "--cmd lockfile --args {}".format(key_path)
+                    )
+                    if exists(key_path):
+                        server.server_key = relative_path
+                except:
+                    self.stderr.write(
+                        self.style.ERROR("{} does not offer a key".format(server.pk))
+                    )
+
+            # if an unlock key is present - attempt unlock!
+            if server.server_unlock_key:
+                try:
+                    key_root_path = join(MEDIA_ROOT, server.server_unlock_key.name)
+                    download_key_command = run_apx_command(
+                        key, "--cmd unlock --args {}".format(key_root_path)
+                    )
+                    server.server_unlock_key = None
+                except:
+                    self.stderr.write(
+                        self.style.ERROR("{} unlock failed".format(server.pk))
+                    )
+
             server.save()

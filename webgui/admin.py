@@ -95,6 +95,15 @@ class ServerAdmin(admin.ModelAdmin):
                 ]
             },
         ),
+        (
+            "Keys",
+            {
+                "fields": [
+                    "server_key",
+                    "server_unlock_key",
+                ]
+            },
+        ),
     ]
 
     def get_readonly_fields(self, request, obj):
