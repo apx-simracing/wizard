@@ -116,10 +116,17 @@ class ServerAdmin(admin.ModelAdmin):
                 "status",
                 "locked",
                 "action",
+                "server_key",
+                "status",
             )
         if self.is_running(obj):
-            return self.readonly_fields + ("event",)
-        return self.readonly_fields + ("status", "locked", "is_running")
+            return self.readonly_fields + (
+                "event",
+                "server_key",
+                "status",
+                "locked",
+            )
+        return self.readonly_fields + ("status", "locked", "is_running", "server_key")
 
     def is_running(self, obj):
         if not obj:

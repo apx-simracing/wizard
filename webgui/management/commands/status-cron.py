@@ -44,11 +44,11 @@ class Command(BaseCommand):
             # download server key, if needed:
             if not server.server_key:
                 try:
-                    key_root_path = join(MEDIA_ROOT, "keys", str(server.pk))
+                    key_root_path = join(MEDIA_ROOT, "keys", key)
                     if not exists(key_root_path):
                         mkdir(key_root_path)
                     key_path = join(key_root_path, "ServerKeys.bin")
-                    relative_path = join("keys", str(server.pk), "ServerKeys.bin")
+                    relative_path = join("keys", key, "ServerKeys.bin")
                     download_key_command = run_apx_command(
                         key, "--cmd lockfile --args {}".format(key_path)
                     )

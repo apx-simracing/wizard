@@ -47,10 +47,11 @@ def livery_filename(instance, filename):
 
 
 def get_key_root_path(instance, filename):
-    full_path = join(MEDIA_ROOT, "keys", str(instance.pk))
+    hash_code = get_server_hash(instance.url)
+    full_path = join(MEDIA_ROOT, "keys", hash_code)
     if not exists(full_path):
         mkdir(full_path)
-    return join("keys", str(instance.pk), filename)
+    return join("keys", hash_code, filename)
 
 
 def get_random_string(length):

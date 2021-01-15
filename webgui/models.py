@@ -154,6 +154,7 @@ class Server(models.Model):
     locked = models.BooleanField(
         default=False,
         help_text="Shows if the server is currently processed by the background worker. During processing, you cannot change settings.",
+        verbose_name="Processing",
     )
     server_key = models.FileField(
         upload_to=get_key_root_path,
@@ -164,7 +165,7 @@ class Server(models.Model):
     )
     server_unlock_key = models.FileField(
         upload_to=get_key_root_path,
-        help_text="Unlock keyfile of the server, usually named ServerUnlock.bin, required to use paid content",
+        help_text="Unlock keyfile of the server, usually named ServerUnlock.bin, required to use paid content. The field will clear after unlocking",
         blank=True,
         default=None,
         null=True,
