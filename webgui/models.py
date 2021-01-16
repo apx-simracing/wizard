@@ -1,5 +1,7 @@
 from django.db import models
 from django.core.exceptions import ValidationError
+from django.contrib.auth.models import User
+from django.conf import settings
 from django import forms
 from django.dispatch import receiver
 from os.path import isfile
@@ -18,6 +20,7 @@ class ComponentType(models.TextChoices):
 
 
 class Component(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     type = models.CharField(
         max_length=3, choices=ComponentType.choices, default=ComponentType.VEHICLE
     )
@@ -47,6 +50,7 @@ class RaceConditions(models.Model):
 
     description = models.TextField(default="Add description")
     rfm = models.FileField()
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
 
     def __str__(self):
         return "{} ({})".format(self.description, self.rfm)
@@ -55,6 +59,7 @@ class RaceConditions(models.Model):
 class Track(models.Model):
     component = models.ForeignKey(Component, on_delete=models.DO_NOTHING)
     layout = models.CharField(default="", blank=False, max_length=200)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
 
     def __str__(self):
         return "{}@{}".format(self.layout, self.component)
@@ -64,6 +69,7 @@ class Entry(models.Model):
     component = models.ForeignKey(Component, on_delete=models.DO_NOTHING)
     team_name = models.CharField(default="Example Team", max_length=200)
     vehicle_number = models.IntegerField(default=1)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
 
     def __str__(self):
         return "{}#{} ({})".format(self.team_name, self.vehicle_number, self.component)
@@ -74,6 +80,7 @@ class EntryFile(models.Model):
     entry = models.ForeignKey(
         Entry, on_delete=models.DO_NOTHING, blank=False, null=False, default=None
     )
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
 
     def __str__(self):
         return str(self.entry)
@@ -97,6 +104,7 @@ class Event(models.Model):
     conditions = models.ForeignKey(RaceConditions, on_delete=models.DO_NOTHING)
     entries = models.ManyToManyField(Entry)
     tracks = models.ManyToManyField(Track)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
 
     def __str__(self):
         return "{}".format(self.name)
@@ -170,6 +178,7 @@ class Server(models.Model):
         default=None,
         null=True,
     )
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
 
     def __str__(self):
         return self.url if not self.name else self.name
@@ -203,6 +212,7 @@ class Chat(models.Model):
     )
     success = models.BooleanField(default=False)
     date = models.DateTimeField(auto_now_add=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
 
     def __str__(self):
         return "{}@{}: {}".format(
@@ -235,6 +245,7 @@ class ServerStatustext(models.Model):
     server = models.ForeignKey(
         Server, on_delete=models.CASCADE, blank=False, null=False, default=None
     )
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
 
     def __str__(self):
         return "{} @ {}".format(self.server, self.date.strftime("%m/%d/%Y, %H:%M:%S"))

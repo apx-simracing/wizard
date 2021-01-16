@@ -12,27 +12,90 @@ from webgui.models import (
 from django.utils.html import mark_safe
 from django.contrib.auth.models import User
 from django.contrib.auth.models import Group
-
-admin.site.unregister(User)
-admin.site.unregister(Group)
-
+from django import forms
+from django.contrib import admin
 
 admin.site.site_url = None
 
 
 class ComponentAdmin(admin.ModelAdmin):
-    pass
+    def get_form(self, request, obj=None, **kwargs):
+        form = super(ComponentAdmin, self).get_form(request, obj=None, **kwargs)
+        form.base_fields["user"].queryset = User.objects.filter(pk=request.user.pk)
+        return form
+
+    def get_changeform_initial_data(self, request):
+        get_data = super(ComponentAdmin, self).get_changeform_initial_data(request)
+        get_data["user"] = request.user.pk
+        return get_data
+
+    def get_queryset(self, request):
+        if not request.user.is_superuser:
+            return Component.objects.filter(user=request.user)
+        else:
+            return Component.objects.all()
 
 
 class TrackAdmin(admin.ModelAdmin):
-    pass
+    def get_form(self, request, obj=None, **kwargs):
+        form = super(TrackAdmin, self).get_form(request, obj=None, **kwargs)
+        form.base_fields["component"].queryset = Component.objects.filter(
+            user=request.user, type="LOC"
+        )
+        form.base_fields["user"].queryset = User.objects.filter(pk=request.user.pk)
+        return form
+
+    def get_changeform_initial_data(self, request):
+        get_data = super(TrackAdmin, self).get_changeform_initial_data(request)
+        get_data["user"] = request.user.pk
+        return get_data
+
+    def get_queryset(self, request):
+        if not request.user.is_superuser:
+            return Track.objects.filter(user=request.user)
+        else:
+            return Track.objects.all()
 
 
 class EntryAdmin(admin.ModelAdmin):
-    pass
+    def get_form(self, request, obj=None, **kwargs):
+        form = super(EntryAdmin, self).get_form(request, obj=None, **kwargs)
+        form.base_fields["component"].queryset = Component.objects.filter(
+            user=request.user, type="VEH"
+        )
+        form.base_fields["user"].queryset = User.objects.filter(pk=request.user.pk)
+        return form
+
+    def get_changeform_initial_data(self, request):
+        get_data = super(EntryAdmin, self).get_changeform_initial_data(request)
+        get_data["user"] = request.user.pk
+        return get_data
+
+    def get_queryset(self, request):
+        if not request.user.is_superuser:
+            return Entry.objects.filter(user=request.user)
+        else:
+            return Entry.objects.all()
 
 
 class ChatAdmin(admin.ModelAdmin):
+    def get_form(self, request, obj=None, **kwargs):
+        form = super(ChatAdmin, self).get_form(request, obj=None, **kwargs)
+        form.base_fields["server"].queryset = Server.objects.filter(user=request.user)
+        form.base_fields["user"].queryset = User.objects.filter(pk=request.user.pk)
+        return form
+
+    def get_changeform_initial_data(self, request):
+        get_data = super(ChatAdmin, self).get_changeform_initial_data(request)
+        get_data["user"] = request.user.pk
+        return get_data
+
+    def get_queryset(self, request):
+        if not request.user.is_superuser:
+            return Chat.objects.filter(user=request.user)
+        else:
+            return Chat.objects.all()
+
     readonly_fields = ("success", "date")
     list_display = (
         "server",
@@ -43,6 +106,23 @@ class ChatAdmin(admin.ModelAdmin):
 
 
 class EntryFileAdmin(admin.ModelAdmin):
+    def get_form(self, request, obj=None, **kwargs):
+        form = super(EntryFileAdmin, self).get_form(request, obj=None, **kwargs)
+        form.base_fields["entry"].queryset = Entry.objects.filter(user=request.user)
+        form.base_fields["user"].queryset = User.objects.filter(pk=request.user.pk)
+        return form
+
+    def get_changeform_initial_data(self, request):
+        get_data = super(EntryFileAdmin, self).get_changeform_initial_data(request)
+        get_data["user"] = request.user.pk
+        return get_data
+
+    def get_queryset(self, request):
+        if not request.user.is_superuser:
+            return EntryFile.objects.filter(user=request.user)
+        else:
+            return EntryFile.objects.all()
+
     list_display = (
         "computed_name",
         "is_grouped",
@@ -60,6 +140,31 @@ class EntryFileAdmin(admin.ModelAdmin):
 
 
 class EventAdmin(admin.ModelAdmin):
+    def get_form(self, request, obj=None, **kwargs):
+        form = super(EventAdmin, self).get_form(request, obj=None, **kwargs)
+        form.base_fields["entries"].queryset = Entry.objects.filter(
+            user=request.user, component__type="VEH"
+        )
+        form.base_fields["tracks"].queryset = Track.objects.filter(
+            user=request.user, component__type="LOC"
+        )
+        form.base_fields["user"].queryset = User.objects.filter(pk=request.user.pk)
+        form.base_fields["conditions"].queryset = RaceConditions.objects.filter(
+            user=request.user
+        )
+        return form
+
+    def get_changeform_initial_data(self, request):
+        get_data = super(EventAdmin, self).get_changeform_initial_data(request)
+        get_data["user"] = request.user.pk
+        return get_data
+
+    def get_queryset(self, request):
+        if not request.user.is_superuser:
+            return Event.objects.filter(user=request.user)
+        else:
+            return Event.objects.all()
+
     list_display = ("name", "json_link")
 
     def json_link(self, obj):
@@ -70,13 +175,44 @@ class EventAdmin(admin.ModelAdmin):
 
 
 class RaceConditionsAdmin(admin.ModelAdmin):
-    pass
+    def get_form(self, request, obj=None, **kwargs):
+        form = super(RaceConditionsAdmin, self).get_form(request, obj=None, **kwargs)
+        form.base_fields["user"].queryset = User.objects.filter(pk=request.user.pk)
+        return form
+
+    def get_changeform_initial_data(self, request):
+        get_data = super(RaceConditionsAdmin, self).get_changeform_initial_data(request)
+        get_data["user"] = request.user.pk
+        return get_data
+
+    def get_queryset(self, request):
+        if not request.user.is_superuser:
+            return RaceConditions.objects.filter(user=request.user)
+        else:
+            return RaceConditions.objects.all()
 
 
 class ServerAdmin(admin.ModelAdmin):
+    def get_form(self, request, obj=None, **kwargs):
+        form = super(ServerAdmin, self).get_form(request, obj=None, **kwargs)
+        form.base_fields["event"].queryset = Event.objects.filter(user=request.user)
+        form.base_fields["user"].queryset = User.objects.filter(pk=request.user.pk)
+        return form
+
+    def get_changeform_initial_data(self, request):
+        get_data = super(ServerAdmin, self).get_changeform_initial_data(request)
+        get_data["user"] = request.user.pk
+        return get_data
+
+    def get_queryset(self, request):
+        if not request.user.is_superuser:
+            return Server.objects.filter(user=request.user)
+        else:
+            return Server.objects.all()
+
     list_display = ("name", "url", "event", "locked", "action", "is_running")
     fieldsets = [
-        ("APX Settings", {"fields": ["name", "url", "public_ip", "secret"]}),
+        ("APX Settings", {"fields": ["name", "url", "public_ip", "secret", "user"]}),
         (
             "Dedicated server settings",
             {
@@ -129,7 +265,7 @@ class ServerAdmin(admin.ModelAdmin):
         return self.readonly_fields + ("status", "locked", "is_running", "server_key")
 
     def is_running(self, obj):
-        if not obj:
+        if not obj or not obj.status:
             return False
         return "not_running" not in obj.status
 
