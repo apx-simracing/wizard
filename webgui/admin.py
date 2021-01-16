@@ -16,6 +16,7 @@ from django import forms
 from django.contrib import admin
 
 admin.site.site_url = None
+admin.site.site_title = "APX"
 
 
 class ComponentAdmin(admin.ModelAdmin):
