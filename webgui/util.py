@@ -118,7 +118,7 @@ def get_event_config(event_id: int):
                 "update": False,
             },
         }
-
+    mod_name = "apx_{}".format(get_server_hash(server.name)[:8])
     result = {
         "server": {
             "overwrites": {
@@ -129,7 +129,7 @@ def get_event_config(event_id: int):
         "cars": vehicle_groups,
         "track": track_groups,
         "mod": {
-            "name": "apx_",
+            "name": mod_name,
             "version": "1.0.{}".format(get_random_string(5)),
             "rfm": rfm_url,
         },
