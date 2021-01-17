@@ -37,7 +37,9 @@ class Component(models.Model):
         max_length=20,
         help_text="The version to use. You can use 'latest' or 'latest-even' to either get the latest or the latest even version.",
     )
-    component_name = models.CharField(default="Example_Mod", max_length=200)
+    component_name = models.CharField(
+        default="Example_Mod", max_length=200, validators=[alphanumeric_validator]
+    )
     do_update = models.BooleanField(
         default=False, help_text="If you plan to add liveries on a car, check this."
     )
