@@ -211,6 +211,9 @@ class Server(models.Model):
         ):
             raise ValidationError("Stop the server first")
 
+        if self.action == "D" and not self.event:
+            raise ValidationError("You have to add an event before deploying")
+
 
 class Chat(models.Model):
     server = models.ForeignKey(Server, on_delete=models.DO_NOTHING)
