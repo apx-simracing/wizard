@@ -7,6 +7,7 @@ from django.dispatch import receiver
 from os.path import isfile
 from os import remove
 from json import loads
+from django.core.validators import RegexValidator
 from webgui.util import (
     livery_filename,
     run_apx_command,
@@ -18,6 +19,11 @@ from webgui.util import (
 class ComponentType(models.TextChoices):
     VEHICLE = "VEH", "Vehicle"
     LOCATION = "LOC", "Location"
+
+
+alphanumeric_validator = RegexValidator(
+    r"^[0-9a-zA-Z_]*$", "Only alphanumeric characters and dashes are allowed."
+)
 
 
 class Component(models.Model):
@@ -39,6 +45,7 @@ class Component(models.Model):
         default="",
         max_length=200,
         help_text="The short name is required to idenitfy (livery) filenames belonging to this component. You only need this when 'Do update' is checked.",
+        validators=[alphanumeric_validator],
     )
 
     def __str__(self):
