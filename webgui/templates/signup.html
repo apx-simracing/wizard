@@ -1,0 +1,60 @@
+<html>
+
+<head>
+  <title>APX Signup</title>
+  <style>
+    .form {
+      margin: auto;
+      width: 30%;
+      border: 1px solid #eee;
+      padding: 10px;
+      font-family: "Roboto", "Lucida Grande", "DejaVu Sans", "Bitstream Vera Sans", Verdana, Arial, sans-serif;
+    }
+
+    .form h1 {
+      margin-top: 0px;
+    }
+
+    .form-field {
+      margin-bottom: 1em;
+    }
+
+    .form-field label {
+      width: 40%;
+      display: inline-block;
+      color: #09003d;
+      font-weight: bold;
+    }
+
+    .form-field input {
+      width: 50%;
+      display: inline-block;
+    }
+  </style>
+</head>
+
+<body>
+  <form action="/signup/" method="post" class="form">
+    {% csrf_token %}
+    <h1>
+      APX User Signup
+    </h1>
+    {% for field in form %}
+    <div class="form-field">
+      <label>{{field.label}}</label>
+      {{field}}
+    </div>
+    {% endfor %}
+    <h2>Rules</h2>
+    <ol>
+      <li>This application comes without any warranty</li>
+      <li>I obey applicable (copyright) law for uploaded content</li>
+      <li>I check the content for malware before uploading</li>
+      <li>My account can be terminated at any point by the instance owner</li>
+      <li>Content can be deleted at any point by the instance owner</li>
+    </ol>
+    <input type="submit" value="Signup">
+  </form>
+</body>
+
+</html>
