@@ -6,6 +6,7 @@ from django import forms
 from django.dispatch import receiver
 from os.path import isfile
 from os import remove
+from json import loads
 from webgui.util import (
     livery_filename,
     run_apx_command,
@@ -108,6 +109,18 @@ class Event(models.Model):
 
     def __str__(self):
         return "{}".format(self.name)
+
+    def clean(self):
+        try:
+            loads(self.overwrites_multiplayer)
+        except:
+            raise ValidationError(
+                "The overwrite for the multiplayer.JSON are not valid"
+            )
+        try:
+            loads(self.overwrites_player)
+        except:
+            raise ValidationError("The overwrite for the player.JSON are not valid")
 
 
 class ServerStatus(models.TextChoices):
