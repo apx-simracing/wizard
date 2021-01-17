@@ -196,7 +196,7 @@ class Server(models.Model):
     def __str__(self):
         return self.url if not self.name else self.name
 
-    def save(self, *args, **kwargs):
+    def clean(self):
         if (
             self.status is not None
             and "not_running" in self.status
@@ -210,8 +210,6 @@ class Server(models.Model):
             and self.action == "D"
         ):
             raise ValidationError("Stop the server first")
-
-        super(Server, self).save(*args, **kwargs)
 
 
 class Chat(models.Model):
