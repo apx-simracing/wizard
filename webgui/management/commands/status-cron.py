@@ -44,6 +44,7 @@ class Command(BaseCommand):
                 server.status = got
 
                 text = ServerStatustext()
+                text.user = server.user
                 text.server = server
                 text.status = got
                 text.save()
