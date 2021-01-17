@@ -12,7 +12,7 @@ class Command(BaseCommand):
     help = "Interacts with a given server"
 
     def handle(self, *args, **options):
-        servers_to_start = Server.objects.filter(action="S+").all()
+        servers_to_start = Server.objects.filter(action="S+", locked=False).all()
 
         for server in servers_to_start:
             secret = server.secret
@@ -30,7 +30,7 @@ class Command(BaseCommand):
                 server.locked = False
                 server.save()
 
-        servers_to_stop = Server.objects.filter(action="R-").all()
+        servers_to_stop = Server.objects.filter(action="R-", locked=False).all()
 
         for server in servers_to_stop:
             secret = server.secret
@@ -48,7 +48,7 @@ class Command(BaseCommand):
                 server.locked = False
                 server.save()
 
-        servers_to_deploy = Server.objects.filter(action="D").all()
+        servers_to_deploy = Server.objects.filter(action="D", locked=False).all()
 
         for server in servers_to_deploy:
             secret = server.secret

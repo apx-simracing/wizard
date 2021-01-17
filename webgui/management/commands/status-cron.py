@@ -27,7 +27,7 @@ class Command(BaseCommand):
         return server_data
 
     def handle(self, *args, **options):
-        all_servers = Server.objects.all()
+        all_servers = Server.objects.filter(locked=False)
 
         # preparation: create "virtual APX config"
         server_config = self.create_virtual_config()
