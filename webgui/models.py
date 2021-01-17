@@ -115,12 +115,12 @@ class Event(models.Model):
             loads(self.overwrites_multiplayer)
         except:
             raise ValidationError(
-                "The overwrite for the multiplayer.JSON are not valid"
+                "The overwrites for the multiplayer.JSON are not valid"
             )
         try:
             loads(self.overwrites_player)
         except:
-            raise ValidationError("The overwrite for the player.JSON are not valid")
+            raise ValidationError("The overwrites for the player.JSON are not valid")
 
 
 class ServerStatus(models.TextChoices):
