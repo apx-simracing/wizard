@@ -13,7 +13,9 @@ from webgui.util import (
     run_apx_command,
     get_server_hash,
     get_key_root_path,
+    get_conditions_file_root,
 )
+from webgui.storage import OverwriteStorage
 
 
 class ComponentType(models.TextChoices):
@@ -59,7 +61,7 @@ class RaceConditions(models.Model):
         verbose_name_plural = "Race conditions"
 
     description = models.TextField(default="Add description")
-    rfm = models.FileField()
+    rfm = models.FileField(upload_to=get_conditions_file_root, storage=OverwriteStorage)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
 
     def __str__(self):
@@ -86,7 +88,7 @@ class Entry(models.Model):
 
 
 class EntryFile(models.Model):
-    file = models.FileField(upload_to=livery_filename)
+    file = models.FileField(upload_to=livery_filename, storage=OverwriteStorage)
     entry = models.ForeignKey(
         Entry, on_delete=models.DO_NOTHING, blank=False, null=False, default=None
     )

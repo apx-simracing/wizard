@@ -26,13 +26,34 @@ FILE_NAME_SUFFIXES = [
 ]
 
 
+def get_conditions_file_root(instance, filename):
+    user_root = str(instance.user.pk)
+    full_path = join(MEDIA_ROOT, user_root)
+    if not exists(full_path):
+        mkdir(full_path)
+    conditions_path = join(full_path, "conditions")
+    if not exists(conditions_path):
+        mkdir(conditions_path)
+    return join(user_root, "conditions", filename)
+
+
 def livery_filename(instance, filename):
     vehicle_number = instance.entry.vehicle_number
     component_short_name = instance.entry.component.short_name
     component_name = instance.entry.component.component_name
+    user_root = str(instance.user.pk)
+    full_user_path = join(MEDIA_ROOT, user_root)
+    if not exists(full_user_path):
+        mkdir(full_user_path)
+
+    liveries_path = join(full_user_path, "liveries")
+    if not exists(liveries_path):
+        mkdir(liveries_path)
+
     component_path = join(MEDIA_ROOT, component_name)
     if not exists(component_path):
         mkdir(component_path)
+
     selected_suffix = None
     for suffix in FILE_NAME_SUFFIXES:
         if str(filename).endswith(suffix):
@@ -40,6 +61,8 @@ def livery_filename(instance, filename):
     if selected_suffix is None:
         raise ValidationError("We can't identify that file purpose")
     new_file_path = join(
+        user_root,
+        "liveries",
         component_name,
         "{}_{}{}".format(component_short_name, vehicle_number, selected_suffix),
     )

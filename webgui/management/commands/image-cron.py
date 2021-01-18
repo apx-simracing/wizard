@@ -12,6 +12,7 @@ class Command(BaseCommand):
     help = "Handle uploads and moves them into file structures"
 
     def handle(self, *args, **options):
+        raise Exception("The image cron handler is currently deprecated")
         # Filesystem discovery
 
         entries = Entry.objects.all()

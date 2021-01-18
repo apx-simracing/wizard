@@ -17,11 +17,16 @@ class Command(BaseCommand):
         server_data = {}
         for server in all_servers:
             key = get_server_hash(server.url)
+            # we assume that the liveries folder may already be existing
+            build_path = join(MEDIA_ROOT, str(server.user.pk), "liveries")
+            packs_path = join(PACKS_ROOT, str(server.user.pk))
+            if not exists(packs_path):
+                mkdir(packs_path)
             server_data[key] = {
                 "url": server.url,
                 "secret": server.secret,
                 "public_ip": server.public_ip,
-                "env": {"build_path": MEDIA_ROOT, "packs_path": PACKS_ROOT},
+                "env": {"build_path": build_path, "packs_path": packs_path},
             }
 
         return server_data
