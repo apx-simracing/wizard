@@ -78,6 +78,9 @@ class Track(models.Model):
 
 
 class Entry(models.Model):
+    class Meta:
+        verbose_name_plural = "Entries"
+
     component = models.ForeignKey(Component, on_delete=models.DO_NOTHING)
     team_name = models.CharField(default="Example Team", max_length=200)
     vehicle_number = models.IntegerField(default=1)
