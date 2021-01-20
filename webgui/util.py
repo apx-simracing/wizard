@@ -26,6 +26,24 @@ FILE_NAME_SUFFIXES = [
 ]
 
 
+def get_update_filename(instance, filename):
+    component_name = instance.component_name
+    user_root = str(instance.user.pk)
+    full_user_path = join(MEDIA_ROOT, user_root)
+    if not exists(full_user_path):
+        mkdir(full_user_path)
+
+    liveries_path = join(full_user_path, "liveries")
+    if not exists(liveries_path):
+        mkdir(liveries_path)
+
+    component_path = join(liveries_path, component_name)
+    if not exists(component_path):
+        mkdir(component_path)
+
+    return join(user_root, "liveries", component_name, filename)
+
+
 def get_conditions_file_root(instance, filename):
     user_root = str(instance.user.pk)
     full_path = join(MEDIA_ROOT, user_root)
@@ -50,7 +68,7 @@ def livery_filename(instance, filename):
     if not exists(liveries_path):
         mkdir(liveries_path)
 
-    component_path = join(MEDIA_ROOT, component_name)
+    component_path = join(liveries_path, component_name)
     if not exists(component_path):
         mkdir(component_path)
 

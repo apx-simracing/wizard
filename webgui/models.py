@@ -14,6 +14,7 @@ from webgui.util import (
     get_server_hash,
     get_key_root_path,
     get_conditions_file_root,
+    get_update_filename,
 )
 from webgui.storage import OverwriteStorage
 
@@ -52,11 +53,17 @@ class Component(models.Model):
         validators=[alphanumeric_validator],
     )
 
+    update = models.FileField(
+        upload_to=get_update_filename, storage=OverwriteStorage, null=True, blank=True
+    )
+
     def clean(self):
         if self.type != ComponentType.VEHICLE and self.do_update:
             raise ValidationError(
                 "Only vehicle components can currently recieve updates (for liveries)"
             )
+        if self.type != ComponentType.VEHICLE and self.update:
+            raise ValidationError("Only vehicle components can get an Update.ini file")
 
     def __str__(self):
         return "{} ({})".format(self.component_name, self.component_version)
