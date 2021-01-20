@@ -62,7 +62,7 @@ class EntryAdmin(admin.ModelAdmin):
     def get_form(self, request, obj=None, **kwargs):
         form = super(EntryAdmin, self).get_form(request, obj=None, **kwargs)
         form.base_fields["component"].queryset = Component.objects.filter(
-            user=request.user, type="VEH"
+            user=request.user, type="VEH", do_update=True
         )
         form.base_fields["user"].queryset = User.objects.filter(pk=request.user.pk)
         return form
