@@ -109,7 +109,9 @@ class ChatAdmin(admin.ModelAdmin):
 class EntryFileAdmin(admin.ModelAdmin):
     def get_form(self, request, obj=None, **kwargs):
         form = super(EntryFileAdmin, self).get_form(request, obj=None, **kwargs)
-        form.base_fields["entry"].queryset = Entry.objects.filter(user=request.user)
+        form.base_fields["entry"].queryset = Entry.objects.filter(
+            user=request.user, component__do_update=True
+        )
         form.base_fields["user"].queryset = User.objects.filter(pk=request.user.pk)
         return form
 
