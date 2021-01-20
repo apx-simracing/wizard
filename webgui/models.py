@@ -52,6 +52,12 @@ class Component(models.Model):
         validators=[alphanumeric_validator],
     )
 
+    def clean(self):
+        if self.type != ComponentType.VEHICLE and self.do_update:
+            raise ValidationError(
+                "Only vehicle components can currently recieve updates (for liveries)"
+            )
+
     def __str__(self):
         return "{} ({})".format(self.component_name, self.component_version)
 
