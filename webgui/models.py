@@ -16,6 +16,7 @@ from webgui.util import (
     get_conditions_file_root,
     get_update_filename,
 )
+from wizard.settings import FAILURE_THRESHOLD
 from webgui.storage import OverwriteStorage
 
 
@@ -219,6 +220,12 @@ class Server(models.Model):
         null=True,
     )
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    status_failures = models.IntegerField(
+        default=0,
+        help_text="The amount of failed status checks. The field will reset on save. If more than {} attemps will fail, the server will be ignored for status and actions..".format(
+            FAILURE_THRESHOLD
+        ),
+    )
 
     def __str__(self):
         return self.url if not self.name else self.name
@@ -240,6 +247,8 @@ class Server(models.Model):
 
         if self.action == "D" and not self.event:
             raise ValidationError("You have to add an event before deploying")
+
+        self.status_failures = 0
 
 
 class Chat(models.Model):

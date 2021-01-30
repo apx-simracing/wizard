@@ -2,7 +2,7 @@ from django.core.management.base import BaseCommand, CommandError
 from webgui.models import Server, ServerStatustext
 from os.path import join, exists
 from os import mkdir
-from wizard.settings import APX_ROOT, MEDIA_ROOT, PACKS_ROOT
+from wizard.settings import APX_ROOT, MEDIA_ROOT, PACKS_ROOT, FAILURE_THRESHOLD
 import subprocess
 from webgui.util import get_server_hash, run_apx_command
 
@@ -32,7 +32,9 @@ class Command(BaseCommand):
         return server_data
 
     def handle(self, *args, **options):
-        all_servers = Server.objects.filter(locked=False, action="")
+        all_servers = Server.objects.filter(
+            locked=False, action="", status_failures__lt=FAILURE_THRESHOLD
+        )
 
         # preparation: create "virtual APX config"
         server_config = self.create_virtual_config()
@@ -53,37 +55,45 @@ class Command(BaseCommand):
                 text.server = server
                 text.status = got
                 text.save()
-            except:
-                pass
-            # download server key, if needed:
-            if not server.server_key:
-                try:
-                    key_root_path = join(MEDIA_ROOT, "keys", key)
-                    if not exists(key_root_path):
-                        mkdir(key_root_path)
-                    key_path = join(key_root_path, "ServerKeys.bin")
-                    relative_path = join("keys", key, "ServerKeys.bin")
-                    download_key_command = run_apx_command(
-                        key, "--cmd lockfile --args {}".format(key_path)
-                    )
-                    if exists(key_path):
-                        server.server_key = relative_path
-                except:
-                    self.stderr.write(
-                        self.style.ERROR("{} does not offer a key".format(server.pk))
-                    )
+                # download server key, if needed:
+                if not server.server_key:
+                    try:
+                        key_root_path = join(MEDIA_ROOT, "keys", key)
+                        if not exists(key_root_path):
+                            mkdir(key_root_path)
+                        key_path = join(key_root_path, "ServerKeys.bin")
+                        relative_path = join("keys", key, "ServerKeys.bin")
+                        download_key_command = run_apx_command(
+                            key, "--cmd lockfile --args {}".format(key_path)
+                        )
+                        if exists(key_path):
+                            server.server_key = relative_path
+                    except:
+                        self.stderr.write(
+                            self.style.ERROR(
+                                "{} does not offer a key".format(server.pk)
+                            )
+                        )
 
-            # if an unlock key is present - attempt unlock!
-            if server.server_unlock_key:
-                try:
-                    key_root_path = join(MEDIA_ROOT, server.server_unlock_key.name)
-                    download_key_command = run_apx_command(
-                        key, "--cmd unlock --args {}".format(key_root_path)
-                    )
-                    server.server_unlock_key = None
-                except:
-                    self.stderr.write(
-                        self.style.ERROR("{} unlock failed".format(server.pk))
-                    )
+                # if an unlock key is present - attempt unlock!
+                if server.server_unlock_key:
+                    try:
+                        key_root_path = join(MEDIA_ROOT, server.server_unlock_key.name)
+                        download_key_command = run_apx_command(
+                            key, "--cmd unlock --args {}".format(key_root_path)
+                        )
+                        server.server_unlock_key = None
+                    except:
+                        self.stderr.write(
+                            self.style.ERROR("{} unlock failed".format(server.pk))
+                        )
 
-            server.save()
+            except Exception as e:
+                self.stderr.write(
+                    self.style.ERROR(
+                        "Failed to recieve status for {}: {}".format(server.pk, e)
+                    )
+                )
+                server.status_failures = server.status_failures + 1
+            finally:
+                server.save()

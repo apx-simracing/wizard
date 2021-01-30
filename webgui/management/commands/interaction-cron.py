@@ -1,7 +1,7 @@
 from django.core.management.base import BaseCommand, CommandError
 from webgui.models import Server
 from os.path import join
-from wizard.settings import APX_ROOT, MEDIA_ROOT
+from wizard.settings import APX_ROOT, MEDIA_ROOT, FAILURE_THRESHOLD
 import subprocess
 from webgui.util import get_server_hash, run_apx_command, get_event_config
 
@@ -12,7 +12,9 @@ class Command(BaseCommand):
     help = "Interacts with a given server"
 
     def handle(self, *args, **options):
-        servers_to_start = Server.objects.filter(action="S+", locked=False).all()
+        servers_to_start = Server.objects.filter(
+            action="S+", locked=False, status_failures__lt=FAILURE_THRESHOLD
+        ).all()
 
         for server in servers_to_start:
             secret = server.secret
@@ -30,7 +32,9 @@ class Command(BaseCommand):
                 server.locked = False
                 server.save()
 
-        servers_to_stop = Server.objects.filter(action="R-", locked=False).all()
+        servers_to_stop = Server.objects.filter(
+            action="R-", locked=False, status_failures__lt=FAILURE_THRESHOLD
+        ).all()
 
         for server in servers_to_stop:
             secret = server.secret
@@ -48,7 +52,9 @@ class Command(BaseCommand):
                 server.locked = False
                 server.save()
 
-        servers_to_deploy = Server.objects.filter(action="D", locked=False).all()
+        servers_to_deploy = Server.objects.filter(
+            action="D", locked=False, status_failures__lt=FAILURE_THRESHOLD
+        ).all()
 
         for server in servers_to_deploy:
             secret = server.secret
