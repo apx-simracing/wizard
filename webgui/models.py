@@ -257,6 +257,10 @@ class Server(models.Model):
         return self.url if not self.name else self.name
 
     def clean(self):
+        if not self.server_key and self.action:
+            raise ValidationError(
+                "The server was not processed yet. Wait a short time until the key is present."
+            )
         if (
             self.status is not None
             and "not_running" in self.status
