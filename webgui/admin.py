@@ -213,7 +213,15 @@ class ServerAdmin(admin.ModelAdmin):
         else:
             return Server.objects.all()
 
-    list_display = ("name", "url", "event", "locked", "action", "is_running")
+    list_display = (
+        "name",
+        "url",
+        "event",
+        "locked",
+        "action",
+        "is_running",
+        "status_info",
+    )
     fieldsets = [
         (
             "APX Settings",
@@ -238,13 +246,7 @@ class ServerAdmin(admin.ModelAdmin):
         ),
         (
             "Actions and status",
-            {
-                "fields": [
-                    "action",
-                    "locked",
-                    "status",
-                ]
-            },
+            {"fields": ["action", "locked", "status_info"]},
         ),
         (
             "Keys",
@@ -267,24 +269,22 @@ class ServerAdmin(admin.ModelAdmin):
                 "status",
                 "locked",
                 "action",
-                "server_key",
-                "status",
                 "status_failures",
+                "status_info",
             )
         if self.is_running(obj):
             return self.readonly_fields + (
                 "event",
-                "server_key",
-                "status",
                 "locked",
+                "server_key",
                 "status_failures",
+                "status_info",
             )
         return self.readonly_fields + (
-            "status",
             "locked",
             "is_running",
-            "server_key",
             "status_failures",
+            "status_info",
         )
 
     def is_running(self, obj):

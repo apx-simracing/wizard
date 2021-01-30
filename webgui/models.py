@@ -18,6 +18,7 @@ from webgui.util import (
 )
 from wizard.settings import FAILURE_THRESHOLD
 from webgui.storage import OverwriteStorage
+from django.utils.html import mark_safe
 
 
 class ComponentType(models.TextChoices):
@@ -226,6 +227,31 @@ class Server(models.Model):
             FAILURE_THRESHOLD
         ),
     )
+
+    @property
+    def status_info(self):
+        # no status to report (e. g. new server)
+        response = '<img src="/static/admin/img/icon-no.svg" alt="Not Running"> Server is not running</br>'
+        if not self.status:
+            return "Server returned no status yet."
+        # status is existing and it's not_running
+        if self.status and "not_running" in self.status:
+            return mark_safe(response)
+        response = '<img src="/static/admin/img/icon-yes.svg" alt="Running"> Server is running</br>'
+        try:
+            content = loads(self.status.replace("'", '"'))
+            for vehicle in content["vehicles"]:
+                vehicle_text = "[{}] {}: {} (SteamID:{}), penalties: {}".format(
+                    vehicle["carClass"],
+                    vehicle["vehicleName"],
+                    vehicle["driverName"],
+                    vehicle["steamID"],
+                    vehicle["penalties"],
+                )
+                response = response + vehicle_text + "</br>"
+        except Exception as e:
+            response = str(e)
+        return mark_safe(response)
 
     def __str__(self):
         return self.url if not self.name else self.name
