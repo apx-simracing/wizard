@@ -7,6 +7,7 @@ from . import models
 from json import loads
 import random
 from django.core.exceptions import ValidationError
+import socket
 
 FILE_NAME_SUFFIXES = [
     ".json",
@@ -28,7 +29,7 @@ FILE_NAME_SUFFIXES = [
 
 def get_update_filename(instance, filename):
     component_name = instance.component_name
-    user_root = str(instance.user.pk)
+    user_root = get_hash(str(instance.user.pk))
     full_user_path = join(MEDIA_ROOT, user_root)
     if not exists(full_user_path):
         mkdir(full_user_path)
@@ -45,7 +46,7 @@ def get_update_filename(instance, filename):
 
 
 def get_conditions_file_root(instance, filename):
-    user_root = str(instance.user.pk)
+    user_root = get_hash(str(instance.user.pk))
     full_path = join(MEDIA_ROOT, user_root)
     if not exists(full_path):
         mkdir(full_path)
@@ -59,7 +60,7 @@ def livery_filename(instance, filename):
     vehicle_number = instance.entry.vehicle_number
     component_short_name = instance.entry.component.short_name
     component_name = instance.entry.component.component_name
-    user_root = str(instance.user.pk)
+    user_root = get_hash(str(instance.user.pk))
     full_user_path = join(MEDIA_ROOT, user_root)
     if not exists(full_user_path):
         mkdir(full_user_path)
@@ -102,11 +103,15 @@ def get_random_string(length):
     return result_str
 
 
-def get_server_hash(url):
+def get_hash(input):
     sha_1 = hashlib.sha1()
-    sha_1.update(url.encode("utf-8"))
+    sha_1.update(input.encode("utf-8"))
     key = str(sha_1.hexdigest())
     return key
+
+
+def get_server_hash(url):
+    return get_hash(url)
 
 
 def run_apx_command(hashed_url, commandline):

@@ -4,7 +4,7 @@ from os.path import join, exists
 from os import mkdir
 from wizard.settings import APX_ROOT, MEDIA_ROOT, PACKS_ROOT, FAILURE_THRESHOLD
 import subprocess
-from webgui.util import get_server_hash, run_apx_command
+from webgui.util import get_server_hash, run_apx_command, get_hash
 
 from json import dumps
 
@@ -18,8 +18,8 @@ class Command(BaseCommand):
         for server in all_servers:
             key = get_server_hash(server.url)
             # we assume that the liveries folder may already be existing
-            build_path = join(MEDIA_ROOT, str(server.user.pk), "liveries")
-            packs_path = join(PACKS_ROOT, str(server.user.pk))
+            build_path = join(MEDIA_ROOT, get_hash(str(server.user.pk)), "liveries")
+            packs_path = join(PACKS_ROOT, get_hash(str(server.user.pk)))
             if not exists(packs_path):
                 mkdir(packs_path)
             server_data[key] = {
