@@ -271,12 +271,13 @@ class ServerAdmin(admin.ModelAdmin):
                 "action",
                 "status_failures",
                 "status_info",
+                "server_key",
+                "server_unlock_key",
             )
         if self.is_running(obj):
             return self.readonly_fields + (
                 "event",
                 "locked",
-                "server_key",
                 "status_failures",
                 "status_info",
             )
