@@ -94,6 +94,7 @@ class Command(BaseCommand):
                         "Failed to recieve status for {}: {}".format(server.pk, e)
                     )
                 )
+                server.status = None
                 server.status_failures = server.status_failures + 1
             finally:
                 server.save()
