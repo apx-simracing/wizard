@@ -53,6 +53,9 @@ jobs:
         
       - name: Add pip to folder
         run: cd  /home/runner/work/wizard/apx-build/ && zip -ur /home/runner/work/wizard/apx-build/release.zip get-pip.py
+
+      - name: Add APX to folder
+        run: cd  /home/runner/work/wizard/apx-build/ && zip -ur /home/runner/work/wizard/apx-build/release.zip cli
         
       - name: Add wizard components to zip
         run: cd /home/runner/work/wizard/wizard/ && zip -ur /home/runner/work/wizard/apx-build/release.zip *
