@@ -44,7 +44,7 @@ class Command(BaseCommand):
 
         return server_data
 
-    def handle(self, *args, **options):
+    def status_job(self):
         all_servers = Server.objects.filter(
             locked=False, action="", status_failures__lt=FAILURE_THRESHOLD
         )
@@ -111,3 +111,82 @@ class Command(BaseCommand):
                 server.status_failures = server.status_failures + 1
             finally:
                 server.save()
+
+    def interaction_job(self):
+        servers_to_start = Server.objects.filter(
+            action="S+", locked=False, status_failures__lt=FAILURE_THRESHOLD
+        ).all()
+
+        for server in servers_to_start:
+            secret = server.secret
+            url = server.url
+            key = get_server_hash(url)
+            try:
+                server.locked = True
+                server.save()
+                run_apx_command(key, "--cmd start")
+                server.action = ""
+                server.locked = False
+                server.save()
+            except:
+                server.action = ""
+                server.locked = False
+                server.save()
+
+        servers_to_stop = Server.objects.filter(
+            action="R-", locked=False, status_failures__lt=FAILURE_THRESHOLD
+        ).all()
+
+        for server in servers_to_stop:
+            secret = server.secret
+            url = server.url
+            key = get_server_hash(url)
+            try:
+                server.locked = True
+                server.save()
+                run_apx_command(key, "--cmd stop")
+                server.action = ""
+                server.locked = False
+                server.save()
+            except:
+                server.action = ""
+                server.locked = False
+                server.save()
+
+        servers_to_deploy = Server.objects.filter(
+            action="D", locked=False, status_failures__lt=FAILURE_THRESHOLD
+        ).all()
+
+        for server in servers_to_deploy:
+            secret = server.secret
+            url = server.url
+            key = get_server_hash(url)
+
+            # save event json
+            event_config = get_event_config(server.event.pk)
+            config_path = join(APX_ROOT, "configs", key + ".json")
+            with open(config_path, "w") as file:
+                file.write(dumps(event_config))
+            # save rfm
+            rfm_path = join(MEDIA_ROOT, server.event.conditions.rfm.name)
+
+            try:
+                server.locked = True
+                server.save()
+                command_line = "--cmd build_skins --args {} {}".format(
+                    config_path, rfm_path
+                )
+                run_apx_command(key, command_line)
+                command_line = "--cmd deploy --args {} {}".format(config_path, rfm_path)
+                run_apx_command(key, command_line)
+                server.action = ""
+                server.locked = False
+                server.save()
+            except:
+                server.action = ""
+                server.locked = False
+                server.save()
+
+    def handle(self, *args, **options):
+        self.status_job()
+        self.interaction_job()
