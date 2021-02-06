@@ -43,7 +43,7 @@ jobs:
         run: unzip /home/runner/work/wizard/apx-build/cli.zip
 
       - name: Copy APX into wizard dir
-        run: mv /home/runner/work/wizard/apx-build/cli-main home/runner/work/wizard/apx-build/cli
+        run: mv /home/runner/work/wizard/apx-build/cli-main /home/runner/work/wizard/apx-build/cli
 
       - name: Create _pth file according to specification
         run: printf "python39.zip\n.\nimport site" > /home/runner/work/wizard/apx-build/python39._pth
