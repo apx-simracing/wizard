@@ -4,7 +4,7 @@ from os.path import join, exists
 from os import mkdir
 from wizard.settings import APX_ROOT, MEDIA_ROOT, PACKS_ROOT, FAILURE_THRESHOLD
 import subprocess
-from webgui.util import get_server_hash, run_apx_command, get_hash
+from webgui.util import get_server_hash, run_apx_command, get_hash, get_event_config
 
 from json import dumps
 
