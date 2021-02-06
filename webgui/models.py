@@ -15,11 +15,14 @@ from webgui.util import (
     get_key_root_path,
     get_conditions_file_root,
     get_update_filename,
+    get_hash,
 )
-from wizard.settings import FAILURE_THRESHOLD
+from wizard.settings import FAILURE_THRESHOLD, MEDIA_ROOT
 from webgui.storage import OverwriteStorage
 from django.utils.html import mark_safe
 import re
+from os.path import exists, join
+from os import mkdir
 
 
 class ComponentType(models.TextChoices):
@@ -76,32 +79,44 @@ class Component(models.Model):
     def save(self, *args, **kwargs):
         needles = ["number", "name", "description"]
 
-        replacementMap = {
-            "DefaultLivery": self.short_name + "_{number}.dds",
-            "Number": "{number}",
-            "Team": "{name}",
-            "Description": "{description}",
-            "FullTeamName": "{description}",
-        }
-        templateLines = self.template.split("\n")
-        newLines = []
-        for line in templateLines:
-            hadReplacement = False
-            for key, value in replacementMap.items():
-                pattern = r"(" + key + '\s{0,}=\s{0,}"?([^"^\n^\r]+)"?)'
-                matches = re.match(pattern, line, re.MULTILINE)
-                replacement = "{}={}".format(key, value)
-                if matches:
-                    fullMatch = matches.groups(0)[0]
-                    if '"' in fullMatch:
-                        replacement = '{}="{}"'.format(key, value)
+        if self.type == ComponentType.VEHICLE and self.do_update and self.template:
 
-                    newLines.append(replacement)
-                    hadReplacement = True
-            if not hadReplacement:
-                newLines.append(line)
+            replacementMap = {
+                "DefaultLivery": self.short_name + "_{number}.dds",
+                "Number": "{number}",
+                "Team": "{name}",
+                "Description": "{description}",
+                "FullTeamName": "{description}",
+            }
+            templateLines = self.template.split("\n")
+            newLines = []
+            for line in templateLines:
+                hadReplacement = False
+                for key, value in replacementMap.items():
+                    pattern = r"(" + key + '\s{0,}=\s{0,}"?([^"^\n^\r]+)"?)'
+                    matches = re.match(pattern, line, re.MULTILINE)
+                    replacement = "{}={}\n".format(key, value)
+                    if matches:
+                        fullMatch = matches.groups(0)[0]
+                        if '"' in fullMatch:
+                            replacement = '{}="{}"\n'.format(key, value)
 
-        self.template = "\n".join(newLines)
+                        newLines.append(replacement)
+                        hadReplacement = True
+                if not hadReplacement:
+                    newLines.append(line)
+
+            self.template = "".join(newLines)
+            # paste parsed template
+            root_path = join(MEDIA_ROOT, get_hash(str(self.user.pk)), "templates")
+            if not exists(root_path):
+                mkdir(root_path)
+            template_path = join(
+                root_path,
+                self.component_name + ".veh",
+            )
+            with open(template_path, "w") as file:
+                file.write(self.template)
         super(Component, self).save(*args, **kwargs)
 
     def __str__(self):

@@ -20,13 +20,26 @@ class Command(BaseCommand):
             # we assume that the liveries folder may already be existing
             build_path = join(MEDIA_ROOT, get_hash(str(server.user.pk)), "liveries")
             packs_path = join(PACKS_ROOT, get_hash(str(server.user.pk)))
+            templates_path = join(
+                MEDIA_ROOT, get_hash(str(server.user.pk)), "templates"
+            )
             if not exists(packs_path):
                 mkdir(packs_path)
+
+            if not exists(build_path):
+                mkdir(build_path)
+
+            if not exists(templates_path):
+                mkdir(templates_path)
             server_data[key] = {
                 "url": server.url,
                 "secret": server.secret,
                 "public_ip": server.public_ip,
-                "env": {"build_path": build_path, "packs_path": packs_path},
+                "env": {
+                    "build_path": build_path,
+                    "packs_path": packs_path,
+                    "templates_path": templates_path,
+                },
             }
 
         return server_data
