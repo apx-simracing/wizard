@@ -1,0 +1,72 @@
+name: CI
+
+# Controls when the action will run. 
+on:
+  # Triggers the workflow on push or pull request events but only for the main branch
+  push:
+    branches: [ main ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  build:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2
+        
+      - name: Create working directory
+        run: mkdir /home/runner/work/wizard/apx-build
+        
+      - name: Download Python 3.9
+        run: curl https://www.python.org/ftp/python/3.9.1/python-3.9.1-embed-amd64.zip -o /home/runner/work/wizard/apx-build/release.zip
+      
+      - name: Download pip
+        run: curl https://bootstrap.pypa.io/get-pip.py -o /home/runner/work/wizard/apx-build/get-pip.py
+      
+      - name: show build directory
+        run: ls /home/runner/work/wizard/apx-build/
+        
+      - name: show working directory
+        run: ls /home/runner/work/wizard/wizard
+        
+      - name: Create _pth file according to specification
+        run: printf "python39.zip\n.\nimport site" > /home/runner/work/wizard/apx-build/python39._pth
+        
+      - name: Add pth to folder
+        run: cd  /home/runner/work/wizard/apx-build/ && zip -ur /home/runner/work/wizard/apx-build/release.zip python39._pth
+      
+        
+      - name: Add pip to folder
+        run: cd  /home/runner/work/wizard/apx-build/ && zip -ur /home/runner/work/wizard/apx-build/release.zip get-pip.py
+        
+      - name: Add wizard components to zip
+        run: cd /home/runner/work/wizard/wizard/ && zip -ur /home/runner/work/wizard/apx-build/release.zip *
+        
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.run_number }}
+          release_name: Release ${{ github.run_number }}
+          draft: false
+          prerelease: true
+
+      - name: Upload Release Asset
+        id: upload-release-asset 
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: /home/runner/work/wizard/apx-build/release.zip
+          asset_name: release.zip
+          asset_content_type: application/zip
