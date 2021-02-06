@@ -19,6 +19,7 @@ from webgui.util import (
 from wizard.settings import FAILURE_THRESHOLD
 from webgui.storage import OverwriteStorage
 from django.utils.html import mark_safe
+import re
 
 
 class ComponentType(models.TextChoices):
@@ -59,6 +60,8 @@ class Component(models.Model):
         upload_to=get_update_filename, storage=OverwriteStorage, null=True, blank=True
     )
 
+    template = models.TextField(default="", null=True, blank=True)
+
     def clean(self):
         if self.type != ComponentType.VEHICLE and self.do_update:
             raise ValidationError(
@@ -66,6 +69,40 @@ class Component(models.Model):
             )
         if self.type != ComponentType.VEHICLE and self.update:
             raise ValidationError("Only vehicle components can get an Update.ini file")
+
+        if self.type == ComponentType.VEHICLE and self.do_update and not self.template:
+            raise ValidationError("You will need the VEH template when doing an update")
+
+    def save(self, *args, **kwargs):
+        needles = ["number", "name", "description"]
+
+        replacementMap = {
+            "DefaultLivery": self.short_name + "_{number}.dds",
+            "Number": "{number}",
+            "Team": "{name}",
+            "Description": "{description}",
+            "FullTeamName": "{description}",
+        }
+        templateLines = self.template.split("\n")
+        newLines = []
+        for line in templateLines:
+            hadReplacement = False
+            for key, value in replacementMap.items():
+                pattern = r"(" + key + '\s{0,}=\s{0,}"?([^"^\n^\r]+)"?)'
+                matches = re.match(pattern, line, re.MULTILINE)
+                replacement = "{}={}".format(key, value)
+                if matches:
+                    fullMatch = matches.groups(0)[0]
+                    if '"' in fullMatch:
+                        replacement = '{}="{}"'.format(key, value)
+
+                    newLines.append(replacement)
+                    hadReplacement = True
+            if not hadReplacement:
+                newLines.append(line)
+
+        self.template = "\n".join(newLines)
+        super(Component, self).save(*args, **kwargs)
 
     def __str__(self):
         return "{} ({})".format(self.component_name, self.component_version)
