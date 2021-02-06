@@ -40,7 +40,7 @@ jobs:
         run: curl https://codeload.github.com/apx-simracing/cli/zip/main -o /home/runner/work/wizard/apx-build/cli.zip
         
       - name: Unzip APX
-        run: unzip /home/runner/work/wizard/apx-build/cli.zip
+        run: cd  /home/runner/work/wizard/apx-build/ && unzip /home/runner/work/wizard/apx-build/cli.zip
 
       - name: Copy APX into wizard dir
         run: mv /home/runner/work/wizard/apx-build/cli-main /home/runner/work/wizard/apx-build/cli
