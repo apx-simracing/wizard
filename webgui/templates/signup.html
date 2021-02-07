@@ -1,59 +1,65 @@
+{% load static %}
 <html>
 
 <head>
   <title>APX Signup</title>
-  <style>
-    .form {
-      margin: auto;
-      width: 30%;
-      border: 1px solid #eee;
-      padding: 10px;
-      font-family: "Roboto", "Lucida Grande", "DejaVu Sans", "Bitstream Vera Sans", Verdana, Arial, sans-serif;
-    }
-
-    .form h1 {
-      margin-top: 0px;
-    }
-
-    .form-field {
-      margin-bottom: 1em;
-    }
-
-    .form-field label {
-      width: 40%;
-      display: inline-block;
-      color: #09003d;
-      font-weight: bold;
-    }
-
-    .form-field input {
-      width: 50%;
-      display: inline-block;
-    }
-  </style>
+  <link rel="stylesheet" href="{% static 'webgui/lib/spectre.min.css' %}">
+  <link rel="stylesheet" href="{% static 'webgui/lib/spectre-exp.min.css' %}">
+  <link rel="stylesheet" href="{% static 'webgui/lib/spectre-icons.min.css' %}">
+  <link rel="stylesheet" href="{% static 'webgui/style.css' %}">
 </head>
 
 <body>
+  <img class="backdrop" style="background-image: url({% static 'webgui/backdrop.jpg' %})">
+
   <form action="/signup/" method="post" class="form">
+    <div class="logo-parent">
+      <img src="{% static 'webgui/logo.png' %}">
+    </div>
+    <div>
+      {% if form.errors %}
+      {% for field in form %}
+      {% for error in field.errors %}
+      <div class="alert alert-danger">
+        <strong>{{ error|escape }}</strong>
+      </div>
+      {% endfor %}
+      {% endfor %}
+      {% for error in form.non_field_errors %}
+      <div class="alert alert-danger">
+        <strong>{{ error|escape }}</strong>
+      </div>
+      {% endfor %}
+      {% endif %}
+    </div>
     {% csrf_token %}
     <h1>
-      APX User Signup
+      User Signup
     </h1>
+    <div class="form-group instance-name-parent">
+      <span class="label">{{instance_name}}</span>
+    </div>
     {% for field in form %}
-    <div class="form-field">
-      <label>{{field.label}}</label>
-      {{field}}
+    <div class="form-group">
+      {% if field.field.widget.input_type == 'checkbox' %}
+      <div class="form-group">
+        <label class="form-checkbox">
+          {{field}}
+          <i class="form-icon"></i> {{field.label}}
+        </label>
+      </div>
+      {% else %}
+      <div class="form-field">
+        <label>{{field.label}}</label>
+        {{field}}
+      </div>
+      {% endif  %}
     </div>
     {% endfor %}
-    <h2>Rules</h2>
-    <ol>
-      <li>This application comes without any warranty</li>
-      <li>I obey applicable (copyright) law for uploaded content</li>
-      <li>I check the content for malware before uploading</li>
-      <li>My account can be terminated at any point by the instance owner</li>
-      <li>Content can be deleted at any point by the instance owner</li>
-    </ol>
-    <input type="submit" value="Signup">
+    <div class="form-group">
+      <a href="/rules" target="_blank">Rules/ Usage conditions</a>
+    </div>
+    <input type="submit" value="Signup" class="btn btn-primary">
   </form>
 </body>
 

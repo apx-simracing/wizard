@@ -4,7 +4,17 @@ from django.core.exceptions import ValidationError
 from django.contrib.auth.models import User, Group
 from django.db.models import Q
 from .forms import SignupForm
-from wizard.settings import USER_SIGNUP_ENABLED
+from wizard.settings import USER_SIGNUP_ENABLED, USER_SIGNUP_RULE_TEXT, INSTANCE_NAME
+
+
+def get_rules_page(request):
+    if not USER_SIGNUP_ENABLED:
+        raise Http404("Signup not enabled on this instance.")
+    return render(
+        request,
+        "rules.html",
+        {"rules": USER_SIGNUP_RULE_TEXT, "instance_name": INSTANCE_NAME},
+    )
 
 
 def get_signup_form(request):
@@ -19,16 +29,6 @@ def get_signup_form(request):
             password = form.cleaned_data.get("password")
             password_repeat = form.cleaned_data.get("password_repeat")
             rules_accept = form.cleaned_data.get("rules_accept")
-            if password != password_repeat:
-                raise ValidationError("The passwords do not match")
-
-            result = User.objects.filter(Q(username=user) | Q(email=email))
-
-            if result.count() > 0:
-                raise ValidationError("User or email already taken")
-
-            if not rules_accept:
-                raise ValidationError("You have to accept the rules")
 
             new_user = User(username=user, email=email, is_staff=True, is_active=True)
             new_user.set_password(password)
@@ -38,8 +38,16 @@ def get_signup_form(request):
             new_user.groups.add(group)
             new_user.save()
 
-            return HttpResponse("You can now login on the backend")
+            return render(
+                request,
+                "signup_success.html",
+            )
+
     else:
         form = SignupForm()
 
-    return render(request, "signup.html", {"form": form})
+    return render(
+        request,
+        "signup.html",
+        {"form": form, "rules": USER_SIGNUP_RULE_TEXT, "instance_name": INSTANCE_NAME},
+    )

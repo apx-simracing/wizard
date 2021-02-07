@@ -1,0 +1,26 @@
+{% load static %}
+<html>
+
+<head>
+  <title>APX Signup</title>
+  <link rel="stylesheet" href="{% static 'webgui/lib/spectre.min.css' %}">
+  <link rel="stylesheet" href="{% static 'webgui/lib/spectre-exp.min.css' %}">
+  <link rel="stylesheet" href="{% static 'webgui/lib/spectre-icons.min.css' %}">
+  <link rel="stylesheet" href="{% static 'webgui/style.css' %}">
+</head>
+
+<body>
+  <img class="backdrop" style="background-image: url({% static 'webgui/backdrop.jpg' %})">
+
+  <form class="form">
+    <div class="logo-parent">
+      <img src="{% static 'webgui/logo.png' %}">
+    </div>
+    <div class="form-group instance-name-parent">
+      <span class="label">{{instance_name}}</span>
+    </div>
+    {{rules|safe}}
+  </form>
+</body>
+
+</html>
