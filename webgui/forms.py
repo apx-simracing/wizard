@@ -1,7 +1,41 @@
 from django import forms
-from webgui.models import User
+from webgui.models import User, Entry
 from django.core.exceptions import ValidationError
 from django.db.models import Q
+import os
+
+
+class EntryTokenForm(forms.Form):
+    token = forms.CharField(
+        label="Token",
+        max_length=100,
+        widget=forms.TextInput(attrs={"class": "form-input"}),
+    )
+
+    def clean(self):
+        token = self.cleaned_data.get("token")
+        result = Entry.objects.filter(token=token)
+
+        if result.count() == 0:
+            raise ValidationError("This token is unknown!")
+
+
+def validate_file_extension(value):
+    ext = os.path.splitext(value.name)[1]
+    valid_extensions = [".zip"]
+    if not ext.lower() in valid_extensions:
+        raise ValidationError("Unsupported file extension.")
+
+
+class EntryFileForm(forms.Form):
+    token = forms.CharField(
+        label="Token",
+        max_length=100,
+        widget=forms.HiddenInput(),
+    )
+    file = forms.FileField(
+        validators=[validate_file_extension], widget=forms.ClearableFileInput()
+    )
 
 
 class SignupForm(forms.Form):

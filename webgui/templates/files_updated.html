@@ -1,0 +1,51 @@
+{% load static %}
+<html>
+
+<head>
+  <title>APX Signup</title>
+  <link rel="stylesheet" href="{% static 'webgui/lib/spectre.min.css' %}">
+  <link rel="stylesheet" href="{% static 'webgui/lib/spectre-exp.min.css' %}">
+  <link rel="stylesheet" href="{% static 'webgui/lib/spectre-icons.min.css' %}">
+  <link rel="stylesheet" href="{% static 'webgui/style.css' %}">
+</head>
+
+<body>
+  <img class="backdrop" style="background-image: url({% static 'webgui/backdrop.jpg' %})">
+
+  <form class="form">
+    <div class="logo-parent">
+      <img src="{% static 'webgui/logo.png' %}">
+    </div>
+    <div>
+      {% if form.errors %}
+      {% for field in form %}
+      {% for error in field.errors %}
+      <div class="alert alert-danger">
+        <strong>{{ error|escape }}</strong>
+      </div>
+      {% endfor %}
+      {% endfor %}
+      {% for error in form.non_field_errors %}
+      <div class="alert alert-danger">
+        <strong>{{ error|escape }}</strong>
+      </div>
+      {% endfor %}
+      {% endif %}
+    </div>
+    {% csrf_token %}
+    <h1>
+      Livery submit: {{entry.team_name}}#{{entry.vehicle_number}}
+    </h1>
+    <div class="toast toast-success">
+      We progressed following files
+    </div>
+    <div class="form-group processed-files">
+      {% for file, resulted_file in files.items %}
+      {{file}} <i class="icon icon-forward"></i> {{resulted_file}}
+      <div class="divider"></div>
+      {% endfor %}
+    </div>
+  </form>
+</body>
+
+</html>
