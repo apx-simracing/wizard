@@ -152,7 +152,9 @@ class Entry(models.Model):
     team_name = models.CharField(default="Example Team", max_length=200)
     vehicle_number = models.IntegerField(default=1)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    token = models.CharField(default=None, null=True, blank=True, max_length=100)
+    token = models.CharField(
+        default=None, null=True, blank=True, max_length=100, unique=True
+    )
 
     def __str__(self):
         return "{}#{} ({})".format(self.team_name, self.vehicle_number, self.component)
