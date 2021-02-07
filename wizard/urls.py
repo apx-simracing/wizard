@@ -23,13 +23,21 @@ from webgui.views import (
     get_team_signup_form,
     get_team_revoke_form,
 )
+from wizard.settings import ENTRY_SIGNUP_ENABLED
 
-urlpatterns = [
-    path("admin/", admin.site.urls),
-    path("signup/", get_signup_form),
-    path("rules/", get_rules_page),
-    path("entry/", get_token_form),
-    path("files/", get_files_form),
-    path("team/<client>", get_team_signup_form),
-    path("revoke/", get_team_revoke_form),
-]
+if ENTRY_SIGNUP_ENABLED:
+    urlpatterns = [
+        path("admin/", admin.site.urls),
+        path("signup/", get_signup_form),
+        path("rules/", get_rules_page),
+        path("entry/", get_token_form),
+        path("files/", get_files_form),
+        path("team/<client>", get_team_signup_form),
+        path("revoke/", get_team_revoke_form),
+    ]
+else:
+    urlpatterns = [
+        path("admin/", admin.site.urls),
+        path("signup/", get_signup_form),
+        path("rules/", get_rules_page),
+    ]
