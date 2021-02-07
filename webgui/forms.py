@@ -1,8 +1,45 @@
 from django import forms
-from webgui.models import User, Entry
+from webgui.models import User, Entry, Component
 from django.core.exceptions import ValidationError
 from django.db.models import Q
 import os
+from .util import get_hash
+
+
+class EntryRevokeForm(forms.Form):
+    token = forms.CharField(
+        label="Token",
+        max_length=100,
+        widget=forms.TextInput(attrs={"class": "form-input"}),
+    )
+
+
+class EntrySignupForm(forms.Form):
+    component = forms.ModelChoiceField(
+        queryset=Component.objects.all(),
+    )
+    number = forms.IntegerField()
+    team_name = forms.CharField()
+    client = forms.CharField(widget=forms.HiddenInput())
+
+    def clean(self):
+        users = User.objects.all()
+        client = self.cleaned_data.get("client")
+        number = self.cleaned_data.get("number")
+        client_obj = None
+        for user in users:
+            needle = get_hash(str(user.pk))
+            if client == needle:
+                client_obj = user
+                break
+
+        if not client_obj:
+            raise ValidationError("Invalid client")
+
+        matching_numbers = Entry.objects.filter(user=client_obj, vehicle_number=number)
+
+        if len(matching_numbers) != 0:
+            raise ValidationError("Number already taken")
 
 
 class EntryTokenForm(forms.Form):

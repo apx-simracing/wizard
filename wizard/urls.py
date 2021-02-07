@@ -15,7 +15,14 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
-from webgui.views import get_signup_form, get_rules_page, get_token_form, get_files_form
+from webgui.views import (
+    get_signup_form,
+    get_rules_page,
+    get_token_form,
+    get_files_form,
+    get_team_signup_form,
+    get_team_revoke_form,
+)
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -23,4 +30,6 @@ urlpatterns = [
     path("rules/", get_rules_page),
     path("entry/", get_token_form),
     path("files/", get_files_form),
+    path("team/<client>", get_team_signup_form),
+    path("revoke/", get_team_revoke_form),
 ]

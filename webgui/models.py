@@ -163,7 +163,7 @@ class Entry(models.Model):
 class EntryFile(models.Model):
     file = models.FileField(upload_to=livery_filename, storage=OverwriteStorage)
     entry = models.ForeignKey(
-        Entry, on_delete=models.DO_NOTHING, blank=False, null=False, default=None
+        Entry, on_delete=models.CASCADE, blank=False, null=False, default=None
     )
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
 

@@ -3,7 +3,13 @@ from django.shortcuts import render
 from django.core.exceptions import ValidationError
 from django.contrib.auth.models import User, Group
 from django.db.models import Q
-from .forms import SignupForm, EntryTokenForm, EntryFileForm
+from .forms import (
+    SignupForm,
+    EntryTokenForm,
+    EntryFileForm,
+    EntrySignupForm,
+    EntryRevokeForm,
+)
 from wizard.settings import USER_SIGNUP_ENABLED, USER_SIGNUP_RULE_TEXT, INSTANCE_NAME
 from .models import EntryFile, Entry
 import pathlib
@@ -12,6 +18,83 @@ import tempfile
 from os import listdir
 from os.path import join, basename
 from django.core.files import File
+from .util import get_hash, get_random_string
+
+
+def get_team_revoke_form(request):
+    if request.method == "POST":
+        form = EntryRevokeForm(request.POST)
+        if form.is_valid():
+            token = form.cleaned_data.get("token")
+            results = Entry.objects.filter(token=token)
+            if len(results) == 0:
+                raise Http404()
+            results.delete()
+            return render(
+                request,
+                "entry_revoke_confirm.html",
+            )
+
+    else:
+        form = EntryRevokeForm()
+
+    return render(
+        request,
+        "entry_revoke.html",
+        {
+            "form": form,
+            "rules": USER_SIGNUP_RULE_TEXT,
+            "instance_name": INSTANCE_NAME,
+        },
+    )
+
+
+def get_team_signup_form(request, client: str):
+    if request.method == "POST":
+        form = EntrySignupForm(request.POST)
+        if form.is_valid():
+            number = form.cleaned_data.get("number")
+            team_name = form.cleaned_data.get("team_name")
+            client = form.cleaned_data.get("client")
+            component = form.cleaned_data.get("component")
+
+            client_obj = None
+            users = User.objects.all()
+            for user in users:
+                needle = get_hash(str(user.pk))
+                if client == needle:
+                    client_obj = user
+                    break
+            if not client:
+                raise ValidationError("Invalid client")
+
+            token = get_random_string(10)
+            new_entry = Entry()
+            new_entry.user = client_obj
+            new_entry.component = component
+            new_entry.team_name = team_name
+            new_entry.vehicle_number = int(number)
+            new_entry.token = token
+            new_entry.save()
+            return render(
+                request,
+                "entry_signup_confirm.html",
+                {"instance_name": INSTANCE_NAME, "token": token, "entry": new_entry},
+            )
+
+    else:
+        form = EntrySignupForm()
+        form.fields["client"].initial = client
+    return render(
+        request,
+        "entry_signup.html",
+        {
+            "form": form,
+            "rules": USER_SIGNUP_RULE_TEXT,
+            "instance_name": INSTANCE_NAME,
+            "client": client,
+        },
+    )
 
 
 def get_rules_page(request):
