@@ -250,12 +250,7 @@ class ServerAdmin(admin.ModelAdmin):
         ),
         (
             "Keys",
-            {
-                "fields": [
-                    "server_key",
-                    "server_unlock_key",
-                ]
-            },
+            {"fields": ["server_key", "server_unlock_key", "log"]},
         ),
     ]
 

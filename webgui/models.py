@@ -13,6 +13,7 @@ from webgui.util import (
     run_apx_command,
     get_server_hash,
     get_key_root_path,
+    get_logfile_root_path,
     get_conditions_file_root,
     get_update_filename,
     get_hash,
@@ -271,6 +272,13 @@ class Server(models.Model):
     server_unlock_key = models.FileField(
         upload_to=get_key_root_path,
         help_text="Unlock keyfile of the server, usually named ServerUnlock.bin, required to use paid content. The field will clear after unlocking",
+        blank=True,
+        default=None,
+        null=True,
+    )
+    log = models.FileField(
+        upload_to=get_logfile_root_path,
+        help_text="The logfile of the server for troublsehooting purposes",
         blank=True,
         default=None,
         null=True,

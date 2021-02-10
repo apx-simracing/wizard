@@ -101,6 +101,22 @@ class Command(BaseCommand):
                             self.style.ERROR("{} unlock failed".format(server.pk))
                         )
 
+                # download the logfile
+                log_root_path = join(MEDIA_ROOT, "logs", key)
+                if not exists(log_root_path):
+                    mkdir(log_root_path)
+                log_path = join(log_root_path, "reciever.log")
+                relative_path = join("logs", key, "reciever.log")
+                try:
+                    download_log_command = run_apx_command(
+                        key, "--cmd log --args {}".format(log_path)
+                    )
+                    server.log = relative_path
+                except:
+                    self.stderr.write(
+                        self.style.ERROR("{} logfile download failed".format(server.pk))
+                    )
+
             except Exception as e:
                 self.stderr.write(
                     self.style.ERROR(

@@ -96,6 +96,14 @@ def get_key_root_path(instance, filename):
     return join("keys", hash_code, filename)
 
 
+def get_logfile_root_path(instance, filename):
+    hash_code = get_server_hash(instance.url)
+    full_path = join(MEDIA_ROOT, "logs", hash_code)
+    if not exists(full_path):
+        mkdir(full_path)
+    return join("keys", hash_code, filename)
+
+
 def get_random_string(length):
     # put your letters in the following string
     sample_letters = "abcdefghi"
