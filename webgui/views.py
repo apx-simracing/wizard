@@ -204,7 +204,7 @@ def get_signup_form(request):
             new_user.groups.add(group)
             new_user.save()
             do_post(
-                "[{}] 😁 A new user signed up: {} ({})".format(
+                "[{}]: 😁 A new user signed up: {} ({})".format(
                     INSTANCE_NAME, user, email
                 )
             )
