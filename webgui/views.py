@@ -18,7 +18,7 @@ import tempfile
 from os import listdir
 from os.path import join, basename
 from django.core.files import File
-from .util import get_hash, get_random_string
+from .util import get_hash, get_random_string, do_post
 
 
 def get_team_revoke_form(request):
@@ -27,9 +27,14 @@ def get_team_revoke_form(request):
         if form.is_valid():
             token = form.cleaned_data.get("token")
             results = Entry.objects.filter(token=token)
-            if len(results) == 0:
+            if len(results) != 1:
                 raise Http404()
+            entry_string = str(results.first())
             results.delete()
+
+            do_post(
+                "[{}] 🚮 Team {} just revoked entry".format(INSTANCE_NAME, entry_string)
+            )
             return render(
                 request,
                 "entry_revoke_confirm.html",
@@ -76,6 +81,8 @@ def get_team_signup_form(request, client: str):
             new_entry.vehicle_number = int(number)
             new_entry.token = token
             new_entry.save()
+            entry_string = str(new_entry)
+            do_post("[{}] 👋 Team {} just signed up".format(INSTANCE_NAME, entry_string))
             return render(
                 request,
                 "entry_signup_confirm.html",
@@ -159,7 +166,12 @@ def get_files_form(request):
                         entry_file.file.save(file, File(livery_file), save=True)
                     entry.save()
                     results[file] = basename(entry_file.file.name)
-
+                entry_string = str(entry)
+                do_post(
+                    "[{}] 🎨 Team {} just added a livery ({})".format(
+                        INSTANCE_NAME, entry_string, ", ".join(results.values())
+                    )
+                )
                 return render(
                     request, "files_updated.html", {"files": results, "entry": entry}
                 )
@@ -191,7 +203,11 @@ def get_signup_form(request):
             group = Group.objects.get(name="Users")
             new_user.groups.add(group)
             new_user.save()
-
+            do_post(
+                "[{}] 😁 A new user signed up: {} ({})".format(
+                    INSTANCE_NAME, user, email
+                )
+            )
             return render(
                 request,
                 "signup_success.html",

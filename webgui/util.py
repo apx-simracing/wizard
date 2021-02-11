@@ -1,13 +1,24 @@
-from wizard.settings import APX_ROOT, MEDIA_ROOT, PACKS_ROOT
+from wizard.settings import (
+    APX_ROOT,
+    MEDIA_ROOT,
+    PACKS_ROOT,
+    DISCORD_WEBHOOK,
+    DISCORD_WEBHOOK_NAME,
+    INSTANCE_NAME,
+)
 import hashlib
 import subprocess
+from django.dispatch import receiver
 from os.path import join, exists
 from os import mkdir
 from . import models
 from json import loads
 import random
 from django.core.exceptions import ValidationError
+from django.db.models.signals import post_save
 import socket
+import discord
+from requests import post
 
 FILE_NAME_SUFFIXES = [
     ".json",
@@ -191,3 +202,16 @@ def get_event_config(event_id: int):
         },
     }
     return result
+
+
+def do_post(message):
+    if DISCORD_WEBHOOK is not None and DISCORD_WEBHOOK_NAME is not None:
+        got = post(
+            DISCORD_WEBHOOK,
+            json={
+                "username": DISCORD_WEBHOOK_NAME,
+                "content": message,
+                "avatar_url": "",
+            },
+            headers={"Content-type": "application/json"},
+        )

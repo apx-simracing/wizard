@@ -2,9 +2,21 @@ from django.core.management.base import BaseCommand, CommandError
 from webgui.models import Server, ServerStatustext
 from os.path import join, exists
 from os import mkdir
-from wizard.settings import APX_ROOT, MEDIA_ROOT, PACKS_ROOT, FAILURE_THRESHOLD
+from wizard.settings import (
+    APX_ROOT,
+    MEDIA_ROOT,
+    PACKS_ROOT,
+    FAILURE_THRESHOLD,
+    INSTANCE_NAME,
+)
 import subprocess
-from webgui.util import get_server_hash, run_apx_command, get_hash, get_event_config
+from webgui.util import (
+    get_server_hash,
+    run_apx_command,
+    get_hash,
+    get_event_config,
+    do_post,
+)
 
 from json import dumps
 
@@ -87,6 +99,11 @@ class Command(BaseCommand):
                                 "{} does not offer a key".format(server.pk)
                             )
                         )
+                        do_post(
+                            "[{}]: Server {} - {} does not offer a key".format(
+                                INSTANCE_NAME, server.pk, server.name
+                            )
+                        )
 
                 # if an unlock key is present - attempt unlock!
                 if server.server_unlock_key:
@@ -99,6 +116,12 @@ class Command(BaseCommand):
                     except:
                         self.stderr.write(
                             self.style.ERROR("{} unlock failed".format(server.pk))
+                        )
+
+                        do_post(
+                            "[{}]: Server {} - {} unlock failed".format(
+                                INSTANCE_NAME, server.pk, server.name
+                            )
                         )
 
                 # download the logfile
@@ -117,6 +140,12 @@ class Command(BaseCommand):
                         self.style.ERROR("{} logfile download failed".format(server.pk))
                     )
 
+                    do_post(
+                        "[{}]: Server {} - {} logfile failed".format(
+                            INSTANCE_NAME, server.pk, server.name
+                        )
+                    )
+
             except Exception as e:
                 self.stderr.write(
                     self.style.ERROR(
@@ -125,6 +154,12 @@ class Command(BaseCommand):
                 )
                 server.status = None
                 server.status_failures = server.status_failures + 1
+
+                do_post(
+                    "[{}]: Server {} - {} failed to retrieve status. Fail count is now at {}".format(
+                        INSTANCE_NAME, server.pk, server.name, server.status_failures
+                    )
+                )
             finally:
                 server.save()
 
@@ -144,7 +179,17 @@ class Command(BaseCommand):
                 server.action = ""
                 server.locked = False
                 server.save()
-            except:
+                do_post(
+                    "[{}]: 🚀 Starting looks complete for {}!".format(
+                        INSTANCE_NAME, server.name
+                    )
+                )
+            except Exception as e:
+                do_post(
+                    "[{}]: 😱 Failed starting server {}: {}".format(
+                        INSTANCE_NAME, server.name, str(e)
+                    )
+                )
                 server.action = ""
                 server.locked = False
                 server.save()
@@ -164,7 +209,17 @@ class Command(BaseCommand):
                 server.action = ""
                 server.locked = False
                 server.save()
-            except:
+                do_post(
+                    "[{}]: 🛑 Stopping looks complete for {}!".format(
+                        INSTANCE_NAME, server.name
+                    )
+                )
+            except Exception as e:
+                do_post(
+                    "[{}]: 😱 Failed to stop server {}: {}".format(
+                        INSTANCE_NAME, server.name, str(e)
+                    )
+                )
                 server.action = ""
                 server.locked = False
                 server.save()
@@ -198,7 +253,17 @@ class Command(BaseCommand):
                 server.action = ""
                 server.locked = False
                 server.save()
-            except:
+                do_post(
+                    "[{}]: 😎 Deployment looks good for {}!".format(
+                        INSTANCE_NAME, server.name
+                    )
+                )
+            except Exception as e:
+                do_post(
+                    "[{}]: 😱 Failed deploying server {}: {}".format(
+                        INSTANCE_NAME, server.name, str(e)
+                    )
+                )
                 server.action = ""
                 server.locked = False
                 server.save()
