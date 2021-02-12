@@ -41,7 +41,7 @@ class Component(models.Model):
     type = models.CharField(
         max_length=3, choices=ComponentType.choices, default=ComponentType.VEHICLE
     )
-    steam_id = models.IntegerField(default=0, blank=True)
+    steam_id = models.BigIntegerField(default=0, blank=True)
     component_version = models.CharField(
         default="1.0",
         max_length=20,
