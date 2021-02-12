@@ -33,6 +33,7 @@ FILE_NAME_SUFFIXES = [
     "helmet.png",
     "-icon-128x72.png",
     "-icon-256x144.png",
+    "-icon-512x288.png",
     "-icon-1024x576.png",
     "-icon-2048x1152.png",
 ]
