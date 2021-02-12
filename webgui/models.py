@@ -18,7 +18,7 @@ from webgui.util import (
     get_update_filename,
     get_hash,
 )
-from wizard.settings import FAILURE_THRESHOLD, MEDIA_ROOT
+from wizard.settings import FAILURE_THRESHOLD, MEDIA_ROOT, STATIC_URL
 from webgui.storage import OverwriteStorage
 from django.utils.html import mark_safe
 import re
@@ -294,13 +294,19 @@ class Server(models.Model):
     @property
     def status_info(self):
         # no status to report (e. g. new server)
-        response = '<img src="/static/admin/img/icon-no.svg" alt="Not Running"> Server is not running</br>'
+        response = '<img src="{}admin/img/icon-no.svg" alt="Not Running"> Server is not running</br>'.format(
+            STATIC_URL
+        )
         if not self.status:
-            return "Server returned no status yet."
+            response = '<img src="{}admin/img/icon-no.svg" alt="Not Running"> Server did not return a status yet</br>'.format(
+                STATIC_URL
+            )
         # status is existing and it's not_running
-        if self.status and "not_running" in self.status:
+        if self.status and "not_running" in self.status or not self.status:
             return mark_safe(response)
-        response = '<img src="/static/admin/img/icon-yes.svg" alt="Running"> Server is running</br>'
+        response = '<img src="{}admin/img/icon-yes.svg" alt="Running"> Server is running</br>'.format(
+            STATIC_URL
+        )
         try:
             content = loads(self.status.replace("'", '"'))
             for vehicle in content["vehicles"]:
