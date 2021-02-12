@@ -162,7 +162,9 @@ class Entry(models.Model):
 
 
 class EntryFile(models.Model):
-    file = models.FileField(upload_to=livery_filename, storage=OverwriteStorage)
+    file = models.FileField(
+        upload_to=livery_filename, storage=OverwriteStorage, max_length=500
+    )
     entry = models.ForeignKey(
         Entry, on_delete=models.CASCADE, blank=False, null=False, default=None
     )
