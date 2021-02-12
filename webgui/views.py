@@ -10,12 +10,17 @@ from .forms import (
     EntrySignupForm,
     EntryRevokeForm,
 )
-from wizard.settings import USER_SIGNUP_ENABLED, USER_SIGNUP_RULE_TEXT, INSTANCE_NAME
+from wizard.settings import (
+    USER_SIGNUP_ENABLED,
+    USER_SIGNUP_RULE_TEXT,
+    INSTANCE_NAME,
+    MEDIA_ROOT,
+)
 from .models import EntryFile, Entry
 import pathlib
 import zipfile
 import tempfile
-from os import listdir
+from os import listdir, mkdir
 from os.path import join, basename
 from django.core.files import File
 from .util import get_hash, get_random_string, do_post
@@ -203,6 +208,21 @@ def get_signup_form(request):
             group = Group.objects.get(name="Users")
             new_user.groups.add(group)
             new_user.save()
+            # create directories
+            id = get_hash(str(new_user.id))
+            paths = [
+                join(MEDIA_ROOT, "logs", id),
+                join(MEDIA_ROOT, "keys", id),
+                join(
+                    MEDIA_ROOT,
+                    id,
+                ),
+                join(MEDIA_ROOT, id, "conditions"),
+                join(MEDIA_ROOT, id, "liveries"),
+                join(MEDIA_ROOT, id, "templates"),
+            ]
+            for path in paths:
+                mkdir(path)
             do_post(
                 "[{}]: 😁 A new user signed up: {} ({})".format(
                     INSTANCE_NAME, user, email
