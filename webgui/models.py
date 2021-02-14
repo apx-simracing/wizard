@@ -169,7 +169,7 @@ class RaceConditions(models.Model):
     rfm = models.FileField(upload_to=get_conditions_file_root, storage=OverwriteStorage)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
 
-    sessions = models.ManyToManyField(RaceSessions)
+    sessions = models.ManyToManyField(RaceSessions, blank=True)
 
     def __str__(self):
         return "{} ({})".format(self.description, self.rfm)

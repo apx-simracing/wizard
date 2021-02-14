@@ -192,8 +192,11 @@ def get_event_config(event_id: int):
 
     sessions = conditions.sessions.all()
     session_list = {}
-    for session in sessions:
-        session_list[session.type] = session.grip.path
+    if len(sessions) > 0:
+        for session in sessions:
+            session_list[session.type] = session.grip.path
+    else:
+        session_list = None
     result = {
         "server": {
             "overwrites": {
