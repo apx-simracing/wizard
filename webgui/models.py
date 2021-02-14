@@ -31,6 +31,23 @@ class ComponentType(models.TextChoices):
     LOCATION = "LOC", "Location"
 
 
+class RaceSessionsType(models.TextChoices):
+    TD = "TD", "Training Day"
+    P1 = "P1", "Practice 1"
+    P2 = "P2", "Practice 2"
+    P3 = "P3", "Practice 3"
+    P4 = "P4", "Practice 4"
+    Q1 = "Q1", "Qualy 1"
+    Q2 = "Q2", "Qualy 2"
+    Q3 = "Q3", "Qualy 3"
+    Q4 = "Q4", "Qualy 4"
+    WU = "WU", "Warmup"
+    R1 = "R1", "Race 1"
+    R2 = "R2", "Race 2"
+    R3 = "R3", "Race 3"
+    R4 = "R4", "Race 4"
+
+
 alphanumeric_validator = RegexValidator(
     r"^[0-9a-zA-Z_]*$", "Only alphanumeric characters and dashes are allowed."
 )
@@ -124,6 +141,26 @@ class Component(models.Model):
         return "{} ({})".format(self.component_name, self.component_version)
 
 
+class RaceSessions(models.Model):
+    class Meta:
+        verbose_name_plural = "Race sessions"
+
+    description = models.TextField(default="Add description")
+    type = models.CharField(
+        max_length=2, choices=RaceSessionsType.choices, default=RaceSessionsType.TD
+    )
+    grip = models.FileField(
+        upload_to=get_conditions_file_root,
+        blank=False,
+        null=False,
+    )
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return "{}".format(self.description)
+
+
 class RaceConditions(models.Model):
     class Meta:
         verbose_name_plural = "Race conditions"
@@ -131,6 +168,8 @@ class RaceConditions(models.Model):
     description = models.TextField(default="Add description")
     rfm = models.FileField(upload_to=get_conditions_file_root, storage=OverwriteStorage)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+
+    sessions = models.ManyToManyField(RaceSessions)
 
     def __str__(self):
         return "{} ({})".format(self.description, self.rfm)

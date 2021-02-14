@@ -8,6 +8,7 @@ from webgui.models import (
     RaceConditions,
     Server,
     Chat,
+    RaceSessions,
 )
 from django.utils.html import mark_safe
 from django.contrib.auth.models import User
@@ -177,6 +178,24 @@ class EventAdmin(admin.ModelAdmin):
     json_link.short_description = "Event configuration"
 
 
+class RaceSessionsAdmin(admin.ModelAdmin):
+    def get_form(self, request, obj=None, **kwargs):
+        form = super(RaceSessionsAdmin, self).get_form(request, obj=None, **kwargs)
+        form.base_fields["user"].queryset = User.objects.filter(pk=request.user.pk)
+        return form
+
+    def get_changeform_initial_data(self, request):
+        get_data = super(RaceSessionsAdmin, self).get_changeform_initial_data(request)
+        get_data["user"] = request.user.pk
+        return get_data
+
+    def get_queryset(self, request):
+        if not request.user.is_superuser:
+            return RaceSessions.objects.filter(user=request.user)
+        else:
+            return RaceSessions.objects.all()
+
+
 class RaceConditionsAdmin(admin.ModelAdmin):
     def get_form(self, request, obj=None, **kwargs):
         form = super(RaceConditionsAdmin, self).get_form(request, obj=None, **kwargs)
@@ -297,5 +316,6 @@ admin.site.register(EntryFile, EntryFileAdmin)
 admin.site.register(Entry, EntryAdmin)
 admin.site.register(Event, EventAdmin)
 admin.site.register(RaceConditions, RaceConditionsAdmin)
+admin.site.register(RaceSessions, RaceSessionsAdmin)
 admin.site.register(Server, ServerAdmin)
 admin.site.register(Chat, ChatAdmin)

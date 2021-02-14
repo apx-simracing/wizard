@@ -187,6 +187,13 @@ def get_event_config(event_id: int):
             },
         }
     mod_name = "apx_{}".format(get_server_hash(server.name)[:8])
+
+    # grip settings
+
+    sessions = conditions.sessions.all()
+    session_list = {}
+    for session in sessions:
+        session_list[session.type] = session.grip.path
     result = {
         "server": {
             "overwrites": {
@@ -194,6 +201,7 @@ def get_event_config(event_id: int):
                 "Player.JSON": loads(server.overwrites_player),
             }
         },
+        "conditions": session_list,
         "cars": vehicle_groups,
         "track": track_groups,
         "mod": {
