@@ -34,18 +34,9 @@ class ComponentType(models.TextChoices):
 class RaceSessionsType(models.TextChoices):
     TD = "TD", "Training Day"
     P1 = "P1", "Practice 1"
-    P2 = "P2", "Practice 2"
-    P3 = "P3", "Practice 3"
-    P4 = "P4", "Practice 4"
     Q1 = "Q1", "Qualy 1"
-    Q2 = "Q2", "Qualy 2"
-    Q3 = "Q3", "Qualy 3"
-    Q4 = "Q4", "Qualy 4"
     WU = "WU", "Warmup"
     R1 = "R1", "Race 1"
-    R2 = "R2", "Race 2"
-    R3 = "R3", "Race 3"
-    R4 = "R4", "Race 4"
 
 
 alphanumeric_validator = RegexValidator(
@@ -154,8 +145,31 @@ class RaceSessions(models.Model):
         blank=False,
         null=False,
     )
+    start = models.TimeField(
+        blank=True,
+        default=None,
+        null=True,
+        help_text="Target laps fro this session",
+    )
+    laps = models.IntegerField(default=0, help_text="Target laps of the session")
+    length = models.IntegerField(
+        default=0, help_text="Target length of the session in minutes"
+    )
 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+
+    def clean(self):
+        if self.length < 0 or self.laps < 0:
+            raise ValidationError(
+                "Either length or laps is negative. Set to 0 to ignore."
+            )
+        if "Q" not in str(self.type):
+            if self.length > 0 and self.laps > 0:
+                raise ValidationError(
+                    "You cannot set laps and length of the session in one session"
+                )
+        if "WU" in str(self.type) and self.laps > 0:
+            raise ValidationError("A warmup can only have a time lenght")
 
     def __str__(self):
         return "{}".format(self.description)
