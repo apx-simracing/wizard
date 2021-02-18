@@ -149,7 +149,7 @@ class RaceSessions(models.Model):
         blank=True,
         default=None,
         null=True,
-        help_text="Target laps fro this session",
+        help_text="Target laps fro this session. This is in-game time. If empty, the defaults will be used.",
     )
     laps = models.IntegerField(default=0, help_text="Target laps of the session")
     length = models.IntegerField(
@@ -172,7 +172,14 @@ class RaceSessions(models.Model):
             raise ValidationError("A warmup can only have a time lenght")
 
     def __str__(self):
-        return "{}".format(self.description)
+        str = "[{}] {}, {} minutes, {} laps".format(
+            self.type, self.description, self.length, self.laps
+        )
+
+        if self.start:
+            return str + ", start: {}".format(self.start)
+        else:
+            return str
 
 
 class RaceConditions(models.Model):

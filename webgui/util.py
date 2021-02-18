@@ -192,9 +192,18 @@ def get_event_config(event_id: int):
 
     sessions = conditions.sessions.all()
     session_list = {}
+    session_setting_list = []
     if len(sessions) > 0:
         for session in sessions:
             session_list[session.type] = session.grip.path
+            session_setting_list.append(
+                {
+                    "type": str(session.type),
+                    "length": session.length,
+                    "laps": session.laps,
+                    "start": str(session.start),
+                }
+            )
     else:
         session_list = None
     result = {
@@ -205,6 +214,7 @@ def get_event_config(event_id: int):
             }
         },
         "conditions": session_list,
+        "sessions": session_setting_list,
         "cars": vehicle_groups,
         "track": track_groups,
         "mod": {
