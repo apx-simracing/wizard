@@ -239,6 +239,7 @@ class ServerAdmin(admin.ModelAdmin):
         "action",
         "status_info",
         "status_failures",
+        "branch",
         "build",
     )
     fieldsets = [
@@ -257,11 +258,7 @@ class ServerAdmin(admin.ModelAdmin):
         ),
         (
             "Dedicated server settings",
-            {
-                "fields": [
-                    "event",
-                ]
-            },
+            {"fields": ["event", "branch"]},
         ),
         (
             "Actions and status",

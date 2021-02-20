@@ -292,6 +292,11 @@ class ServerStatus(models.TextChoices):
     DEPLOY = "D", "Update config and redeploy"
 
 
+class ServerBranch(models.TextChoices):
+    RC = "release-candidate", "release-candidate"
+    P = "public", "public"
+
+
 class Server(models.Model):
     name = models.CharField(
         blank=True,
@@ -328,6 +333,14 @@ class Server(models.Model):
         blank=True,
         default="",
         help_text="Runs an activity on the server.",
+    )
+    branch = models.CharField(
+        max_length=50,
+        choices=ServerBranch.choices,
+        default=ServerBranch.P,
+        blank=False,
+        null=False,
+        help_text="Public steam branch",
     )
     status = models.TextField(
         blank=True,
