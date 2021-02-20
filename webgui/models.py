@@ -245,6 +245,19 @@ def auto_delete_file_on_delete(sender, instance, **kwargs):
             remove(instance.file.path)
 
 
+# 0 Standing
+# 1 formation lap & standing start
+# 2 lap behind safety car & rolling start
+# 4 fast rolling start
+
+
+class EvenStartType(models.TextChoices):
+    S = "S", "Standing start"
+    FLS = "FLS", "Formation Lap and standing start"
+    SCR = "SCR", "Lap behind safety car & rolling start"
+    FR = "FR", "Fast rolling start"
+
+
 class Event(models.Model):
     overwrites_multiplayer = models.TextField(default="{}")
     overwrites_player = models.TextField(default="{}")
@@ -252,6 +265,9 @@ class Event(models.Model):
     conditions = models.ForeignKey(RaceConditions, on_delete=models.DO_NOTHING)
     entries = models.ManyToManyField(Entry)
     tracks = models.ManyToManyField(Track)
+    start_type = models.CharField(
+        max_length=3, choices=EvenStartType.choices, default=EvenStartType.S
+    )
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
 
     def __str__(self):
@@ -352,6 +368,14 @@ class Server(models.Model):
             FAILURE_THRESHOLD
         ),
     )
+
+    @property
+    def build(self):
+        if self.status and "build" in self.status:
+            content = loads(self.status.replace("'", '"'))
+            return content["build"]
+        else:
+            return "-"
 
     @property
     def status_info(self):

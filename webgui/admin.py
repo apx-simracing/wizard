@@ -234,12 +234,12 @@ class ServerAdmin(admin.ModelAdmin):
 
     list_display = (
         "name",
-        "url",
         "event",
         "locked",
         "action",
-        "is_running",
         "status_info",
+        "status_failures",
+        "build",
     )
     fieldsets = [
         (

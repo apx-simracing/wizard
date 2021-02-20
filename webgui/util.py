@@ -206,6 +206,15 @@ def get_event_config(event_id: int):
             )
     else:
         session_list = None
+
+    start_type = 0
+    if server.start_type == models.EvenStartType.FLS:
+        start_type = 1
+    if server.start_type == models.EvenStartType.SCR:
+        start_type = 2
+    if server.start_type == models.EvenStartType.FR:
+        start_type = 4
+
     result = {
         "server": {
             "overwrites": {
@@ -217,6 +226,7 @@ def get_event_config(event_id: int):
         "sessions": session_setting_list,
         "cars": vehicle_groups,
         "track": track_groups,
+        "start_type": start_type,
         "mod": {
             "name": mod_name,
             "version": "1.0.{}".format(get_random_string(5)),
