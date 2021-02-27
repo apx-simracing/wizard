@@ -241,6 +241,7 @@ class ServerAdmin(admin.ModelAdmin):
         "status_failures",
         "branch",
         "build",
+        "release",
     )
     fieldsets = [
         (

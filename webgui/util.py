@@ -5,6 +5,7 @@ from wizard.settings import (
     DISCORD_WEBHOOK,
     DISCORD_WEBHOOK_NAME,
     INSTANCE_NAME,
+    OPENWEATHERAPI_KEY,
 )
 import hashlib
 import subprocess
@@ -227,6 +228,9 @@ def get_event_config(event_id: int):
         "cars": vehicle_groups,
         "track": track_groups,
         "start_type": start_type,
+        "real_weather": server.real_weather,
+        "real_weather_key": OPENWEATHERAPI_KEY,
+        "temp_offset": server.temp_offset,
         "mod": {
             "name": mod_name,
             "version": "1.0.{}".format(get_random_string(5)),

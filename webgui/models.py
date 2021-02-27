@@ -269,6 +269,15 @@ class Event(models.Model):
         max_length=3, choices=EvenStartType.choices, default=EvenStartType.S
     )
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    real_weather = models.BooleanField(
+        default=False,
+        help_text="Decides if real weather should be used. The weather is based on a hourly forecast.",
+    )
+
+    temp_offset = models.IntegerField(
+        default=0,
+        help_text="Adds a positive or negative number to the temperature in Celsius.",
+    )
 
     def __str__(self):
         return "{}".format(self.name)
@@ -391,17 +400,34 @@ class Server(models.Model):
             return "-"
 
     @property
+    def release(self):
+        if self.status and "release" in self.status:
+            content = loads(self.status.replace("'", '"'))
+            return content["release"]
+        else:
+            return "-"
+
+    @property
     def status_info(self):
         # no status to report (e. g. new server)
         response = '<img src="{}admin/img/icon-no.svg" alt="Not Running"> Server is not running</br>'.format(
             STATIC_URL
         )
-        if not self.status:
+        if self.status_failures >= FAILURE_THRESHOLD:
+            response = '<img src="{}admin/img/icon-no.svg" alt="Not Running"> Server is disabled due to errors.</br>'.format(
+                STATIC_URL
+            )
+        elif not self.status:
             response = '<img src="{}admin/img/icon-no.svg" alt="Not Running"> Server did not return a status yet</br>'.format(
                 STATIC_URL
             )
         # status is existing and it's not_running
-        if self.status and "not_running" in self.status or not self.status:
+        if (
+            self.status
+            and "not_running" in self.status
+            or not self.status
+            or self.status_failures >= FAILURE_THRESHOLD
+        ):
             return mark_safe(response)
         response = '<img src="{}admin/img/icon-yes.svg" alt="Running"> Server is running</br>'.format(
             STATIC_URL
