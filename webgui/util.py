@@ -58,6 +58,13 @@ def get_update_filename(instance, filename):
     return join(user_root, "liveries", component_name, filename)
 
 
+def get_livery_mask_root(instance, filename):
+    root_path = join(MEDIA_ROOT, get_hash(str(instance.user.pk)), "templates")
+    if not exists(root_path):
+        mkdir(root_path)
+    return join(join(get_hash(str(instance.user.pk)), "templates"), filename)
+
+
 def get_conditions_file_root(instance, filename):
     user_root = get_hash(str(instance.user.pk))
     full_path = join(MEDIA_ROOT, user_root)

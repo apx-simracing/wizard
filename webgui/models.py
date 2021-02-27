@@ -17,6 +17,7 @@ from webgui.util import (
     get_conditions_file_root,
     get_update_filename,
     get_hash,
+    get_livery_mask_root,
 )
 from wizard.settings import FAILURE_THRESHOLD, MEDIA_ROOT, STATIC_URL
 from webgui.storage import OverwriteStorage
@@ -24,6 +25,11 @@ from django.utils.html import mark_safe
 import re
 from os.path import exists, join
 from os import mkdir
+
+
+from wand import image
+from wand.drawing import Drawing
+from wand.color import Color
 
 
 class ComponentType(models.TextChoices):
@@ -71,6 +77,10 @@ class Component(models.Model):
     update = models.FileField(
         upload_to=get_update_filename, storage=OverwriteStorage, null=True, blank=True
     )
+    numberplate_template = models.FileField(
+        upload_to=get_livery_mask_root, null=True, blank=True, max_length=255
+    )
+    mask_positions = models.TextField(null=True, blank=True, default=None)
 
     template = models.TextField(default="", null=True, blank=True)
 
@@ -211,7 +221,7 @@ class Entry(models.Model):
 
     component = models.ForeignKey(Component, on_delete=models.DO_NOTHING)
     team_name = models.CharField(default="Example Team", max_length=200)
-    vehicle_number = models.IntegerField(default=1)
+    vehicle_number = models.CharField(default="1", max_length=3)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     token = models.CharField(
         default=None, null=True, blank=True, max_length=100, unique=True
@@ -229,9 +239,65 @@ class EntryFile(models.Model):
         Entry, on_delete=models.CASCADE, blank=False, null=False, default=None
     )
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    mask_added = models.BooleanField(
+        default=False,
+        help_text="Will be checked if a set of numberpaltes/ livery masks were added. Uncheck to force update.",
+    )
 
     def __str__(self):
         return str(self.entry)
+
+    def save(self, *args, **kwargs):
+        needle = "{}_{}.dds".format(
+            self.entry.component.short_name, self.entry.vehicle_number
+        )
+
+        has_mask = (
+            self.entry.component.update and self.entry.component.numberplate_template
+        )
+
+        if (
+            str(self.file).endswith(needle)
+            and has_mask
+            and not self.mask_added
+            and self.entry.component.numberplate_template
+        ):
+            # attempt numberplate addition
+            livery_path = join(MEDIA_ROOT, str(self.file))
+
+            # add the livery mask on top of thel ivery
+            livery = image.Image(filename=livery_path)
+            livery.compression = "dxt5"
+            numberplate_template = image.Image(
+                filename=join(
+                    MEDIA_ROOT, str(self.entry.component.numberplate_template)
+                )
+            )
+            numberplate_template.compression = "dxt5"
+            numberplates = loads(self.entry.component.mask_positions)
+            if numberplates is not None:
+                for numberplate in numberplates:
+                    with numberplate_template.clone() as rotate:
+                        outer = numberplate["outer"]
+                        inner = numberplate["inner"]
+                        rotation = numberplate["rotate"]
+                        color_id = numberplate["color"]
+                        size = numberplate["size"]
+                        with Drawing() as draw:
+                            color = Color(color_id)
+                            draw.fill_color = color
+                            draw.font_size = size
+                            draw.color = color
+                            draw.text(inner[0], inner[1], self.entry.vehicle_number)
+                            draw(rotate)
+                        if rotation > 0:
+                            rotate.rotate(rotation, None)
+                        livery.composite(rotate, left=outer[0], top=outer[1])
+
+            livery.save(filename=livery_path)
+            self.mask_added = True
+
+        super(EntryFile, self).save(*args, **kwargs)
 
 
 @receiver(models.signals.post_delete, sender=EntryFile)
