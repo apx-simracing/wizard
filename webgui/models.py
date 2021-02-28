@@ -77,8 +77,33 @@ class Component(models.Model):
     update = models.FileField(
         upload_to=get_update_filename, storage=OverwriteStorage, null=True, blank=True
     )
-    numberplate_template = models.FileField(
-        upload_to=get_livery_mask_root, null=True, blank=True, max_length=255
+    numberplate_template_l = models.FileField(
+        upload_to=get_livery_mask_root,
+        null=True,
+        blank=True,
+        max_length=255,
+        help_text="A dds file containing the left numberplate background. Numbers will be applied.",
+    )
+    numberplate_template_mask_l = models.FileField(
+        upload_to=get_livery_mask_root,
+        null=True,
+        blank=True,
+        max_length=255,
+        help_text="A dds file containing the region information for the left numberplate. Will be added on top of a given _Region.dds file.",
+    )
+    numberplate_template_r = models.FileField(
+        upload_to=get_livery_mask_root,
+        null=True,
+        blank=True,
+        max_length=255,
+        help_text="A dds file containing the right numberplate background. Numbers will be applied.",
+    )
+    numberplate_template_mask_r = models.FileField(
+        upload_to=get_livery_mask_root,
+        null=True,
+        blank=True,
+        max_length=255,
+        help_text="A dds file containing the region information for the leftright numberplate. Will be added on top of a given _Region.dds file.",
     )
     mask_positions = models.TextField(null=True, blank=True, default=None)
 
@@ -252,44 +277,83 @@ class EntryFile(models.Model):
             self.entry.component.short_name, self.entry.vehicle_number
         )
 
+        regionNeedle = "{}_{}_Region.dds".format(
+            self.entry.component.short_name, self.entry.vehicle_number
+        )
+
         has_mask = (
-            self.entry.component.update and self.entry.component.numberplate_template
+            self.entry.component.update
+            and self.entry.component.numberplate_template_r
+            and self.entry.component.numberplate_template_mask_r
+            and self.entry.component.numberplate_template_l
+            and self.entry.component.numberplate_template_mask_l
         )
 
         if (
-            str(self.file).endswith(needle)
+            (str(self.file).endswith(needle) or str(self.file).endswith(regionNeedle))
             and has_mask
             and not self.mask_added
-            and self.entry.component.numberplate_template
+            and self.pk
         ):
             # attempt numberplate addition
             livery_path = join(MEDIA_ROOT, str(self.file))
 
             # add the livery mask on top of thel ivery
-            livery = image.Image(filename=livery_path)
+            livery = image.Image(filename=livery_path, format="raw")
             livery.compression = "dxt5"
-            numberplate_template = image.Image(
-                filename=join(
-                    MEDIA_ROOT, str(self.entry.component.numberplate_template)
-                )
+
+            is_region = livery_path.endswith("_Region.dds")
+
+            numberplate_template_path_r = (
+                self.entry.component.numberplate_template_r
+                if not is_region
+                else self.entry.component.numberplate_template_mask_r
             )
-            numberplate_template.compression = "dxt5"
+
+            numberplate_template_r = image.Image(
+                filename=join(MEDIA_ROOT, str(numberplate_template_path_r)),
+                format="raw",
+            )
+
+            numberplate_template_path_l = (
+                self.entry.component.numberplate_template_l
+                if not is_region
+                else self.entry.component.numberplate_template_mask_l
+            )
+
+            numberplate_template_l = image.Image(
+                filename=join(MEDIA_ROOT, str(numberplate_template_path_l)),
+                format="raw",
+            )
+
+            numberplate_template_r.compression = "dxt5"
+            numberplate_template_l.compression = "dxt5"
             numberplates = loads(self.entry.component.mask_positions)
             if numberplates is not None:
                 for numberplate in numberplates:
-                    with numberplate_template.clone() as rotate:
+                    side = numberplate["side"]
+                    template = (
+                        numberplate_template_l
+                        if side.lower() == "l"
+                        else numberplate_template_r
+                    )
+                    with template.clone() as rotate:
                         outer = numberplate["outer"]
                         inner = numberplate["inner"]
                         rotation = numberplate["rotate"]
                         color_id = numberplate["color"]
                         size = numberplate["size"]
-                        with Drawing() as draw:
-                            color = Color(color_id)
-                            draw.fill_color = color
-                            draw.font_size = size
-                            draw.color = color
-                            draw.text(inner[0], inner[1], self.entry.vehicle_number)
-                            draw(rotate)
+                        flop = numberplate["flop"]
+                        if flop:
+                            rotate.flop()
+                        if not is_region:
+                            with Drawing() as draw:
+                                color = Color(color_id)
+                                draw.fill_color = color
+                                draw.font_size = size
+                                draw.color = color
+                                draw.text(inner[0], inner[1], self.entry.vehicle_number)
+                                draw(rotate)
                         if rotation > 0:
                             rotate.rotate(rotation, None)
                         livery.composite(rotate, left=outer[0], top=outer[1])

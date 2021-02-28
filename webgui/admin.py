@@ -129,6 +129,7 @@ class EntryFileAdmin(admin.ModelAdmin):
 
     list_display = (
         "computed_name",
+        "mask_added",
         "is_grouped",
     )
 

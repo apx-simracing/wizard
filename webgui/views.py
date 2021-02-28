@@ -163,14 +163,32 @@ def get_files_form(request):
                 results = {}
                 EntryFile.objects.filter(entry__token=token).delete()
                 for file in files:
+                    needs_secondary_save = False
                     full_path = join(temp_extract_path, file)
                     entry_file = EntryFile()
                     entry_file.entry = entry
                     entry_file.user = entry.user
+
+                    needle = "{}_{}".format(
+                        entry.component.short_name, entry.vehicle_number
+                    )
+
+                    needs_secondary_save = full_path.endswith(
+                        needle + ".dds"
+                    ) or full_path.endswith(needle + "_Region.dds")
+
                     with open(full_path, "rb") as livery_file:
                         entry_file.file.save(file, File(livery_file), save=True)
-                    entry.save()
+                    entry_file.save()
+
                     results[file] = basename(entry_file.file.name)
+                    # A secondary safe just triggers save() again to add numberplates, if needed.
+                    # For files not required to have numberplate element, it's just a seconds save() call
+                    if needs_secondary_save:
+                        results[
+                            file + " (numberplates)"
+                        ] = "Applied numberplate #{}".format(entry.vehicle_number)
+                        entry_file.save()
                 entry_string = str(entry)
                 do_post(
                     "[{}] 🎨 Team {} just added a livery ({})".format(
