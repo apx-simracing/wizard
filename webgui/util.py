@@ -4,6 +4,8 @@ from wizard.settings import (
     PACKS_ROOT,
     DISCORD_WEBHOOK,
     DISCORD_WEBHOOK_NAME,
+    DISCORD_RACE_CONTROL_WEBHOOK,
+    DISCORD_RACE_CONTROL_WEBHOOK_NAME,
     INSTANCE_NAME,
     OPENWEATHERAPI_KEY,
 )
@@ -253,6 +255,22 @@ def do_post(message):
             DISCORD_WEBHOOK,
             json={
                 "username": DISCORD_WEBHOOK_NAME,
+                "content": message,
+                "avatar_url": "",
+            },
+            headers={"Content-type": "application/json"},
+        )
+
+
+def do_rc_post(message):
+    if (
+        DISCORD_RACE_CONTROL_WEBHOOK is not None
+        and DISCORD_RACE_CONTROL_WEBHOOK_NAME is not None
+    ):
+        got = post(
+            DISCORD_RACE_CONTROL_WEBHOOK,
+            json={
+                "username": DISCORD_RACE_CONTROL_WEBHOOK_NAME,
                 "content": message,
                 "avatar_url": "",
             },

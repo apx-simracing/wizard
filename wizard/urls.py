@@ -36,7 +36,9 @@ if ENTRY_SIGNUP_ENABLED:
         path("files/", get_files_form),
         path("team/<client>", get_team_signup_form),
         path("revoke/", get_team_revoke_form),
-        path("penalty/<str:secret>/<str:driver>/<int:penalty>", add_penalty),
+        path(
+            "penalty/<str:secret>/<str:driver>/<int:penalty>/<str:reason>", add_penalty
+        ),
         path("status/<str:secret>", get_status),
     ]
 else:
@@ -44,6 +46,8 @@ else:
         path("admin/", admin.site.urls),
         path("signup/", get_signup_form),
         path("rules/", get_rules_page),
-        path("penalty/<str:secret>/<str:driver>/<int:penalty>", add_penalty),
+        path(
+            "penalty/<str:secret>/<str:driver>/<int:penalty>/<str:reason>", add_penalty
+        ),
         path("status/<str:secret>", get_status),
     ]

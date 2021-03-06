@@ -23,7 +23,7 @@ import tempfile
 from os import listdir, mkdir
 from os.path import join, basename
 from django.core.files import File
-from .util import get_hash, get_random_string, do_post
+from .util import get_hash, get_random_string, do_post, do_rc_post
 
 
 def get_status(request, secret: str):
@@ -39,41 +39,50 @@ def get_status(request, secret: str):
     return response
 
 
-def add_penalty(request, secret: str, driver: str, penalty: int):
+def add_penalty(request, secret: str, driver: str, penalty: int, reason: str):
     server = Server.objects.get(public_secret=secret)
-    if not server:
+    if server is None:
         raise Http404()
     response = HttpResponse()
     response["Access-Control-Allow-Origin"] = "*"
     response["Access-Control-Allow-Methods"] = "GET, OPTIONS"
     response["Access-Control-Max-Age"] = "1000"
     response["Access-Control-Allow-Headers"] = "X-Requested-With, Content-Type"
-    if not server:
+    if server is None:
         raise Http404()
     user = server.user
     message = ""
+    description = ""
     if penalty != 19:
         if penalty == 1:  # DT
             message = "/addpenalty -1 {}".format(driver)
+            description = "⚖️ DT penalty for {}."
         if penalty == 2:  # DQ
             message = "/dq {}".format(driver)
+            description = "💀 {} is now disqualified."
         if penalty >= 3 and penalty <= 13:  # S&h 5 to 60
-            message = "/addpenalty {} {}".format(5 * (penalty - 1), driver)
+            length = 5 * (penalty - 1)
+            message = "/addpenalty {} {}".format(length, driver)
+            description = "🛑 " + str(length) + "s Stop and Hold penalty for {}"
         if penalty == 15:  # Remove one S&H
             message = "/subpenalty 0 {}".format(driver)
+            description = "🚮 One Stop and Hold penalty was revoked for {}"
         if penalty == 16:  # Remove one DT
             message = "/subpenalty 1 {}".format(driver)
+            description = "🚮 One DT penalty was revoked for {}"
         if penalty == 17:  # Remove all penalties
+            description = "🚮 All assigned penalties removed for {}"
             message = "/subpenalty 3 {}".format(driver)
         if penalty == 18:  # UNDSQ
-            message = "/undq {}".format(driver)
-        if penalty == 18:  # UNDSQ
+            description = "✔️ {} is now un-disqualified"
             message = "/undq {}".format(driver)
         if penalty >= 20 and penalty <= 30:  # add laps
             laps = penalty - 19
+            description = "➕ Applied change of +" + str(laps) + " laps for {}"
             message = "/changelaps {} {}".format(laps, driver)
         if penalty >= 30 and penalty <= 40:  # add laps
             laps = penalty - 29
+            description = "➖ Applied change of -" + str(laps) + " laps for {}"
             message = "/changelaps -{} {}".format(laps, driver)
         if message:
             chat = Chat()
@@ -82,6 +91,8 @@ def add_penalty(request, secret: str, driver: str, penalty: int):
             chat.user = user
             chat.save()
             response.write("ok")
+            do_rc_post(description.format(driver))
+            do_rc_post('👉 Reason by race control: "{}"'.format(reason))
             return response
         else:
             raise Http404()
@@ -96,6 +107,8 @@ def add_penalty(request, secret: str, driver: str, penalty: int):
         chat.message = "/undq {}".format(driver)
         chat.user = user
         chat.save()
+        message = "✔️ Driver {} can now resume the race".format(driver)
+        do_rc_post(description.format(driver))
         response.write("ok")
         return response
 
