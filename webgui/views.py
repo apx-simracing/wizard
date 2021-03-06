@@ -1,4 +1,4 @@
-from django.http import HttpResponse, Http404
+from django.http import HttpResponse, Http404, JsonResponse
 from django.shortcuts import render
 from django.core.exceptions import ValidationError
 from django.contrib.auth.models import User, Group
@@ -16,7 +16,7 @@ from wizard.settings import (
     INSTANCE_NAME,
     MEDIA_ROOT,
 )
-from .models import EntryFile, Entry
+from .models import EntryFile, Entry, Chat, Server, User
 import pathlib
 import zipfile
 import tempfile
@@ -24,6 +24,80 @@ from os import listdir, mkdir
 from os.path import join, basename
 from django.core.files import File
 from .util import get_hash, get_random_string, do_post
+
+
+def get_status(request, secret: str):
+    server = Server.objects.filter(public_secret=secret).first()
+    if not server:
+        raise Http404()
+    response = HttpResponse(server.status)
+    response["Access-Control-Allow-Origin"] = "*"
+    response["Access-Control-Allow-Methods"] = "GET, OPTIONS"
+    response["Access-Control-Max-Age"] = "1000"
+    response["Access-Control-Allow-Headers"] = "X-Requested-With, Content-Type"
+    response["Content-Type"] = "application/json"
+    return response
+
+
+def add_penalty(request, secret: str, driver: str, penalty: int):
+    server = Server.objects.get(public_secret=secret)
+    if not server:
+        raise Http404()
+    response = HttpResponse()
+    response["Access-Control-Allow-Origin"] = "*"
+    response["Access-Control-Allow-Methods"] = "GET, OPTIONS"
+    response["Access-Control-Max-Age"] = "1000"
+    response["Access-Control-Allow-Headers"] = "X-Requested-With, Content-Type"
+    if not server:
+        raise Http404()
+    user = server.user
+    message = ""
+    if penalty != 19:
+        if penalty == 1:  # DT
+            message = "/addpenalty -1 {}".format(driver)
+        if penalty == 2:  # DQ
+            message = "/dq {}".format(driver)
+        if penalty >= 3 and penalty <= 13:  # S&h 5 to 60
+            message = "/addpenalty {} {}".format(5 * (penalty - 1), driver)
+        if penalty == 15:  # Remove one S&H
+            message = "/subpenalty 0 {}".format(driver)
+        if penalty == 16:  # Remove one DT
+            message = "/subpenalty 1 {}".format(driver)
+        if penalty == 17:  # Remove all penalties
+            message = "/subpenalty 3 {}".format(driver)
+        if penalty == 18:  # UNDSQ
+            message = "/undq {}".format(driver)
+        if penalty == 18:  # UNDSQ
+            message = "/undq {}".format(driver)
+        if penalty >= 20 and penalty <= 30:  # add laps
+            laps = penalty - 19
+            message = "/changelaps {} {}".format(laps, driver)
+        if penalty >= 30 and penalty <= 40:  # add laps
+            laps = penalty - 29
+            message = "/changelaps -{} {}".format(laps, driver)
+        if message:
+            chat = Chat()
+            chat.server = server
+            chat.message = message
+            chat.user = user
+            chat.save()
+            response.write("ok")
+            return response
+        else:
+            raise Http404()
+    else:
+        chat = Chat()
+        chat.server = server
+        chat.message = "/dq {}".format(driver)
+        chat.user = user
+        chat.save()
+        chat = Chat()
+        chat.server = server
+        chat.message = "/undq {}".format(driver)
+        chat.user = user
+        chat.save()
+        response.write("ok")
+        return response
 
 
 def get_team_revoke_form(request):

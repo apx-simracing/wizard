@@ -18,6 +18,7 @@ from webgui.util import (
     get_update_filename,
     get_hash,
     get_livery_mask_root,
+    get_random_string,
 )
 from wizard.settings import FAILURE_THRESHOLD, MEDIA_ROOT, STATIC_URL
 from webgui.storage import OverwriteStorage
@@ -452,6 +453,12 @@ class Server(models.Model):
         max_length=500,
         default="",
         help_text="The secret for the communication with the APX reciever",
+    )
+    public_secret = models.CharField(
+        blank=True,
+        max_length=500,
+        default=get_random_string(20),
+        help_text="The secret for the communication with the APX race control",
     )
     public_ip = models.CharField(
         blank=False,

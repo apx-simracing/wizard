@@ -253,6 +253,7 @@ class ServerAdmin(admin.ModelAdmin):
                     "url",
                     "public_ip",
                     "secret",
+                    "public_secret",
                     "user",
                     "status_failures",
                 ]
@@ -286,6 +287,7 @@ class ServerAdmin(admin.ModelAdmin):
                 "status_info",
                 "server_key",
                 "server_unlock_key",
+                "public_secret",
             )
         if self.is_running(obj):
             return self.readonly_fields + (
@@ -293,12 +295,14 @@ class ServerAdmin(admin.ModelAdmin):
                 "locked",
                 "status_failures",
                 "status_info",
+                "public_secret",
             )
         return self.readonly_fields + (
             "locked",
             "is_running",
             "status_failures",
             "status_info",
+            "public_secret",
         )
 
     def is_running(self, obj):
