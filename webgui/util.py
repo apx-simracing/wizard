@@ -196,8 +196,10 @@ def get_event_config(event_id: int):
                 "update": False,
             },
         }
-    mod_name = "apx_{}".format(get_server_hash(server.name)[:8])
-
+    if not server.mod_name or len(server.mod_name) == 0:
+        mod_name = "apx_{}".format(get_server_hash(server.name)[:8])
+    else:
+        mod_name = server.mod_name
     # grip settings
 
     sessions = conditions.sessions.all()

@@ -414,6 +414,14 @@ class Event(models.Model):
         help_text="Adds a positive or negative number to the temperature in Celsius.",
     )
 
+    mod_name = models.CharField(
+        default="",
+        blank=True,
+        max_length=50,
+        help_text="Name of the mod to install. If no value is given, the scheme apx_{randomstring} will be used. Max length is 50 chars.",
+        validators=[alphanumeric_validator],
+    )
+
     def __str__(self):
         return "{}".format(self.name)
 
