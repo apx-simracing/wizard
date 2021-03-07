@@ -2,6 +2,7 @@ from django.apps import AppConfig
 from django.core import management
 from django.core.management.commands import loaddata
 from threading import Thread
+from sys import argv
 
 
 class WebguiConfig(AppConfig):
@@ -17,7 +18,8 @@ class WebguiConfig(AppConfig):
     def ready(self):
         # call cron job module
         try:
-            worker = Thread(target=self.background_cron, daemon=True)
-            worker.start()
+            if len(argv) == 2 and argv[1] == "runserver":
+                worker = Thread(target=self.background_cron, daemon=True)
+                worker.start()
         except KeyboardInterrupt:
             kill_thread = True
