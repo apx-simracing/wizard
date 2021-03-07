@@ -8,6 +8,9 @@ from wizard.settings import (
     PACKS_ROOT,
     FAILURE_THRESHOLD,
     INSTANCE_NAME,
+    CRON_CHUNK_SIZE,
+    CRON_TIMEOUT,
+    CRON_THREAD_KILL_TIMEOUT,
 )
 import subprocess
 from webgui.util import (
@@ -17,58 +20,26 @@ from webgui.util import (
     get_event_config,
     do_post,
 )
+from django.db.models.signals import post_save
 
+from django.dispatch import receiver
 from json import dumps
+from time import sleep
+from threading import Thread, get_ident
 
 
 class Command(BaseCommand):
     help = "Recieves status of servers"
+    kill_all_threads = False
 
-    def create_virtual_config(self):
-        all_servers = Server.objects.all()
-        server_data = {}
-        for server in all_servers:
-            key = get_server_hash(server.url)
-            # we assume that the liveries folder may already be existing
-            build_path = join(MEDIA_ROOT, get_hash(str(server.user.pk)), "liveries")
-            packs_path = join(PACKS_ROOT, get_hash(str(server.user.pk)))
-            templates_path = join(
-                MEDIA_ROOT, get_hash(str(server.user.pk)), "templates"
-            )
-            if not exists(packs_path):
-                mkdir(packs_path)
-
-            if not exists(build_path):
-                mkdir(build_path)
-
-            if not exists(templates_path):
-                mkdir(templates_path)
-            server_data[key] = {
-                "url": server.url,
-                "secret": server.secret,
-                "public_ip": server.public_ip,
-                "env": {
-                    "build_path": build_path,
-                    "packs_path": packs_path,
-                    "templates_path": templates_path,
-                },
-            }
-
-        return server_data
-
-    def status_job(self):
+    def status_job(servers: list):
         all_servers = Server.objects.filter(
-            locked=False, action="", status_failures__lt=FAILURE_THRESHOLD
+            pk__in=servers,
+            locked=False,
+            status_failures__lt=FAILURE_THRESHOLD,
         )
 
-        # preparation: create "virtual APX config"
-        server_config = self.create_virtual_config()
-        servers_json_path = join(APX_ROOT, "servers.json")
-        with open(servers_json_path, "w") as file:
-            file.write(dumps(server_config))
-
         for server in all_servers:
-            secret = server.secret
             url = server.url
             key = get_server_hash(url)
             try:
@@ -94,11 +65,7 @@ class Command(BaseCommand):
                         if exists(key_path):
                             server.server_key = relative_path
                     except:
-                        self.stderr.write(
-                            self.style.ERROR(
-                                "{} does not offer a key".format(server.pk)
-                            )
-                        )
+                        print("{} does not offer a key".format(server.pk))
                         do_post(
                             "[{}]: Server {} - {} does not offer a key".format(
                                 INSTANCE_NAME, server.pk, server.name
@@ -114,9 +81,8 @@ class Command(BaseCommand):
                         )
                         server.server_unlock_key = None
                     except:
-                        self.stderr.write(
-                            self.style.ERROR("{} unlock failed".format(server.pk))
-                        )
+
+                        print("{} unlock failed".format(server.pk))
 
                         do_post(
                             "[{}]: Server {} - {} unlock failed".format(
@@ -136,9 +102,7 @@ class Command(BaseCommand):
                     )
                     server.log = relative_path
                 except:
-                    self.stderr.write(
-                        self.style.ERROR("{} logfile download failed".format(server.pk))
-                    )
+                    print("{} logfile download failed".format(server.pk))
 
                     do_post(
                         "[{}]: Server {} - {} logfile failed".format(
@@ -147,11 +111,7 @@ class Command(BaseCommand):
                     )
 
             except Exception as e:
-                self.stderr.write(
-                    self.style.ERROR(
-                        "Failed to recieve status for {}: {}".format(server.pk, e)
-                    )
-                )
+                print("Failed to recieve status for {}: {}".format(server.pk, e))
                 server.status = None
                 server.status_failures = server.status_failures + 1
 
@@ -163,112 +123,45 @@ class Command(BaseCommand):
             finally:
                 server.save()
 
-    def interaction_job(self):
-        servers_to_start = Server.objects.filter(
-            action="S+", locked=False, status_failures__lt=FAILURE_THRESHOLD
-        ).all()
+    def thread_action(servers):
+        print("Thread {} action start".format(get_ident()))
+        while not Command.kill_all_threads:
+            Command.status_job(servers)
+            sleep(CRON_TIMEOUT)
+        print("Thread {} action end".format(get_ident()))
 
-        for server in servers_to_start:
-            secret = server.secret
-            url = server.url
-            key = get_server_hash(url)
-            try:
-                server.locked = True
-                server.save()
-                run_apx_command(key, "--cmd start")
-                server.action = ""
-                server.locked = False
-                server.save()
-                do_post(
-                    "[{}]: 🚀 Starting looks complete for {}!".format(
-                        INSTANCE_NAME, server.name
-                    )
-                )
-            except Exception as e:
-                do_post(
-                    "[{}]: 😱 Failed starting server {}: {}".format(
-                        INSTANCE_NAME, server.name, str(e)
-                    )
-                )
-                server.action = ""
-                server.locked = False
-                server.save()
+    def chunks(lst, n):
+        # https://stackoverflow.com/questions/312443/how-do-you-split-a-list-into-evenly-sized-chunks
+        """Yield successive n-sized chunks from lst."""
+        for i in range(0, len(lst), n):
+            yield lst[i : i + n]
 
-        servers_to_stop = Server.objects.filter(
-            action="R-", locked=False, status_failures__lt=FAILURE_THRESHOLD
-        ).all()
+    def chunk_list():
+        Command.kill_all_threads = False
+        servers = Server.objects.filter(
+            status_failures__lt=FAILURE_THRESHOLD
+        ).values_list("pk", flat=True)
 
-        for server in servers_to_stop:
-            secret = server.secret
-            url = server.url
-            key = get_server_hash(url)
-            try:
-                server.locked = True
-                server.save()
-                run_apx_command(key, "--cmd stop")
-                server.action = ""
-                server.locked = False
-                server.save()
-                do_post(
-                    "[{}]: 🛑 Stopping looks complete for {}!".format(
-                        INSTANCE_NAME, server.name
-                    )
-                )
-            except Exception as e:
-                do_post(
-                    "[{}]: 😱 Failed to stop server {}: {}".format(
-                        INSTANCE_NAME, server.name, str(e)
-                    )
-                )
-                server.action = ""
-                server.locked = False
-                server.save()
+        server_chunks = list(Command.chunks(servers, CRON_CHUNK_SIZE))
+        threads = []
+        for servers in server_chunks:
+            chunk_thread = Thread(
+                target=Command.thread_action, args=(servers,), daemon=True
+            )
+            threads.append(chunk_thread)
+            chunk_thread.start()
 
-        servers_to_deploy = Server.objects.filter(
-            action="D", locked=False, status_failures__lt=FAILURE_THRESHOLD
-        ).all()
-
-        for server in servers_to_deploy:
-            secret = server.secret
-            url = server.url
-            key = get_server_hash(url)
-
-            # save event json
-            event_config = get_event_config(server.event.pk)
-            event_config["branch"] = server.branch
-            config_path = join(APX_ROOT, "configs", key + ".json")
-            with open(config_path, "w") as file:
-                file.write(dumps(event_config))
-            # save rfm
-            rfm_path = join(MEDIA_ROOT, server.event.conditions.rfm.name)
-
-            try:
-                server.locked = True
-                server.save()
-                command_line = "--cmd build_skins --args {} {}".format(
-                    config_path, rfm_path
-                )
-                run_apx_command(key, command_line)
-                command_line = "--cmd deploy --args {} {}".format(config_path, rfm_path)
-                run_apx_command(key, command_line)
-                server.action = ""
-                server.locked = False
-                server.save()
-                do_post(
-                    "[{}]: 😎 Deployment looks good for {}!".format(
-                        INSTANCE_NAME, server.name
-                    )
-                )
-            except Exception as e:
-                do_post(
-                    "[{}]: 😱 Failed deploying server {}: {}".format(
-                        INSTANCE_NAME, server.name, str(e)
-                    )
-                )
-                server.action = ""
-                server.locked = False
-                server.save()
+        return threads
 
     def handle(self, *args, **options):
-        self.status_job()
-        self.interaction_job()
+        try:
+            print("Chunking servers to allow new and changed servers to be included")
+            threads = Command.chunk_list()
+            sleep(CRON_THREAD_KILL_TIMEOUT)
+            Command.kill_all_threads = True
+            for thread in threads:
+                thread.join()
+            print("Exiting")
+
+        except KeyboardInterrupt:
+            Command.kill_all_threads = True

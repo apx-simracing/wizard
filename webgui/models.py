@@ -19,6 +19,8 @@ from webgui.util import (
     get_hash,
     get_livery_mask_root,
     get_random_string,
+    create_virtual_config,
+    do_server_interaction,
 )
 from wizard.settings import FAILURE_THRESHOLD, MEDIA_ROOT, STATIC_URL
 from webgui.storage import OverwriteStorage
@@ -26,11 +28,13 @@ from django.utils.html import mark_safe
 import re
 from os.path import exists, join
 from os import mkdir
-
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 
 from wand import image
 from wand.drawing import Drawing
 from wand.color import Color
+from threading import Thread
 
 
 class ComponentType(models.TextChoices):
@@ -479,6 +483,7 @@ class Server(models.Model):
         blank=True,
         default="",
         help_text="Runs an activity on the server.",
+        verbose_name="Pending action to submit",
     )
     branch = models.CharField(
         max_length=50,
@@ -497,7 +502,7 @@ class Server(models.Model):
     locked = models.BooleanField(
         default=False,
         help_text="Shows if the server is currently processed by the background worker. During processing, you cannot change settings.",
-        verbose_name="Processing",
+        verbose_name="Processing pending action",
     )
     server_key = models.FileField(
         upload_to=get_key_root_path,
@@ -558,30 +563,35 @@ class Server(models.Model):
             response = '<img src="{}admin/img/icon-no.svg" alt="Not Running"> Server did not return a status yet</br>'.format(
                 STATIC_URL
             )
-        # status is existing and it's not_running
-        if (
+        elif (
             self.status
-            and "not_running" in self.status
-            or not self.status
-            or self.status_failures >= FAILURE_THRESHOLD
+            and "in_deploy" in self.status
+            and self.status_failures <= FAILURE_THRESHOLD
         ):
-            return mark_safe(response)
-        response = '<img src="{}admin/img/icon-yes.svg" alt="Running"> Server is running</br>'.format(
-            STATIC_URL
-        )
-        try:
-            content = loads(self.status.replace("'", '"'))
-            for vehicle in content["vehicles"]:
-                vehicle_text = "[{}] {}: {} (SteamID:{}), penalties: {}".format(
-                    vehicle["carClass"],
-                    vehicle["vehicleName"],
-                    vehicle["driverName"],
-                    vehicle["steamID"],
-                    vehicle["penalties"],
-                )
-                response = response + vehicle_text + "</br>"
-        except Exception as e:
-            response = str(e)
+            response = '<img src="{}admin/img/icon-no.svg" alt="Not Running"> The server is deploying</br>'.format(
+                STATIC_URL
+            )
+        elif (
+            self.status
+            and "not_running" not in self.status
+            and self.status_failures <= FAILURE_THRESHOLD
+        ):
+            response = '<img src="{}admin/img/icon-yes.svg" alt="Running"> Server is running</br>'.format(
+                STATIC_URL
+            )
+            try:
+                content = loads(self.status.replace("'", '"'))
+                for vehicle in content["vehicles"]:
+                    vehicle_text = "[{}] {}: {} (SteamID:{}), penalties: {}".format(
+                        vehicle["carClass"],
+                        vehicle["vehicleName"],
+                        vehicle["driverName"],
+                        vehicle["steamID"],
+                        vehicle["penalties"],
+                    )
+                    response = response + vehicle_text + "</br>"
+            except Exception as e:
+                response = str(e)
         return mark_safe(response)
 
     def __str__(self):
@@ -616,7 +626,37 @@ class Server(models.Model):
         if self.action == "D" and not self.event:
             raise ValidationError("You have to add an event before deploying")
 
+        if self.status and "in_deploy" in self.status:
+            raise ValidationError("Wait until deployment is over")
+
         self.status_failures = 0
+
+        if self.action != "":
+            self.locked = True
+            background_thread = Thread(
+                target=background_action_server, args=(self,), daemon=True
+            )
+            background_thread.start()
+
+
+def background_action_server(server):
+    do_server_interaction(server)
+
+
+def background_action_chat(chat):
+    try:
+        key = get_server_hash(chat.server.url)
+        run_apx_command(key, "--cmd chat --args {} ".format(chat.message))
+        chat.success = True
+    except Exception as e:
+        chat.success = False
+    finally:
+        chat.save()
+
+
+@receiver(post_save, sender=Server)
+def my_handler(sender, instance, **kwargs):
+    create_virtual_config()
 
 
 class Chat(models.Model):
@@ -637,16 +677,11 @@ class Chat(models.Model):
             self.server, self.date.strftime("%m/%d/%Y, %H:%M:%S"), self.message
         )
 
-    def save(self, *args, **kwargs):
-        try:
-            key = get_server_hash(self.server.url)
-            run_apx_command(key, "--cmd chat --args {} ".format(self.message))
-            self.success = True
-        except:
-            self.success = False
-            pass
-
-        super(Chat, self).save(*args, **kwargs)
+    def clean(self):
+        background_thread = Thread(
+            target=background_action_chat, args=(self,), daemon=True
+        )
+        background_thread.start()
 
 
 class ServerStatustext(models.Model):

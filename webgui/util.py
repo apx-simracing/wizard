@@ -15,7 +15,7 @@ from django.dispatch import receiver
 from os.path import join, exists
 from os import mkdir
 from . import models
-from json import loads
+from json import loads, dumps
 import random
 from django.core.exceptions import ValidationError
 from django.db.models.signals import post_save
@@ -276,3 +276,114 @@ def do_rc_post(message):
             },
             headers={"Content-type": "application/json"},
         )
+
+
+def create_virtual_config():
+    all_servers = models.Server.objects.all()
+    server_data = {}
+    for server in all_servers:
+        key = get_server_hash(server.url)
+        # we assume that the liveries folder may already be existing
+        build_path = join(MEDIA_ROOT, get_hash(str(server.user.pk)), "liveries")
+        packs_path = join(PACKS_ROOT, get_hash(str(server.user.pk)))
+        templates_path = join(MEDIA_ROOT, get_hash(str(server.user.pk)), "templates")
+        if not exists(packs_path):
+            mkdir(packs_path)
+
+        if not exists(build_path):
+            mkdir(build_path)
+
+        if not exists(templates_path):
+            mkdir(templates_path)
+        server_data[key] = {
+            "url": server.url,
+            "secret": server.secret,
+            "public_ip": server.public_ip,
+            "env": {
+                "build_path": build_path,
+                "packs_path": packs_path,
+                "templates_path": templates_path,
+            },
+        }
+
+    servers_json_path = join(APX_ROOT, "servers.json")
+    with open(servers_json_path, "w") as file:
+        file.write(dumps(server_data))
+
+
+def do_server_interaction(server):
+    secret = server.secret
+    url = server.url
+    key = get_server_hash(url)
+    if server.action == "S+":
+        try:
+            run_apx_command(key, "--cmd start")
+            do_post(
+                "[{}]: 🚀 Starting looks complete for {}!".format(
+                    INSTANCE_NAME, server.name
+                )
+            )
+        except Exception as e:
+            print(e)
+            do_post(
+                "[{}]: 😱 Failed starting server {}: {}".format(
+                    INSTANCE_NAME, server.name, str(e)
+                )
+            )
+        finally:
+            server.action = ""
+            server.locked = False
+            server.save()
+
+    if server.action == "R-":
+
+        try:
+            run_apx_command(key, "--cmd stop")
+            do_post(
+                "[{}]: 🛑 Stopping looks complete for {}!".format(
+                    INSTANCE_NAME, server.name
+                )
+            )
+        except Exception as e:
+            do_post(
+                "[{}]: 😱 Failed to stop server {}: {}".format(
+                    INSTANCE_NAME, server.name, str(e)
+                )
+            )
+        finally:
+            server.action = ""
+            server.locked = False
+            server.save()
+
+    if server.action == "D":
+        # save event json
+        event_config = get_event_config(server.event.pk)
+        event_config["branch"] = server.branch
+        config_path = join(APX_ROOT, "configs", key + ".json")
+        with open(config_path, "w") as file:
+            file.write(dumps(event_config))
+        # save rfm
+        rfm_path = join(MEDIA_ROOT, server.event.conditions.rfm.name)
+
+        try:
+            command_line = "--cmd build_skins --args {} {}".format(
+                config_path, rfm_path
+            )
+            run_apx_command(key, command_line)
+            command_line = "--cmd deploy --args {} {}".format(config_path, rfm_path)
+            run_apx_command(key, command_line)
+            do_post(
+                "[{}]: 😎 Deployment looks good for {}!".format(
+                    INSTANCE_NAME, server.name
+                )
+            )
+        except Exception as e:
+            do_post(
+                "[{}]: 😱 Failed deploying server {}: {}".format(
+                    INSTANCE_NAME, server.name, str(e)
+                )
+            )
+        finally:
+            server.action = ""
+            server.locked = False
+            server.save()
