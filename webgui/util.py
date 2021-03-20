@@ -216,7 +216,7 @@ def get_event_config(event_id: int):
                     "type": str(session.type),
                     "length": session.length,
                     "laps": session.laps,
-                    "start": str(session.start),
+                    "start": str(session.start) if session.start is not None else None,
                 }
             )
     else:
