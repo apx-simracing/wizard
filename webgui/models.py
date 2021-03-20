@@ -400,6 +400,8 @@ class Event(models.Model):
     conditions = models.ForeignKey(RaceConditions, on_delete=models.DO_NOTHING)
     entries = models.ManyToManyField(Entry)
     tracks = models.ManyToManyField(Track)
+    signup_active = models.BooleanField(default=False)
+    signup_components = models.ManyToManyField(Component)
     start_type = models.CharField(
         max_length=3, choices=EvenStartType.choices, default=EvenStartType.S
     )

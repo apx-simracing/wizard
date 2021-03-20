@@ -16,7 +16,7 @@ from wizard.settings import (
     INSTANCE_NAME,
     MEDIA_ROOT,
 )
-from .models import EntryFile, Entry, Chat, Server, User
+from .models import EntryFile, Entry, Chat, Server, User, Event, Component
 import pathlib
 import zipfile
 import tempfile
@@ -146,35 +146,38 @@ def get_team_revoke_form(request):
     )
 
 
-def get_team_signup_form(request, client: str):
+def get_team_signup_form(request, event: int):
+    event_obj = Event.objects.filter(pk=event, signup_active=True).first()
+    if not event_obj:
+        raise Http404("No suitable event found")
+
     if request.method == "POST":
         form = EntrySignupForm(request.POST)
         if form.is_valid():
             number = form.cleaned_data.get("number")
             team_name = form.cleaned_data.get("team_name")
-            client = form.cleaned_data.get("client")
             component = form.cleaned_data.get("component")
 
-            client_obj = None
-            users = User.objects.all()
-            for user in users:
-                needle = get_hash(str(user.pk))
-                if client == needle:
-                    client_obj = user
-                    break
-            if not client:
-                raise ValidationError("Invalid client")
+            if not event_obj:
+                raise ValidationError("Event")
 
             token = get_random_string(10)
             new_entry = Entry()
-            new_entry.user = client_obj
+            new_entry.user = event_obj.user
             new_entry.component = component
             new_entry.team_name = team_name
             new_entry.vehicle_number = int(number)
             new_entry.token = token
             new_entry.save()
+
+            # add new entry to event
+            event_obj.entries.add(new_entry)
             entry_string = str(new_entry)
-            do_post("[{}] 👋 Team {} just signed up".format(INSTANCE_NAME, entry_string))
+            do_post(
+                "[{}] 👋 Team {} just signed for {} up".format(
+                    INSTANCE_NAME, entry_string, event_obj.name
+                )
+            )
             return render(
                 request,
                 "entry_signup_confirm.html",
@@ -183,15 +186,18 @@ def get_team_signup_form(request, client: str):
 
     else:
         form = EntrySignupForm()
-        form.fields["client"].initial = client
+        # events gets added for validation purposes
+        form.fields["component"].queryset = event_obj.signup_components
+        form.fields["event"].initial = event
     return render(
         request,
         "entry_signup.html",
         {
+            "event": event,
             "form": form,
             "rules": USER_SIGNUP_RULE_TEXT,
             "instance_name": INSTANCE_NAME,
-            "client": client,
+            "event_obj": event_obj,
         },
     )
 
@@ -346,3 +352,7 @@ def get_signup_form(request):
         "signup.html",
         {"form": form, "rules": USER_SIGNUP_RULE_TEXT, "instance_name": INSTANCE_NAME},
     )
+
+
+def get_entry_signup_form(request, entry: int):
+    pass

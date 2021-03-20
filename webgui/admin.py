@@ -157,6 +157,9 @@ class EventAdmin(admin.ModelAdmin):
         form.base_fields["conditions"].queryset = RaceConditions.objects.filter(
             user=request.user
         )
+        form.base_fields["signup_components"].queryset = Component.objects.filter(
+            user=request.user, type="VEH"
+        )
         return form
 
     def get_changeform_initial_data(self, request):

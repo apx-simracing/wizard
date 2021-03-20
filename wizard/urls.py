@@ -34,7 +34,7 @@ if ENTRY_SIGNUP_ENABLED:
         path("rules/", get_rules_page),
         path("entry/", get_token_form),
         path("files/", get_files_form),
-        path("team/<client>", get_team_signup_form),
+        path("team/<event>", get_team_signup_form),
         path("revoke/", get_team_revoke_form),
         path(
             "penalty/<str:secret>/<str:driver>/<int:penalty>/<str:reason>", add_penalty

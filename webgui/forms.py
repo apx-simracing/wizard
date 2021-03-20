@@ -1,5 +1,5 @@
 from django import forms
-from webgui.models import User, Entry, Component
+from webgui.models import User, Entry, Component, Event
 from django.core.exceptions import ValidationError
 from django.db.models import Q
 import os
@@ -20,23 +20,19 @@ class EntrySignupForm(forms.Form):
     )
     number = forms.IntegerField()
     team_name = forms.CharField()
-    client = forms.CharField(widget=forms.HiddenInput())
+    event = forms.CharField(widget=forms.HiddenInput())
 
     def clean(self):
-        users = User.objects.all()
-        client = self.cleaned_data.get("client")
+        event_id = self.cleaned_data.get("event")
+        event_obj = Event.objects.filter(pk=event_id, signup_active=True).first()
         number = self.cleaned_data.get("number")
-        client_obj = None
-        for user in users:
-            needle = get_hash(str(user.pk))
-            if client == needle:
-                client_obj = user
-                break
 
-        if not client_obj:
-            raise ValidationError("Invalid client")
+        if not event_obj:
+            raise ValidationError("Invalid Event")
 
-        matching_numbers = Entry.objects.filter(user=client_obj, vehicle_number=number)
+        matching_numbers = Entry.objects.filter(
+            user=event_obj.user, vehicle_number=number
+        )
 
         if len(matching_numbers) != 0:
             raise ValidationError("Number already taken")
