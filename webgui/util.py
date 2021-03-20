@@ -321,6 +321,26 @@ def do_server_interaction(server):
     secret = server.secret
     url = server.url
     key = get_server_hash(url)
+    if server.action == "W":
+        try:
+            run_apx_command(key, "--cmd new_weekend")
+            do_post(
+                "[{}]: 🚀 Restart weekend looks good {}!".format(
+                    INSTANCE_NAME, server.name
+                )
+            )
+        except Exception as e:
+            print(e)
+            do_post(
+                "[{}]: 😱 Failed to restart weekend {}: {}".format(
+                    INSTANCE_NAME, server.name, str(e)
+                )
+            )
+        finally:
+            server.action = ""
+            server.locked = False
+            server.save()
+
     if server.action == "S+":
         try:
             run_apx_command(key, "--cmd start")

@@ -444,6 +444,7 @@ class ServerStatus(models.TextChoices):
     STARTREQUESTED = "S+", "Start"
     STOPREQUESTED = "R-", "Stop"
     DEPLOY = "D", "Update config and redeploy"
+    RESTARTWEEKEND = "W", "Restart weekend"
 
 
 class ServerBranch(models.TextChoices):
@@ -638,6 +639,12 @@ class Server(models.Model):
 
         if self.status and "in_deploy" in self.status:
             raise ValidationError("Wait until deployment is over")
+
+        if self.action == "W" and self.status and "in_deploy" in self.status:
+            raise ValidationError("Wait until deployment is over")
+
+        if self.action == "W" and self.status and "not_running" in self.status:
+            raise ValidationError("Start the server first")
 
         self.status_failures = 0
 
