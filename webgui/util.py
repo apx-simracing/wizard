@@ -42,6 +42,9 @@ FILE_NAME_SUFFIXES = [
 ]
 
 
+RECIEVER_COMP_INFO = "pre-beta"
+
+
 def get_update_filename(instance, filename):
     component_name = instance.component_name
     user_root = get_hash(str(instance.user.pk))
@@ -242,6 +245,7 @@ def get_event_config(event_id: int):
         "real_weather": server.real_weather,
         "real_weather_key": OPENWEATHERAPI_KEY,
         "temp_offset": server.temp_offset,
+        "comp": RECIEVER_COMP_INFO,
         "mod": {
             "name": mod_name,
             "version": "1.0.{}".format(get_random_string(5)),
