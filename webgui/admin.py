@@ -4,6 +4,7 @@ from webgui.models import (
     Track,
     Entry,
     EntryFile,
+    ComponentFile,
     Event,
     RaceConditions,
     Server,
@@ -15,6 +16,7 @@ from django.contrib.auth.models import User
 from django.contrib.auth.models import Group
 from django import forms
 from django.contrib import admin
+from webgui.util import do_component_file_apply
 
 admin.site.site_url = None
 admin.site.site_title = "APX"
@@ -105,6 +107,24 @@ class ChatAdmin(admin.ModelAdmin):
         "success",
         "date",
     )
+
+
+class ComponentFileAdmin(admin.ModelAdmin):
+    def get_form(self, request, obj=None, **kwargs):
+        form = super(ComponentFileAdmin, self).get_form(request, obj=None, **kwargs)
+        form.base_fields["user"].queryset = User.objects.filter(pk=request.user.pk)
+        return form
+
+    def get_changeform_initial_data(self, request):
+        get_data = super(ComponentFileAdmin, self).get_changeform_initial_data(request)
+        get_data["user"] = request.user.pk
+        return get_data
+
+    def get_queryset(self, request):
+        if not request.user.is_superuser:
+            return ComponentFile.objects.filter(user=request.user)
+        else:
+            return ComponentFile.objects.all()
 
 
 class EntryFileAdmin(admin.ModelAdmin):
@@ -317,6 +337,7 @@ class ServerAdmin(admin.ModelAdmin):
 
 
 admin.site.register(Component, ComponentAdmin)
+admin.site.register(ComponentFile, ComponentFileAdmin)
 admin.site.register(Track, TrackAdmin)
 admin.site.register(EntryFile, EntryFileAdmin)
 admin.site.register(Entry, EntryAdmin)

@@ -13,7 +13,8 @@ import hashlib
 import subprocess
 from django.dispatch import receiver
 from os.path import join, exists
-from os import mkdir
+from os import mkdir, listdir, unlink
+from shutil import copyfile
 from . import models
 from json import loads, dumps
 import random
@@ -64,6 +65,13 @@ def get_update_filename(instance, filename):
 
 
 def get_livery_mask_root(instance, filename):
+    root_path = join(MEDIA_ROOT, get_hash(str(instance.user.pk)), "templates")
+    if not exists(root_path):
+        mkdir(root_path)
+    return join(join(get_hash(str(instance.user.pk)), "templates"), filename)
+
+
+def get_component_file_root(instance, filename):
     root_path = join(MEDIA_ROOT, get_hash(str(instance.user.pk)), "templates")
     if not exists(root_path):
         mkdir(root_path)
@@ -127,6 +135,77 @@ def get_logfile_root_path(instance, filename):
     if not exists(full_path):
         mkdir(full_path)
     return join("keys", hash_code, filename)
+
+
+def do_component_file_apply(element):
+    remove_orphan_files(element.user.pk)
+    root_path = join(MEDIA_ROOT, get_hash(str(element.user.pk)), "liveries")
+    existing_files = listdir(root_path)
+    file_list = []
+    component_files = {}
+    component = element.component
+    # group livery files per component
+    if component.component_name not in component_files:
+        component_files[component.component_name] = []
+    if element.type not in component_files[component.component_name]:
+        component_files[component.component_name].append(element.type)
+
+    files = models.EntryFile.objects.filter(entry__component=component)
+    for file in files:
+        if file.file not in file_list:
+            file_list.append(str(file.file))
+
+    # remove existing component file additions
+    for component, files in component_files.items():
+        for file in files:
+            comp_path = join(root_path, component)
+            if exists(comp_path):
+                component_files_existing = listdir(comp_path)
+                for component_file in component_files_existing:
+                    if component_file.endswith(file):
+                        full_path = join(root_path, component, component_file)
+                        unlink(full_path)
+
+    # add component files
+    template_root = join(MEDIA_ROOT)
+
+    src_path = join(template_root, str(element.file))
+    entries = models.Entry.objects.filter(component=element.component)
+    if element.component.do_update:
+        for entry in entries:
+            target_path = join(
+                root_path,
+                element.component.component_name,
+                element.component.short_name
+                + "_"
+                + str(entry.vehicle_number)
+                + element.type,
+            )
+            copyfile(src_path, target_path)
+
+
+def remove_orphan_files(user_id):
+    root_path = join(MEDIA_ROOT, get_hash(str(user_id)), "liveries")
+    files = models.EntryFile.objects.filter(entry__component__do_update=True)
+    components = {}
+    for file in files:
+        component = file.entry.component.component_name
+        if component not in components:
+            components[component] = []
+        path = str(file.file)
+        components[component].append(path)
+
+    for component, files in components.items():
+        files_on_disk = listdir(join(root_path, component))
+        for disk_file in files_on_disk:
+            is_file_entry_file = False
+            for file in files:
+                if file.endswith(disk_file):
+                    is_file_entry_file = True
+
+            if not is_file_entry_file and ".ini" not in disk_file:  # ignore update.ini
+                full_path = join(root_path, component, disk_file)
+                unlink(full_path)
 
 
 def get_random_string(length):

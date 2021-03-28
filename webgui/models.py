@@ -5,6 +5,7 @@ from django.conf import settings
 from django import forms
 from django.dispatch import receiver
 from os.path import isfile
+from shutil import copy
 from os import remove
 from json import loads
 from django.core.validators import RegexValidator
@@ -21,6 +22,9 @@ from webgui.util import (
     get_random_string,
     create_virtual_config,
     do_server_interaction,
+    get_component_file_root,
+    remove_orphan_files,
+    do_component_file_apply,
 )
 from wizard.settings import FAILURE_THRESHOLD, MEDIA_ROOT, STATIC_URL
 from webgui.storage import OverwriteStorage
@@ -113,6 +117,8 @@ class Component(models.Model):
     mask_positions = models.TextField(null=True, blank=True, default=None)
 
     template = models.TextField(default="", null=True, blank=True)
+
+    files = models.ManyToManyField("ComponentFile", related_name="component_file_list")
 
     def clean(self):
         if self.type != ComponentType.VEHICLE and self.do_update:
@@ -261,6 +267,27 @@ class Entry(models.Model):
         return "{}#{} ({})".format(self.team_name, self.vehicle_number, self.component)
 
 
+class ComponentFileType(models.TextChoices):
+    WINDOW = "window.dds", "Window skin (GT3)"
+    WINDOWS = "windows.dds", "Window skin"
+    WINDOWSIN = "windowsin.dds", "Windows (inside)"
+    WINDOWSOUT = "windowsout.dds", "Windows (outside)"
+
+
+class ComponentFile(models.Model):
+    file = models.FileField(upload_to=get_component_file_root, max_length=500)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    component = models.ForeignKey(Component, on_delete=models.CASCADE)
+    type = models.CharField(
+        max_length=50,
+        choices=ComponentFileType.choices,
+        default=ComponentFileType.WINDOW,
+    )
+
+    def __str__(self):
+        return "{} {}: {}".format(self.component, self.type, self.file)
+
+
 class EntryFile(models.Model):
     file = models.FileField(
         upload_to=livery_filename, storage=OverwriteStorage, max_length=500
@@ -378,6 +405,16 @@ def auto_delete_file_on_delete(sender, instance, **kwargs):
     if instance.file:
         if isfile(instance.file.path):
             remove(instance.file.path)
+
+
+@receiver(models.signals.post_delete, sender=ComponentFile)
+def auto_delete_file_on_delete(sender, instance, **kwargs):
+    remove_orphan_files(instance.user.pk)
+
+
+@receiver(models.signals.post_save, sender=ComponentFile)
+def auto_apply_comp_file(sender, instance, **kwargs):
+    do_component_file_apply(instance)
 
 
 # 0 Standing
