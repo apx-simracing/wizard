@@ -182,7 +182,7 @@ class RaceSessions(models.Model):
     class Meta:
         verbose_name_plural = "Race sessions"
 
-    description = models.TextField(default="Add description")
+    description = models.CharField(default="Add description", max_length=200)
     type = models.CharField(
         max_length=2, choices=RaceSessionsType.choices, default=RaceSessionsType.TD
     )
@@ -232,14 +232,27 @@ class RaceConditions(models.Model):
     class Meta:
         verbose_name_plural = "Race conditions"
 
-    description = models.TextField(default="Add description")
+    description = models.CharField(default="Add description", max_length=200)
     rfm = models.FileField(upload_to=get_conditions_file_root, storage=OverwriteStorage)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
 
     sessions = models.ManyToManyField(RaceSessions, blank=True)
 
     def __str__(self):
-        return "{} ({})".format(self.description, self.rfm)
+        sessions = self.sessions.all()
+        sessions_list = []
+        for session in sessions:
+            sessions_list.append(
+                "{}@{} [{} minutes/{} laps]".format(
+                    session.type,
+                    session.start if session.start is not None else "Default startime",
+                    session.length,
+                    session.laps,
+                )
+            )
+        return "{} ({})".format(
+            self.description, "No sessions" if len(sessions) == 0 else sessions_list
+        )
 
 
 class Track(models.Model):
