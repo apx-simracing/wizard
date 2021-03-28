@@ -118,8 +118,6 @@ class Component(models.Model):
 
     template = models.TextField(default="", null=True, blank=True)
 
-    files = models.ManyToManyField("ComponentFile", related_name="component_file_list")
-
     def clean(self):
         if self.type != ComponentType.VEHICLE and self.do_update:
             raise ValidationError(
@@ -142,6 +140,7 @@ class Component(models.Model):
                 "Team": "{name}",
                 "Description": "{description}",
                 "FullTeamName": "{description}",
+                "PitGroup": "Group{pitgroup}",
             }
             templateLines = self.template.split("\n")
             newLines = []
@@ -274,6 +273,10 @@ class Entry(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     token = models.CharField(
         default=None, null=True, blank=True, max_length=100, unique=True
+    )
+    pit_group = models.IntegerField(
+        default=1,
+        help_text="The pit group for the entry. Stock tracks commonly using groups 1-30.",
     )
 
     def __str__(self):

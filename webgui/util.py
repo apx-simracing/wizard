@@ -259,7 +259,9 @@ def get_event_config(event_id: int):
                 },
             }
         vehicle_groups[steam_id]["entries"].append(
-            "{}#{}".format(vehicle.team_name, vehicle.vehicle_number)
+            "{}#{}:{}".format(
+                vehicle.team_name, vehicle.vehicle_number, vehicle.pit_group
+            )
         )
 
     tracks = server.tracks.all()
