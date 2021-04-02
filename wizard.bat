@@ -6,7 +6,7 @@ if not exist "db.sqlite3" (
 	mkdir uploads
 	mkdir "uploads/logs"
 	mkdir "uploads/keys"
-	cp "wizard/wizard/settings.py.tpl" "wizard/wizard/settings.py"
+	cp "wizard/settings.py.tpl" "wizard/settings.py"
   python.exe get-pip.py
   python.exe -m pip install -r requirements.txt
 	python.exe manage.py migrate
