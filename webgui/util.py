@@ -370,6 +370,8 @@ def create_virtual_config():
     server_data = {}
     for server in all_servers:
         key = get_server_hash(server.url)
+        if not exists(join(MEDIA_ROOT, get_hash(str(server.user.pk)))):
+            mkdir(join(MEDIA_ROOT, get_hash(str(server.user.pk))))
         # we assume that the liveries folder may already be existing
         build_path = join(MEDIA_ROOT, get_hash(str(server.user.pk)), "liveries")
         packs_path = join(PACKS_ROOT, get_hash(str(server.user.pk)))
