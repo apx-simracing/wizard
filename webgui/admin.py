@@ -17,6 +17,7 @@ from django.contrib.auth.models import Group
 from django import forms
 from django.contrib import admin
 from webgui.util import do_component_file_apply
+from json import loads
 
 admin.site.site_url = None
 admin.site.site_title = "APX"
@@ -256,17 +257,7 @@ class ServerAdmin(admin.ModelAdmin):
         else:
             return Server.objects.all()
 
-    list_display = (
-        "name",
-        "event",
-        "locked",
-        "action",
-        "status_info",
-        "status_failures",
-        "branch",
-        "build",
-        "release",
-    )
+    list_display = ("name", "server_name", "track_name", "status_info", "build")
     fieldsets = [
         (
             "APX Settings",
@@ -343,6 +334,22 @@ class ServerAdmin(admin.ModelAdmin):
         return "not_running" not in obj.status
 
     is_running.short_description = "Running"
+
+    def server_name(self, obj):
+        if not obj or not obj.status:
+            return "-"
+        json = loads(obj.status)
+        return json["name"] if "name" in obj.status else "-"
+
+    server_name.short_description = "Server name"
+
+    def track_name(self, obj):
+        if not obj or not obj.status:
+            return "-"
+        json = loads(obj.status)
+        return json["track"] if "track" in obj.status else "-"
+
+    track_name.short_description = "Track"
 
 
 admin.site.register(Component, ComponentAdmin)

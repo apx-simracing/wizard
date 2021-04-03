@@ -651,12 +651,15 @@ class Server(models.Model):
             try:
                 content = loads(self.status.replace("'", '"'))
                 for vehicle in content["vehicles"]:
-                    vehicle_text = "[{}] {}: {} (SteamID:{}), penalties: {}".format(
-                        vehicle["carClass"],
-                        vehicle["vehicleName"],
-                        vehicle["driverName"],
-                        vehicle["steamID"],
-                        vehicle["penalties"],
+                    vehicle_text = (
+                        "[{}, Pit {}] {}: {} (SteamID:{}), penalties: {}".format(
+                            vehicle["carClass"],
+                            vehicle["pitGroup"],
+                            vehicle["vehicleName"],
+                            vehicle["driverName"],
+                            vehicle["steamID"],
+                            vehicle["penalties"],
+                        )
                     )
                     response = response + vehicle_text + "</br>"
             except Exception as e:
