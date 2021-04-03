@@ -311,15 +311,6 @@ class ServerAdmin(admin.ModelAdmin):
                 "status_info",
                 "public_secret",
             )
-        if obj and obj.status_info and "incomp" in obj.status_info:
-            self.readonly_fields = self.readonly_fields + (
-                "action",
-                "branch",
-                "event",
-                "server_key",
-                "server_unlock_key",
-                "public_secret",
-            )
         return self.readonly_fields + (
             "locked",
             "is_running",
