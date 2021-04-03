@@ -8,6 +8,7 @@ from wizard.settings import (
     DISCORD_RACE_CONTROL_WEBHOOK_NAME,
     INSTANCE_NAME,
     OPENWEATHERAPI_KEY,
+    BASE_DIR,
 )
 import hashlib
 import subprocess
@@ -43,7 +44,7 @@ FILE_NAME_SUFFIXES = [
 ]
 
 
-RECIEVER_COMP_INFO = "pre-beta"
+RECIEVER_COMP_INFO = open(join(BASE_DIR, "release")).read()
 
 
 def get_update_filename(instance, filename):
