@@ -25,6 +25,7 @@ from webgui.util import (
     get_component_file_root,
     remove_orphan_files,
     do_component_file_apply,
+    RECIEVER_COMP_INFO,
 )
 from wizard.settings import FAILURE_THRESHOLD, MEDIA_ROOT, STATIC_URL
 from webgui.storage import OverwriteStorage
@@ -619,7 +620,11 @@ class Server(models.Model):
         response = '<img src="{}admin/img/icon-no.svg" alt="Not Running"> Server is not running</br>'.format(
             STATIC_URL
         )
-        if self.status_failures >= FAILURE_THRESHOLD:
+        if self.release and self.release != RECIEVER_COMP_INFO:
+            response = '<img src="{}admin/img/icon-no.svg" alt="Wrong version"> The reciever has an incompatible version. Them={}, We={}</br>'.format(
+                STATIC_URL, self.release, RECIEVER_COMP_INFO
+            )
+        elif self.status_failures >= FAILURE_THRESHOLD:
             response = '<img src="{}admin/img/icon-no.svg" alt="Not Running"> Server is disabled due to errors.</br>'.format(
                 STATIC_URL
             )
