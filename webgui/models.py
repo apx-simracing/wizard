@@ -40,6 +40,7 @@ from wand import image
 from wand.drawing import Drawing
 from wand.color import Color
 from threading import Thread
+from croniter import croniter
 
 
 class ComponentType(models.TextChoices):
@@ -760,6 +761,47 @@ class Chat(models.Model):
             target=background_action_chat, args=(self,), daemon=True
         )
         background_thread.start()
+
+
+class ServerCron(models.Model):
+    class Meta:
+        verbose_name_plural = "Server schedules"
+        verbose_name = "Server schedule"
+
+    cron_text = models.CharField(
+        max_length=255,
+        blank=False,
+        null=False,
+        default=None,
+        help_text="Describe the execution time",
+    )
+    server = models.ForeignKey(
+        Server, on_delete=models.CASCADE, blank=False, null=False, default=None
+    )
+    event = models.ForeignKey(
+        Event, on_delete=models.CASCADE, blank=True, null=True, default=None
+    )
+    last_execution = models.DateTimeField(blank=True, null=True, default=None)
+    action = models.CharField(
+        max_length=3,
+        choices=ServerStatus.choices,
+        blank=True,
+        default="",
+        help_text="Runs an activity on the server.",
+        verbose_name="Pending action to submit",
+    )
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return "{}: {}@{}".format(self.cron_text, self.action, self.server)
+
+    def clean(self):
+        if not croniter.is_valid(self.cron_text):
+            raise ValidationError("This is not a valid cron description")
+        if not self.server:
+            raise ValidationError("Select a server first")
+        if self.action == "D" and not self.event:
+            raise ValidationError("You have to add an event before deploying")
 
 
 class ServerStatustext(models.Model):

@@ -7,7 +7,7 @@ from sys import argv
 
 class WebguiConfig(AppConfig):
     name = "webgui"
-    verbose_name = "APX Administration"
+    verbose_name = "APX Administration: rFactor 2"
     kill_thread = False
 
     def background_cron(self):

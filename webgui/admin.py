@@ -10,6 +10,7 @@ from webgui.models import (
     Server,
     Chat,
     RaceSessions,
+    ServerCron,
 )
 from django.utils.html import mark_safe
 from django.contrib.auth.models import User
@@ -126,6 +127,27 @@ class ComponentFileAdmin(admin.ModelAdmin):
             return ComponentFile.objects.filter(user=request.user)
         else:
             return ComponentFile.objects.all()
+
+
+class ServerCronAdmin(admin.ModelAdmin):
+    def get_form(self, request, obj=None, **kwargs):
+        form = super(ServerCronAdmin, self).get_form(request, obj=None, **kwargs)
+        form.base_fields["user"].queryset = User.objects.filter(pk=request.user.pk)
+        return form
+
+    def get_changeform_initial_data(self, request):
+        get_data = super(ServerCronAdmin, self).get_changeform_initial_data(request)
+        get_data["user"] = request.user.pk
+        return get_data
+
+    def get_queryset(self, request):
+        if not request.user.is_superuser:
+            return ServerCron.objects.filter(user=request.user)
+        else:
+            return ServerCron.objects.all()
+
+    def get_readonly_fields(self, request, obj):
+        return self.readonly_fields + ("last_execution",)
 
 
 class EntryFileAdmin(admin.ModelAdmin):
@@ -353,3 +375,4 @@ admin.site.register(RaceConditions, RaceConditionsAdmin)
 admin.site.register(RaceSessions, RaceSessionsAdmin)
 admin.site.register(Server, ServerAdmin)
 admin.site.register(Chat, ChatAdmin)
+admin.site.register(ServerCron, ServerCronAdmin)
