@@ -4,7 +4,7 @@ from django.contrib.auth.models import User
 from django.conf import settings
 from django import forms
 from django.dispatch import receiver
-from os.path import isfile
+from os.path import isfile, basename
 from shutil import copy
 from os import remove
 from json import loads
@@ -188,9 +188,7 @@ class RaceSessions(models.Model):
         max_length=2, choices=RaceSessionsType.choices, default=RaceSessionsType.TD
     )
     grip = models.FileField(
-        upload_to=get_conditions_file_root,
-        blank=False,
-        null=False,
+        upload_to=get_conditions_file_root, blank=True, null=True, default=None
     )
     start = models.TimeField(
         blank=True,
@@ -222,6 +220,9 @@ class RaceSessions(models.Model):
         str = "[{}] {}, {} minutes, {} laps".format(
             self.type, self.description, self.length, self.laps
         )
+
+        if self.grip:
+            str = str + ", gripfile: {}".format(basename(self.grip.name))
 
         if self.start:
             return str + ", start: {}".format(self.start)

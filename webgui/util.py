@@ -292,7 +292,7 @@ def get_event_config(event_id: int):
     session_setting_list = []
     if len(sessions) > 0:
         for session in sessions:
-            session_list[session.type] = session.grip.path
+            session_list[session.type] = session.grip.path if session.grip else None
             session_setting_list.append(
                 {
                     "type": str(session.type),
