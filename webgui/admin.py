@@ -352,7 +352,7 @@ class ServerAdmin(admin.ModelAdmin):
         if not obj or not obj.status:
             return "-"
         json = loads(obj.status)
-        return json["name"] if "name" in obj.status else "-"
+        return json["name"] if "name" in json else "-"
 
     server_name.short_description = "Server name"
 
