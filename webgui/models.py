@@ -454,10 +454,13 @@ class Event(models.Model):
     overwrites_player = models.TextField(default="{}")
     name = models.CharField(default="", max_length=200)
     conditions = models.ForeignKey(RaceConditions, on_delete=models.DO_NOTHING)
-    entries = models.ManyToManyField(Entry)
+    entries = models.ManyToManyField(Entry, blank=True)
     tracks = models.ManyToManyField(Track)
     signup_active = models.BooleanField(default=False)
-    signup_components = models.ManyToManyField(Component)
+    signup_components = models.ManyToManyField(
+        Component,
+        help_text="Components allowed to be registered. If no entries are existing, all available entries from the mod will be used.",
+    )
     start_type = models.CharField(
         max_length=3, choices=EvenStartType.choices, default=EvenStartType.S
     )

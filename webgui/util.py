@@ -239,6 +239,7 @@ def run_apx_command(hashed_url, commandline):
 def get_event_config(event_id: int):
     server = models.Event.objects.get(pk=event_id)
     ungrouped_vehicles = server.entries.all()
+    signup_components = server.signup_components.all()
     vehicle_groups = {}
     for vehicle in ungrouped_vehicles:
         component = vehicle.component
@@ -264,7 +265,26 @@ def get_event_config(event_id: int):
                 vehicle.team_name, vehicle.vehicle_number, vehicle.pit_group
             )
         )
+    if len(ungrouped_vehicles) == 0:
+        # use signup components for the event.json
+        for component in signup_components:
+            steam_id = component.steam_id
+            version = component.component_version
+            name = component.component_name
+            do_update = component.do_update
+            short_name = component.short_name
 
+            if steam_id not in vehicle_groups:
+                vehicle_groups[steam_id] = {
+                    "entries": [],
+                    "component": {
+                        "version": version,
+                        "name": name,
+                        "update": do_update,
+                        "short": short_name,
+                        "numberplates": [],
+                    },
+                }
     tracks = server.tracks.all()
 
     conditions = server.conditions
