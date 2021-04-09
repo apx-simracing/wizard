@@ -282,6 +282,12 @@ class Entry(models.Model):
         help_text="The pit group for the entry. Stock tracks commonly using groups 1-30.",
     )
 
+    def clean(self):
+        if not self.component.do_update:
+            raise ValidationError(
+                "Enable the overwrite on the component first. Otherwise added entries might cause inconsistencies."
+            )
+
     def __str__(self):
         return "{}#{} ({})".format(self.team_name, self.vehicle_number, self.component)
 
