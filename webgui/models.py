@@ -623,7 +623,7 @@ class Server(models.Model):
             content = loads(self.status.replace("'", '"'))
             return content["release"]
         else:
-            return "-"
+            return None
 
     @property
     def status_info(self):
