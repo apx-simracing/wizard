@@ -12,9 +12,10 @@ from wizard.settings import (
 )
 import hashlib
 import subprocess
+from re import match
 from django.dispatch import receiver
 from os.path import join, exists
-from os import mkdir, listdir, unlink
+from os import mkdir, listdir, unlink, linesep
 from shutil import copyfile
 from . import models
 from json import loads, dumps
@@ -252,6 +253,7 @@ def get_event_config(event_id: int):
         if steam_id not in vehicle_groups:
             vehicle_groups[steam_id] = {
                 "entries": [],
+                "entries_overwrites": {},
                 "component": {
                     "version": version,
                     "name": name,
@@ -265,6 +267,17 @@ def get_event_config(event_id: int):
                 vehicle.team_name, vehicle.vehicle_number, vehicle.pit_group
             )
         )
+        if vehicle.additional_overwrites:
+            props = {}
+            lines = vehicle.additional_overwrites.split(linesep)
+            pattern = r"^(.+)\s{0,}=\s{0,}\"(.+)\"$"
+            for line in lines:
+                got = match(pattern, line)
+                if got:
+                    props[got.group(1)] = got.group(2)
+            vehicle_groups[steam_id]["entries_overwrites"][
+                vehicle.vehicle_number
+            ] = props
     if len(ungrouped_vehicles) == 0:
         # use signup components for the event.json
         for component in signup_components:
@@ -277,6 +290,7 @@ def get_event_config(event_id: int):
             if steam_id not in vehicle_groups:
                 vehicle_groups[steam_id] = {
                     "entries": [],
+                    "entries_overwrites": {},
                     "component": {
                         "version": version,
                         "name": name,

@@ -6,7 +6,7 @@ from django import forms
 from django.dispatch import receiver
 from os.path import isfile, basename
 from shutil import copy
-from os import remove
+from os import remove, linesep
 from json import loads
 from django.core.validators import RegexValidator
 from webgui.util import (
@@ -41,6 +41,7 @@ from wand.drawing import Drawing
 from wand.color import Color
 from threading import Thread
 from croniter import croniter
+from re import match
 
 
 class ComponentType(models.TextChoices):
@@ -281,12 +282,32 @@ class Entry(models.Model):
         default=1,
         help_text="The pit group for the entry. Stock tracks commonly using groups 1-30.",
     )
+    additional_overwrites = models.TextField(
+        blank=True,
+        default=None,
+        null=True,
+        verbose_name="See Wiki article 'Wizard: Additional properties for entries' for details",
+    )
 
     def clean(self):
         if not self.component.do_update:
             raise ValidationError(
                 "Enable the overwrite on the component first. Otherwise added entries might cause inconsistencies."
             )
+
+        # validate additional overwrites, if needed
+        # we assume the \r\n as the wizard
+        if self.additional_overwrites:
+            lines = self.additional_overwrites.split(linesep)
+            pattern = r"^(.+)\s{0,}=\s{0,}\"(.+)\"$"
+            for line in lines:
+                got = match(pattern, line)
+                if not got:
+                    raise ValidationError(
+                        'The value for the line "{}" does not follow the scheme Name="Value"!'.format(
+                            line
+                        )
+                    )
 
     def __str__(self):
         return "{}#{} ({})".format(self.team_name, self.vehicle_number, self.component)
