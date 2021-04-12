@@ -289,6 +289,15 @@ class Entry(models.Model):
         verbose_name="See Wiki article 'Wizard: Additional properties for entries' for details",
     )
 
+    @property
+    def events(self):
+        events = Event.objects.filter(entries__in=[self.pk]).values_list(
+            "name", flat=True
+        )
+        if len(events) == 0:
+            return None
+        return ", ".join(events)
+
     def clean(self):
         if not self.component.do_update:
             raise ValidationError(
@@ -310,7 +319,14 @@ class Entry(models.Model):
                     )
 
     def __str__(self):
-        return "{}#{} ({})".format(self.team_name, self.vehicle_number, self.component)
+        if self.events:
+            return "{}#{} ({}) for {}".format(
+                self.team_name, self.vehicle_number, self.component, self.events
+            )
+        else:
+            return "{}#{} ({})".format(
+                self.team_name, self.vehicle_number, self.component
+            )
 
 
 class ComponentFileType(models.TextChoices):
