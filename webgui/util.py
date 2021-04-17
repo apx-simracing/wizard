@@ -14,7 +14,7 @@ import hashlib
 import subprocess
 from re import match
 from django.dispatch import receiver
-from os.path import join, exists
+from os.path import join, exists, basename
 from os import mkdir, listdir, unlink, linesep
 from shutil import copyfile
 from . import models
@@ -129,6 +129,16 @@ def get_key_root_path(instance, filename):
     if not exists(full_path):
         mkdir(full_path)
     return join("keys", hash_code, filename)
+
+
+def get_plugin_root_path(instance, filename):
+    hash_code = get_hash(str(instance.user.pk))
+    if not exists(join(join(MEDIA_ROOT, hash_code, "plugins"))):
+        mkdir(join(MEDIA_ROOT, hash_code, "plugins"))
+    full_path = join(MEDIA_ROOT, hash_code, "plugins")
+    if not exists(full_path):
+        mkdir(full_path)
+    return join(hash_code, "plugins", filename)
 
 
 def get_logfile_root_path(instance, filename):
@@ -345,7 +355,10 @@ def get_event_config(event_id: int):
         start_type = 2
     if server.start_type == models.EvenStartType.FR:
         start_type = 4
-
+    plugins = {}
+    for plugin in server.plugins.all():
+        name = basename(str(plugin.plugin_file))
+        plugins[name] = loads(plugin.overwrites)
     result = {
         "server": {
             "overwrites": {
@@ -362,6 +375,7 @@ def get_event_config(event_id: int):
         "real_weather_key": OPENWEATHERAPI_KEY,
         "temp_offset": server.temp_offset,
         "comp": RECIEVER_COMP_INFO,
+        "plugins": plugins,
         "mod": {
             "name": mod_name,
             "version": "1.0.{}".format(get_random_string(5)),
@@ -516,6 +530,13 @@ def do_server_interaction(server):
             run_apx_command(key, command_line)
             command_line = "--cmd deploy --args {} {}".format(config_path, rfm_path)
             run_apx_command(key, command_line)
+            # push plugins, if needed
+            if server.event.plugins.count() > 0:
+                files = ""
+                for plugin in server.event.plugins.all():
+                    files = files + " " + join(MEDIA_ROOT, str(plugin.plugin_file))
+                command_line = "--cmd plugins --args {}".format(files)
+                run_apx_command(key, command_line)
             do_post(
                 "[{}]: 😎 Deployment looks good for {}!".format(
                     INSTANCE_NAME, server.name

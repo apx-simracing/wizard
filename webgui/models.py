@@ -26,6 +26,7 @@ from webgui.util import (
     remove_orphan_files,
     do_component_file_apply,
     RECIEVER_COMP_INFO,
+    get_plugin_root_path,
 )
 from wizard.settings import FAILURE_THRESHOLD, MEDIA_ROOT, STATIC_URL
 from webgui.storage import OverwriteStorage
@@ -492,6 +493,32 @@ class EvenStartType(models.TextChoices):
     FR = "FR", "Fast rolling start"
 
 
+class ServerPlugin(models.Model):
+    plugin_file = models.FileField(
+        upload_to=get_plugin_root_path,
+        help_text="The plugin file",
+        blank=False,
+        default=None,
+        null=False,
+    )
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    name = models.CharField(
+        blank=True,
+        max_length=500,
+        default="",
+        null=True,
+        help_text="A organistory name for the plugin",
+    )
+
+    overwrites = models.TextField(
+        default="{}",
+        help_text="Additional JSON settings to use. ' Enabled: 1' will be added automatically.",
+    )
+
+    def __str__(self):
+        return "{}: {}".format(self.name, basename(str(self.plugin_file)))
+
+
 class Event(models.Model):
     overwrites_multiplayer = models.TextField(default="{}")
     overwrites_player = models.TextField(default="{}")
@@ -525,6 +552,7 @@ class Event(models.Model):
         help_text="Name of the mod to install. If no value is given, the scheme apx_{randomstring} will be used. Max length is 50 chars.",
         validators=[alphanumeric_validator],
     )
+    plugins = models.ManyToManyField(ServerPlugin, blank=True)
 
     def __str__(self):
         return "{}".format(self.name)
@@ -869,3 +897,36 @@ class ServerStatustext(models.Model):
 
     def __str__(self):
         return "{} @ {}".format(self.server, self.date.strftime("%m/%d/%Y, %H:%M:%S"))
+
+
+class TickerMessageType(models.TextChoices):
+    Penalty = "P+", "Penalty"
+
+
+class TickerMessage(models.Model):
+    class Meta:
+        verbose_name_plural = "Ticker messages"
+
+    server = models.ForeignKey(
+        Server, on_delete=models.CASCADE, blank=False, null=False, default=None
+    )
+
+    date = models.DateTimeField(auto_now_add=True)
+    affected_vehicles = models.ManyToManyField(Entry, blank=True)
+    message = models.CharField(
+        max_length=255,
+        blank=False,
+        null=False,
+        default=None,
+        help_text="Event description",
+    )
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    type = models.CharField(
+        max_length=3,
+        choices=TickerMessageType.choices,
+        blank=True,
+        default="",
+        help_text="Type",
+        verbose_name="Type",
+    )

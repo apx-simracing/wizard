@@ -16,10 +16,21 @@ from wizard.settings import (
     INSTANCE_NAME,
     MEDIA_ROOT,
 )
-from .models import EntryFile, Entry, Chat, Server, User, Event, Component
+from .models import (
+    EntryFile,
+    Entry,
+    Chat,
+    Server,
+    User,
+    Event,
+    Component,
+    TickerMessage,
+    ServerStatustext,
+)
 import pathlib
 import zipfile
 import tempfile
+from json import loads
 from os import listdir, mkdir
 from os.path import join, basename
 from django.core.files import File
@@ -356,3 +367,35 @@ def get_signup_form(request):
 
 def get_entry_signup_form(request, entry: int):
     pass
+
+
+from datetime import date
+from collections import OrderedDict
+
+
+def get_ticker(request, secret: str):
+    messages = TickerMessage.objects.filter(server__public_secret=secret)
+    """
+    last_status = (
+        ServerStatustext.objects.filter(server__public_secret=secret)
+        .order_by("-date")
+        .first()
+    )
+    """
+    last_status = (
+        ServerStatustext.objects.filter(server__public_secret=secret)
+        .order_by("-id")
+        .first()
+    )
+    vehicles = {}
+    raw_status = loads(last_status.status.replace("'", '"')) if last_status else None
+    if raw_status:
+        for vehicle in raw_status["vehicles"]:
+            position = vehicle["position"]
+            vehicles[position] = vehicle
+    vehicles = OrderedDict(sorted(vehicles.items()))
+    return render(
+        request,
+        "ticker.html",
+        {"messages": messages, "status": raw_status, "vehicles": vehicles},
+    )

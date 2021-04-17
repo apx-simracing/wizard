@@ -10,7 +10,10 @@ from webgui.models import (
     Server,
     Chat,
     RaceSessions,
+    ServerStatustext,
     ServerCron,
+    TickerMessage,
+    ServerPlugin,
 )
 from django.utils.html import mark_safe
 from django.contrib.auth.models import User
@@ -365,6 +368,63 @@ class ServerAdmin(admin.ModelAdmin):
     track_name.short_description = "Track"
 
 
+class ServerStatustextAdmin(admin.ModelAdmin):
+    def get_form(self, request, obj=None, **kwargs):
+        form = super(ServerStatustextAdmin, self).get_form(request, obj=None, **kwargs)
+        form.base_fields["user"].queryset = User.objects.filter(pk=request.user.pk)
+        return form
+
+    def get_changeform_initial_data(self, request):
+        get_data = super(ServerStatustextAdmin, self).get_changeform_initial_data(
+            request
+        )
+        get_data["user"] = request.user.pk
+        return get_data
+
+    def get_queryset(self, request):
+        if not request.user.is_superuser:
+            return []
+        else:
+            return ServerStatustext.objects.all()
+
+
+class TickerMessageAdmin(admin.ModelAdmin):
+    def get_form(self, request, obj=None, **kwargs):
+        form = super(TickerMessageAdmin, self).get_form(request, obj=None, **kwargs)
+        form.base_fields["user"].queryset = User.objects.filter(pk=request.user.pk)
+        return form
+
+    def get_changeform_initial_data(self, request):
+        get_data = super(TickerMessageAdmin, self).get_changeform_initial_data(request)
+        get_data["user"] = request.user.pk
+        return get_data
+
+    def get_queryset(self, request):
+        if not request.user.is_superuser:
+            return TickerMessage.objects.filter(user=request.user)
+        else:
+            return TickerMessage.objects.all()
+
+
+class ServerPluginAdmin(admin.ModelAdmin):
+    def get_form(self, request, obj=None, **kwargs):
+        form = super(ServerPluginAdmin, self).get_form(request, obj=None, **kwargs)
+        form.base_fields["user"].queryset = User.objects.filter(pk=request.user.pk)
+        return form
+
+    def get_changeform_initial_data(self, request):
+        get_data = super(ServerPluginAdmin, self).get_changeform_initial_data(request)
+        get_data["user"] = request.user.pk
+        return get_data
+
+    def get_queryset(self, request):
+        if not request.user.is_superuser:
+            return ServerPlugin.objects.filter(user=request.user)
+        else:
+            return ServerPlugin.objects.all()
+
+
+admin.site.register(TickerMessage, TickerMessageAdmin)
 admin.site.register(Component, ComponentAdmin)
 admin.site.register(ComponentFile, ComponentFileAdmin)
 admin.site.register(Track, TrackAdmin)
@@ -374,5 +434,7 @@ admin.site.register(Event, EventAdmin)
 admin.site.register(RaceConditions, RaceConditionsAdmin)
 admin.site.register(RaceSessions, RaceSessionsAdmin)
 admin.site.register(Server, ServerAdmin)
+admin.site.register(ServerStatustext, ServerStatustextAdmin)
 admin.site.register(Chat, ChatAdmin)
 admin.site.register(ServerCron, ServerCronAdmin)
+admin.site.register(ServerPlugin, ServerPluginAdmin)
