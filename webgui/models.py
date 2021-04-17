@@ -518,6 +518,14 @@ class ServerPlugin(models.Model):
     def __str__(self):
         return "{}: {}".format(self.name, basename(str(self.plugin_file)))
 
+    def clean(self):
+    try:
+        loads(self.overwrites)
+    except:
+        raise ValidationError(
+            "The overwrites for the multiplayer.JSON are not valid"
+        )
+
 
 class Event(models.Model):
     overwrites_multiplayer = models.TextField(default="{}")
