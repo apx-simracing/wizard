@@ -519,12 +519,10 @@ class ServerPlugin(models.Model):
         return "{}: {}".format(self.name, basename(str(self.plugin_file)))
 
     def clean(self):
-    try:
-        loads(self.overwrites)
-    except:
-        raise ValidationError(
-            "The overwrites for the multiplayer.JSON are not valid"
-        )
+        try:
+            loads(self.overwrites)
+        except:
+            raise ValidationError("This JSON is not valid.")
 
 
 class Event(models.Model):
