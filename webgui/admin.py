@@ -304,7 +304,7 @@ class ServerAdmin(admin.ModelAdmin):
         ),
         (
             "Actions and status",
-            {"fields": ["action", "locked", "status_info"]},
+            {"fields": ["action", "locked", "status_info", "update_on_build"]},
         ),
         (
             "Keys",

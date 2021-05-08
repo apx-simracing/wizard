@@ -517,6 +517,7 @@ def do_server_interaction(server):
         # save event json
         event_config = get_event_config(server.event.pk)
         event_config["branch"] = server.branch
+        event_config["update_on_build"] = server.update_on_build
         config_path = join(APX_ROOT, "configs", key + ".json")
         with open(config_path, "w") as file:
             file.write(dumps(event_config))

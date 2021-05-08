@@ -679,6 +679,10 @@ class Server(models.Model):
             FAILURE_THRESHOLD
         ),
     )
+    update_on_build = models.BooleanField(
+        default=False,
+        help_text="Decides if APX will call dedicated server update when refreshing the content",
+    )
 
     @property
     def build(self):
