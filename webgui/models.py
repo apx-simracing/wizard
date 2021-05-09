@@ -37,9 +37,15 @@ from os import mkdir
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
-from wand import image
-from wand.drawing import Drawing
-from wand.color import Color
+USE_WAND = True
+try:
+    from wand import image
+    from wand.drawing import Drawing
+    from wand.color import Color
+except ImportError:
+    USE_WAND = False
+    print("Wand will not be available.")
+
 from threading import Thread
 from croniter import croniter
 from re import match
@@ -389,6 +395,7 @@ class EntryFile(models.Model):
             and has_mask
             and not self.mask_added
             and self.pk
+            and USE_WAND
         ):
             # attempt numberplate addition
             livery_path = join(MEDIA_ROOT, str(self.file))
