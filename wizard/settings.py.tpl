@@ -40,7 +40,6 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
 ]
-
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -124,7 +123,7 @@ STATIC_URL = "/static/"
 MEDIA_URL = "http://localhost:8000/"
 
 
-FAILURE_THRESHOLD = 3
+FAILURE_THRESHOLD = 500
 
 MEDIA_URL = "http://localhost:8000/"
 
