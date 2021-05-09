@@ -18,7 +18,7 @@ class WebguiConfig(AppConfig):
     def ready(self):
         # call cron job module
         try:
-            if len(argv) == 2 and argv[1] == "runserver":
+            if len(argv) >= 2 and argv[1] == "runserver":
                 worker = Thread(target=self.background_cron, daemon=True)
                 worker.start()
         except KeyboardInterrupt:
