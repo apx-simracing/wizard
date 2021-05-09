@@ -240,7 +240,13 @@ def get_server_hash(url):
 
 def run_apx_command(hashed_url, commandline):
     apx_path = join(APX_ROOT, "apx.py")
-    command_line = "python {} --server {} {}".format(apx_path, hashed_url, commandline)
+    python_path = "python.exe"
+    local_python_path = join(BASE_DIR, "python.exe")
+    if exists(local_python_path):
+        python_path = local_python_path
+    command_line = "{} {} --server {} {}".format(
+        python_path, apx_path, hashed_url, commandline
+    )
     got = subprocess.check_output(command_line, cwd=APX_ROOT, shell=True).decode(
         "utf-8"
     )
