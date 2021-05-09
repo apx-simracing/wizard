@@ -614,7 +614,7 @@ class Server(models.Model):
     public_ip = models.CharField(
         blank=False,
         max_length=500,
-        default="",
+        default="0.0.0.0",
         help_text="Not used currently. Use '0.0.0.0' if unkown.",
     )
     event = models.ForeignKey(
@@ -793,6 +793,8 @@ class Server(models.Model):
         if self.action == "W" and self.status and "not_running" in self.status:
             raise ValidationError("Start the server first")
 
+        if not str(self.url).endswith("/"):
+            raise ValidationError("The server url must end with a slash!")
         self.status_failures = 0
 
         if self.action != "":
