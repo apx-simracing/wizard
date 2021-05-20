@@ -1,6 +1,8 @@
 target = "https://wiki.apx.chmr.eu/doku.php?id=common_components&do=export_text"
 from requests import get
 from json import dumps
+from string import ascii_uppercase, digits
+from random import choice
 
 lines = get(target).text.split("\n")
 data = []
@@ -12,6 +14,7 @@ for line in lines:
         component = parts[0].strip()
         steamid = parts[1].strip()
         layouts = None
+        short_name = "".join(choice(ascii_uppercase + digits) for _ in range(5))
         if len(parts) > 2:
             layouts = parts[2:]
         if "Component" not in component:
@@ -25,7 +28,7 @@ for line in lines:
                     "steam_id": steamid,
                     "component_version": "latest",
                     "component_name": component,
-                    "short_name": component[0:8],
+                    "short_name": short_name,
                     "user_id": 1,
                 },
             }

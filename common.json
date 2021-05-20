@@ -3,7 +3,7 @@
         "fields": {
             "component_name": "AstonMartin_Vantage_GT3_2019",
             "component_version": "latest",
-            "short_name": "AstonMar",
+            "short_name": "WHMA9",
             "steam_id": "1596822282",
             "type": "VEH",
             "user_id": 1
@@ -15,7 +15,7 @@
         "fields": {
             "component_name": "Audi_R8LMS_GT3_2018",
             "component_version": "latest",
-            "short_name": "Audi_R8L",
+            "short_name": "TSYC7",
             "steam_id": "1596822230",
             "type": "VEH",
             "user_id": 1
@@ -27,7 +27,7 @@
         "fields": {
             "component_name": "Audi_R8LMS_GT3_2019",
             "component_version": "latest",
-            "short_name": "Audi_R8L",
+            "short_name": "RMPU0",
             "steam_id": "1596822230",
             "type": "VEH",
             "user_id": 1
@@ -39,7 +39,7 @@
         "fields": {
             "component_name": "McLaren_650S_GT3_2017",
             "component_version": "latest",
-            "short_name": "McLaren_",
+            "short_name": "WW9F4",
             "steam_id": "1097229192",
             "type": "VEH",
             "user_id": 1
@@ -51,7 +51,7 @@
         "fields": {
             "component_name": "Bentley_Continental_GT3_2017",
             "component_version": "latest",
-            "short_name": "Bentley_",
+            "short_name": "VKW92",
             "steam_id": "1097230662",
             "type": "VEH",
             "user_id": 1
@@ -63,7 +63,7 @@
         "fields": {
             "component_name": "Bentley_Continental_GT3_2020_2020",
             "component_version": "latest",
-            "short_name": "Bentley_",
+            "short_name": "QVCIA",
             "steam_id": "1097230662",
             "type": "VEH",
             "user_id": 1
@@ -75,7 +75,7 @@
         "fields": {
             "component_name": "McLaren_720S_GT3_2018",
             "component_version": "latest",
-            "short_name": "McLaren_",
+            "short_name": "M6ISU",
             "steam_id": "1596821875",
             "type": "VEH",
             "user_id": 1
@@ -87,7 +87,7 @@
         "fields": {
             "component_name": "Mercedes_AMG_GT3_2017",
             "component_version": "latest",
-            "short_name": "Mercedes",
+            "short_name": "QXATN",
             "steam_id": "1097232656",
             "type": "VEH",
             "user_id": 1
@@ -99,7 +99,7 @@
         "fields": {
             "component_name": "Norma_M30-LMP3_2017",
             "component_version": "latest",
-            "short_name": "Norma_M3",
+            "short_name": "DHIRB",
             "steam_id": "1411402158",
             "type": "VEH",
             "user_id": 1
@@ -111,7 +111,7 @@
         "fields": {
             "component_name": "BMW_M2_CS_2020",
             "component_version": "latest",
-            "short_name": "BMW_M2_C",
+            "short_name": "6DQAA",
             "steam_id": "1923574682",
             "type": "VEH",
             "user_id": 1
@@ -123,7 +123,7 @@
         "fields": {
             "component_name": "Oreca_07_LMP2_2017",
             "component_version": "latest",
-            "short_name": "Oreca_07",
+            "short_name": "OWPM1",
             "steam_id": "1411402194",
             "type": "VEH",
             "user_id": 1
@@ -135,7 +135,7 @@
         "fields": {
             "component_name": "BMW_M6_GT3_2018",
             "component_version": "latest",
-            "short_name": "BMW_M6_G",
+            "short_name": "00Y55",
             "steam_id": "1596822133",
             "type": "VEH",
             "user_id": 1
@@ -147,7 +147,7 @@
         "fields": {
             "component_name": "BMW_M8_GTE_2018",
             "component_version": "latest",
-            "short_name": "BMW_M8_G",
+            "short_name": "1FZNO",
             "steam_id": "1411402133",
             "type": "VEH",
             "user_id": 1
@@ -159,7 +159,7 @@
         "fields": {
             "component_name": "Porsche_911_GT3_R_2018",
             "component_version": "latest",
-            "short_name": "Porsche_",
+            "short_name": "K9KDU",
             "steam_id": "1596822183",
             "type": "VEH",
             "user_id": 1
@@ -171,7 +171,7 @@
         "fields": {
             "component_name": "Callaway_Corvette_GT3_2017",
             "component_version": "latest",
-            "short_name": "Callaway",
+            "short_name": "W9Y74",
             "steam_id": "1097232188",
             "type": "VEH",
             "user_id": 1
@@ -183,7 +183,7 @@
         "fields": {
             "component_name": "Porsche_991RSR_GTE_2017",
             "component_version": "latest",
-            "short_name": "Porsche_",
+            "short_name": "RLDQ7",
             "steam_id": "1411394979",
             "type": "VEH",
             "user_id": 1
@@ -195,7 +195,7 @@
         "fields": {
             "component_name": "Corvette_C7R_GTE_2017",
             "component_version": "latest",
-            "short_name": "Corvette",
+            "short_name": "CVJH2",
             "steam_id": "1411387394",
             "type": "VEH",
             "user_id": 1
@@ -207,7 +207,7 @@
         "fields": {
             "component_name": "Porsche_Cup_GT3_2018",
             "component_version": "latest",
-            "short_name": "Porsche_",
+            "short_name": "F60Q2",
             "steam_id": "1872951506",
             "type": "VEH",
             "user_id": 1
@@ -219,7 +219,7 @@
         "fields": {
             "component_name": "Radical_RXC_GT3_2017",
             "component_version": "latest",
-            "short_name": "Radical_",
+            "short_name": "ULCET",
             "steam_id": "1097232726",
             "type": "VEH",
             "user_id": 1
@@ -231,7 +231,7 @@
         "fields": {
             "component_name": "ER_AlpineSeries_rF2",
             "component_version": "latest",
-            "short_name": "ER_Alpin",
+            "short_name": "L503D",
             "steam_id": "2362626369",
             "type": "VEH",
             "user_id": 1
@@ -243,7 +243,7 @@
         "fields": {
             "component_name": "Ferrari_488_GT3_2020",
             "component_version": "latest",
-            "short_name": "Ferrari_",
+            "short_name": "2PTEC",
             "steam_id": "2103827617",
             "type": "VEH",
             "user_id": 1
@@ -255,7 +255,7 @@
         "fields": {
             "component_name": "Ferrari_488_GTE_2020",
             "component_version": "latest",
-            "short_name": "Ferrari_",
+            "short_name": "UC5Q6",
             "steam_id": "2103827595",
             "type": "VEH",
             "user_id": 1
@@ -267,7 +267,7 @@
         "fields": {
             "component_name": "Radical_SR3-RSX_2017",
             "component_version": "latest",
-            "short_name": "Radical_",
+            "short_name": "6C1AF",
             "steam_id": "2113612677",
             "type": "VEH",
             "user_id": 1
@@ -279,7 +279,7 @@
         "fields": {
             "component_name": "Formula_E_2018",
             "component_version": "latest",
-            "short_name": "Formula_",
+            "short_name": "BBZPJ",
             "steam_id": "1214555461",
             "type": "VEH",
             "user_id": 1
@@ -291,7 +291,7 @@
         "fields": {
             "component_name": "Formula_E_Gen2_2019",
             "component_version": "latest",
-            "short_name": "Formula_",
+            "short_name": "TPK8A",
             "steam_id": "1558324776",
             "type": "VEH",
             "user_id": 1
@@ -303,7 +303,7 @@
         "fields": {
             "component_name": "Formula_E_Gen2_2021_2021",
             "component_version": "latest",
-            "short_name": "Formula_",
+            "short_name": "NDFI5",
             "steam_id": "1558324776",
             "type": "VEH",
             "user_id": 1
@@ -315,7 +315,7 @@
         "fields": {
             "component_name": "FVee_2018",
             "component_version": "latest",
-            "short_name": "FVee_201",
+            "short_name": "76OOS",
             "steam_id": "1694798885",
             "type": "VEH",
             "user_id": 1
@@ -327,7 +327,7 @@
         "fields": {
             "component_name": "Cadillac_DPi_2010",
             "component_version": "latest",
-            "short_name": "Cadillac",
+            "short_name": "YJ4ZI",
             "steam_id": "2331283978",
             "type": "VEH",
             "user_id": 1
@@ -339,7 +339,7 @@
         "fields": {
             "component_name": "Ligier_JSP217_2020",
             "component_version": "latest",
-            "short_name": "Ligier_J",
+            "short_name": "JXNO1",
             "steam_id": "2331284205",
             "type": "VEH",
             "user_id": 1
@@ -351,7 +351,7 @@
         "fields": {
             "component_name": "eX_ZERO_2021",
             "component_version": "latest",
-            "short_name": "eX_ZERO_",
+            "short_name": "37HCJ",
             "steam_id": "2271976749",
             "type": "VEH",
             "user_id": 1
@@ -363,7 +363,7 @@
         "fields": {
             "component_name": "Sebring_2018",
             "component_version": "latest",
-            "short_name": "Sebring_",
+            "short_name": "VYZA2",
             "steam_id": "1453463528",
             "type": "LOC",
             "user_id": 1
@@ -411,7 +411,7 @@
         "fields": {
             "component_name": "Nurburgring_2018",
             "component_version": "latest",
-            "short_name": "Nurburgr",
+            "short_name": "QMX5I",
             "steam_id": "1737056846",
             "type": "LOC",
             "user_id": 1
@@ -504,7 +504,7 @@
         "fields": {
             "component_name": "HongKong_2018",
             "component_version": "latest",
-            "short_name": "HongKong",
+            "short_name": "CG8QA",
             "steam_id": "1214556324",
             "type": "LOC",
             "user_id": 1
@@ -525,7 +525,7 @@
         "fields": {
             "component_name": "LeMans_2018",
             "component_version": "latest",
-            "short_name": "LeMans_2",
+            "short_name": "ZEAWB",
             "steam_id": "1737056865",
             "type": "LOC",
             "user_id": 1
@@ -555,7 +555,7 @@
         "fields": {
             "component_name": "SpaFrancorchamps_2020",
             "component_version": "latest",
-            "short_name": "SpaFranc",
+            "short_name": "LKOUA",
             "steam_id": "2291867462",
             "type": "LOC",
             "user_id": 1
@@ -585,7 +585,7 @@
         "fields": {
             "component_name": "Zandvoort_2017",
             "component_version": "latest",
-            "short_name": "Zandvoor",
+            "short_name": "CFYL0",
             "steam_id": "1107038453",
             "type": "LOC",
             "user_id": 1
@@ -606,7 +606,7 @@
         "fields": {
             "component_name": "Zandvoort_2020",
             "component_version": "latest",
-            "short_name": "Zandvoor",
+            "short_name": "UKNB9",
             "steam_id": "1107038453",
             "type": "LOC",
             "user_id": 1
@@ -663,7 +663,7 @@
         "fields": {
             "component_name": "Imola",
             "component_version": "latest",
-            "short_name": "Imola",
+            "short_name": "AEUQ3",
             "steam_id": "1694798655",
             "type": "LOC",
             "user_id": 1
@@ -711,7 +711,7 @@
         "fields": {
             "component_name": "Virginia",
             "component_version": "latest",
-            "short_name": "Virginia",
+            "short_name": "YARWU",
             "steam_id": "1694798757",
             "type": "LOC",
             "user_id": 1
@@ -768,7 +768,7 @@
         "fields": {
             "component_name": "Guapore",
             "component_version": "latest",
-            "short_name": "Guapore",
+            "short_name": "Y278Z",
             "steam_id": "1694798796",
             "type": "LOC",
             "user_id": 1
@@ -789,7 +789,7 @@
         "fields": {
             "component_name": "Monaco_2019",
             "component_version": "latest",
-            "short_name": "Monaco_2",
+            "short_name": "8KII4",
             "steam_id": "1737056822",
             "type": "LOC",
             "user_id": 1
@@ -810,7 +810,7 @@
         "fields": {
             "component_name": "NewYorkFE_2020",
             "component_version": "latest",
-            "short_name": "NewYorkF",
+            "short_name": "IG2LK",
             "steam_id": "2103827662",
             "type": "LOC",
             "user_id": 1
@@ -831,7 +831,7 @@
         "fields": {
             "component_name": "BerlinFE_2020",
             "component_version": "latest",
-            "short_name": "BerlinFE",
+            "short_name": "DCV2E",
             "steam_id": "2103827690",
             "type": "LOC",
             "user_id": 1
@@ -852,7 +852,7 @@
         "fields": {
             "component_name": "RomeFE_2020",
             "component_version": "latest",
-            "short_name": "RomeFE_2",
+            "short_name": "25MTL",
             "steam_id": "2399198882",
             "type": "LOC",
             "user_id": 1
