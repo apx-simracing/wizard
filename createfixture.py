@@ -26,7 +26,7 @@ for line in lines:
                 "fields": {
                     "type": "VEH" if not layouts else "LOC",
                     "steam_id": steamid,
-                    "component_version": "latest",
+                    "component_version": "latest-even" if not layouts else "latest",
                     "component_name": component,
                     "short_name": short_name,
                     "user_id": 1,

@@ -184,10 +184,10 @@ class Component(models.Model):
         super(Component, self).save(*args, **kwargs)
 
     def __str__(self):
-        if self.component_version == "latest":
+        if self.component_version == "latest-even":
             return self.component_name
-        else:
-            return "{} ({})".format(self.component_name, self.component_version)
+
+        return "{} ({})".format(self.component_name, self.component_version)
 
 
 class RaceSessions(models.Model):
