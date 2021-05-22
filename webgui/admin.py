@@ -295,6 +295,7 @@ class ServerAdmin(admin.ModelAdmin):
                     "public_secret",
                     "user",
                     "status_failures",
+                    "session_id",
                 ]
             },
         ),
@@ -327,6 +328,7 @@ class ServerAdmin(admin.ModelAdmin):
                 "server_key",
                 "server_unlock_key",
                 "public_secret",
+                "session_id",
             )
         if self.is_running(obj):
             return self.readonly_fields + (
@@ -335,6 +337,7 @@ class ServerAdmin(admin.ModelAdmin):
                 "status_failures",
                 "status_info",
                 "public_secret",
+                "session_id",
             )
         return self.readonly_fields + (
             "locked",
@@ -342,6 +345,7 @@ class ServerAdmin(admin.ModelAdmin):
             "status_failures",
             "status_info",
             "public_secret",
+            "session_id",
         )
 
     def is_running(self, obj):
@@ -387,6 +391,8 @@ class ServerStatustextAdmin(admin.ModelAdmin):
         else:
             return ServerStatustext.objects.all()
 
+    list_display = ["server", "session_id", "__str__"]
+
 
 class TickerMessageAdmin(admin.ModelAdmin):
     def get_form(self, request, obj=None, **kwargs):
@@ -404,6 +410,8 @@ class TickerMessageAdmin(admin.ModelAdmin):
             return TickerMessage.objects.filter(user=request.user)
         else:
             return TickerMessage.objects.all()
+
+    list_display = ["date", "type", "session_id", "event_time", "session", "__str__"]
 
 
 class ServerPluginAdmin(admin.ModelAdmin):

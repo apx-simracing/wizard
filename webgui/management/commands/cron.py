@@ -24,7 +24,7 @@ from webgui.util import (
 from django.db.models.signals import post_save
 
 from django.dispatch import receiver
-from json import dumps
+from json import dumps, loads
 from time import sleep
 from threading import Thread, get_ident
 from croniter import croniter
@@ -51,6 +51,16 @@ class Command(BaseCommand):
                 server.status = got
 
                 text = ServerStatustext()
+                try:
+                    parsed_text = loads(got)
+                    if (
+                        "session_id" in parsed_text
+                        and parsed_text["session_id"] is not None
+                    ):
+                        server.session_id = parsed_text["session_id"]
+                        text.session_id = server.session_id
+                except:
+                    pass
                 text.user = server.user
                 text.server = server
                 text.status = got

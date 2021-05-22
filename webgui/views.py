@@ -31,10 +31,12 @@ import pathlib
 import zipfile
 import tempfile
 from json import loads
+from django.core import serializers
 from os import listdir, mkdir
 from os.path import join, basename
 from django.core.files import File
 from .util import get_hash, get_random_string, do_post, do_rc_post
+from django.views.decorators.csrf import csrf_exempt
 
 
 def get_status(request, secret: str):
@@ -399,3 +401,45 @@ def get_ticker(request, secret: str):
         "ticker.html",
         {"messages": messages, "status": raw_status, "vehicles": vehicles},
     )
+
+
+@csrf_exempt
+def add_message(request, secret: str):
+    server = Server.objects.filter(public_secret=secret).first()
+    if not server:
+        raise Http404()
+
+    data = request.body.decode("utf-8")
+    parsed = loads(data)
+    ticker = TickerMessage()
+    ticker.message = data
+    ticker.type = parsed["type"]
+    ticker.event_time = parsed["event_time"]
+    ticker.session = parsed["session"]
+    ticker.server = server
+    ticker.user = server.user
+    ticker.session_id = server.session_id
+    ticker.save()
+    return JsonResponse({})
+
+
+@csrf_exempt
+def live(request, secret: str):
+    server = Server.objects.filter(public_secret=secret).first()
+    if not server:
+        raise Http404()
+
+    status = loads(
+        ServerStatustext.objects.filter(server=server).order_by("id").last().status
+    )
+    raw_messages = (
+        TickerMessage.objects.filter(server=server)
+        .filter(session_id=server.session_id)
+        .filter(session=status["session"])
+        .order_by("id")
+    )
+    messages = []
+    for message in raw_messages:
+        messages.append(loads(message.message))
+    response = {"status": status, "messages": messages}
+    return JsonResponse(response)

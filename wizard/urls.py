@@ -24,6 +24,9 @@ from webgui.views import (
     get_team_revoke_form,
     add_penalty,
     get_status,
+    get_ticker,
+    add_message,
+    live,
 )
 from wizard.settings import ENTRY_SIGNUP_ENABLED
 
@@ -40,6 +43,9 @@ if ENTRY_SIGNUP_ENABLED:
             "penalty/<str:secret>/<str:driver>/<int:penalty>/<str:reason>", add_penalty
         ),
         path("status/<str:secret>", get_status),
+        path("ticker/<str:secret>", get_ticker),
+        path("addmessage/<str:secret>", add_message),
+        path("live/<str:secret>", live),
     ]
 else:
     urlpatterns = [
@@ -50,4 +56,7 @@ else:
             "penalty/<str:secret>/<str:driver>/<int:penalty>/<str:reason>", add_penalty
         ),
         path("status/<str:secret>", get_status),
+        path("ticker/<str:secret>", get_ticker),
+        path("addmessage/<str:secret>", add_message),
+        path("live/<str:secret>", live),
     ]
