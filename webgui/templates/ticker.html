@@ -6,68 +6,157 @@
   <link rel="stylesheet" href="{% static 'webgui/lib/spectre.min.css' %}">
   <link rel="stylesheet" href="{% static 'webgui/lib/spectre-exp.min.css' %}">
   <link rel="stylesheet" href="{% static 'webgui/lib/spectre-icons.min.css' %}">
-  <link rel="stylesheet" href="{% static 'webgui/style.css' %}">
+  <link rel="stylesheet" href="{% static 'webgui/timing.css' %}">
+  <script src="https://cdn.jsdelivr.net/npm/vue@2.6.12/dist/vue.js"></script>
+  <link rel="preconnect" href="https://fonts.gstatic.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat&family=Oswald:wght@300&family=Viga&display=swap"
+    rel="stylesheet">
 </head>
 
-<body>
-  <div class="container">
-    <div class="columns">
-      <div class="columns col-2"></div>
-      <div class="columns col-7">
-        <div class="columns col-10">
-          <table class="table table-striped table-hover">
-            <thead>
-              <tr>
-                <th>Position</th>
-                <th>Class</th>
-                <th>Team</th>
-                <th>Driver</th>
-                <th>Laps</th>
-                <th>Gap</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for position, vehicle in vehicles.items %}
-
-              <tr>
-                <td>{{vehicle.position}} </td>
-                <td>{{vehicle.carClass}}</td>
-                <td>{{vehicle.vehicleName}}</td>
-                <td>{{vehicle.driverName}}</td>
-                <td>{{vehicle.lapsCompleted}}</td>
-                <td>
-                  {% if vehicle.lapsBehindNext == 0 %}
-                  {{vehicle.timeBehindNext}}
-                  {% else %}
-                  {{vehicle.lapsBehindNext}}
-                  {% endif %}
-                </td>
-              </tr>
-              {% endfor%}
-            </tbody>
-          </table>
-        </div>
-        <div class="columns col-2">
-          {% for message in messages %}
-          <div class="columns col-12">
-            <div class="col-2">
-              <i class="icon icon-2x icon-mail"></i>
-            </div>
-            <div class="col-10">
-              <b>{{message.message}}</b>
-              <ul>
-                {% for vehicle in message.affected_vehicles.all %}
-                <li>{{vehicle.vehicle_number}}: {{vehicle.team_name}}</li>
-                {% endfor%}
-              </ul>
-            </div>
+<body style="background: #c7c6c3 url({% static 'webgui/timing_backdrop.png' %}) repeat 50% 0;"">
+  <div class=" container" id="vue-app">
+  <div class="columns">
+    <div class="columns col-2"></div>
+    <div class="columns col-10">
+      <div class="columns col-10">
+        <div class="columns col-12">
+          <div class="col-10">
+            <img src="https://www.rf2ln.de/home/templates/driverally/images/logo.png">
           </div>
-          {% endfor%}
+          <div class="col-2" v-if="liveData !== null && liveData.status.maxLaps === 2147483647">
+            Timing...
+          </div>
         </div>
+
+        <table class="table table-striped">
+          <thead>
+            <tr>
+              <th>Position (in class)</th>
+              <th>Car</th>
+              <th>Team</th>
+              <th>Laps</th>
+              <th>Stops</th>
+              <th>Gap</th>
+            </tr>
+          </thead>
+          <tbody v-if="liveData !== null">
+            <tr v-for="(vehicle, index) in liveData.status.vehicles" :key="index"
+              :class="'flag-'+[[vehicle.flag.toLowerCase()]] +' overall-state-'+[[getOverallState(vehicle)]]">
+              <td>[[ vehicle.position ]] ([[vehicle.classPosition]])
+
+                <span>
+                  <span title="Pitting" v-if="vehicle.pitState !== 'NONE' || vehicle.pitting"
+                    class="label label-primary state state-pit">P</span>
+
+                  <span title="Pending penalty" v-if="vehicle.penalties > 0"
+                    class="label label-primary state state-penalty">Pen</span>
+                </span>
+              </td>
+              <td>
+                <img class="car-thumb"
+                  :src="'http://localhost:8181/thumbs/f03346eb3a99be025979045e8fa1a281c5159611/'+vehicle.carId+'.png'" />
+              </td>
+              <td>
+                <p>
+                  <span
+                    :class="'label label-primary class-label class-' +  getClassDisplayName(vehicle.carClass).toLowerCase()">[[
+                    getClassDisplayName(vehicle.carClass) ]]</span>
+                  <b class="car-team">[[ vehicle.vehicleName ]]</b>
+                  <span class="car-driver ">[[ vehicle.driverName ]]</span>
+                </p>
+              </td>
+              <td>[[ vehicle.lapsCompleted ]]</td>
+              <td>[[ vehicle.pitstops ]]</td>
+
+              <td v-if="vehicle.lapsBehindNext === 0 && vehicle.position !== 1">
+                +[[ getTime(vehicle.timeBehindNext) ]]
+              </td>
+              <td v-if="vehicle.lapsBehindNext > 0 && vehicle.position !== 1">
+                +[[ vehicle.lapsBehindNext]] laps
+              </td>
+              <td v-if="vehicle.position === 1">
+                Int
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
-      <div class="column col-2"></div>
     </div>
   </div>
+  </div>
+  <script>
+    var app = new Vue({
+      delimiters: ["[[", "]]"],
+      el: '#vue-app',
+      data: {
+        liveData: null,
+        classMap: {
+          "Clio Cup 2010": "H2",
+          "Alpine A110 GT4": "SP10",
+          "Alpine A110 CUP": "Alpine Cup",
+          "Civic BTCC 2013": "SP3T",
+          "WTCR 2018": "TCR"
+        }
+      },
+      methods: {
+        getOverallState: (vehicle) => {
+
+          if (vehicle.finishStatus === 'FSTAT_DQ') {
+            return "dq"
+          }
+
+          if (vehicle.finishStatus === 'FSTAT_DNF') {
+            return "dnf"
+          }
+          if (vehicle.pitState !== 'NONE' || vehicle.pitting) {
+            return "pitting"
+          }
+          if (vehicle.inGarageStall) {
+            return "garage"
+          }
+          return "running"
+        },
+        fetchData: (self) => {
+          fetch("http://localhost:8000/live/cffhddcfgahchafbhifg")
+            .then(response => response.json())
+            .then(data => self.liveData = data);
+        },
+        getTime: (s) => {
+          var ms = s % 1000;
+          s = (s - ms) / 1000;
+          var secs = s % 60;
+          s = (s - secs) / 60;
+          var mins = s % 60;
+          var hrs = (s - mins) / 60;
+
+          ms = Math.abs(ms).toFixed(3)
+          if (hrs === 0 && mins === 0 && secs == 0) {
+            return ms;
+          }
+          if (hrs === 0 && mins === 0) {
+            return secs + '.' + ms;
+          }
+          if (hrs === 0) {
+            return mins + ':' + secs + '.' + ms;
+          }
+        },
+        getClassDisplayName: function(reportedName) {
+          if (typeof this.classMap[reportedName] !== undefined) {
+            return this.classMap[reportedName]
+          }
+          return reportedName
+        }
+      },
+      created: function() {
+        var self = this;
+        self.fetchData(self)
+        setInterval(function() {
+          self.fetchData(self)
+        }, 5000)
+      }
+    })
+  </script>
 </body>
 
 </html>

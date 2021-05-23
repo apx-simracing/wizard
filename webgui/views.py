@@ -15,6 +15,7 @@ from wizard.settings import (
     USER_SIGNUP_RULE_TEXT,
     INSTANCE_NAME,
     MEDIA_ROOT,
+    MEDIA_URL,
 )
 from .models import (
     EntryFile,
@@ -448,7 +449,15 @@ def live(request, secret: str):
     messages = []
     for message in raw_messages:
         messages.append(loads(message.message))
-    response = {"status": status, "messages": messages}
+    status["vehicles"] = sorted(status["vehicles"], key=lambda x: x["position"])
+    # create in-class positions
+    class_cars = {}
+    for vehicle in status["vehicles"]:
+        if vehicle["carClass"] not in class_cars:
+            class_cars[vehicle["carClass"]] = 0
+        class_cars[vehicle["carClass"]] = class_cars[vehicle["carClass"]] + 1
+        vehicle["classPosition"] = class_cars[vehicle["carClass"]]
+    response = {"status": status, "messages": messages, "media_url": MEDIA_URL}
     # unpack the livery thumbnails, if needed
     server_key_path = join(MEDIA_ROOT, "thumbs", key)
     server_pack_path = join(server_key_path, "thumbs.tar.gz")
