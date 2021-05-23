@@ -57,8 +57,27 @@ class Command(BaseCommand):
                         "session_id" in parsed_text
                         and parsed_text["session_id"] is not None
                     ):
+                        old_id = server.session_id
                         server.session_id = parsed_text["session_id"]
+
                         text.session_id = server.session_id
+                        if old_id != server.session_id:
+                            media_thumbs_root = join(MEDIA_ROOT, "thumbs")
+                            if not exists(media_thumbs_root):
+                                mkdir(media_thumbs_root)
+
+                            server_thumbs_path = join(media_thumbs_root, key)
+                            if not exists(server_thumbs_path):
+                                mkdir(server_thumbs_path)
+
+                            # server may changed -> download thumbs
+                            thumbs_command = run_apx_command(
+                                key,
+                                "--cmd thumbnails --args {}".format(
+                                    join(server_thumbs_path, "thumbs.tar.gz")
+                                ),
+                            )
+
                 except:
                     pass
                 text.user = server.user

@@ -32,11 +32,12 @@ import zipfile
 import tempfile
 from json import loads
 from django.core import serializers
-from os import listdir, mkdir
-from os.path import join, basename
+from os import listdir, mkdir, unlink
+from os.path import join, basename, exists
 from django.core.files import File
-from .util import get_hash, get_random_string, do_post, do_rc_post
+from .util import get_hash, get_random_string, do_post, do_rc_post, get_server_hash
 from django.views.decorators.csrf import csrf_exempt
+import tarfile
 
 
 def get_status(request, secret: str):
@@ -423,9 +424,15 @@ def add_message(request, secret: str):
     return JsonResponse({})
 
 
+import tarfile
+
+
 @csrf_exempt
 def live(request, secret: str):
     server = Server.objects.filter(public_secret=secret).first()
+
+    url = server.url
+    key = get_server_hash(url)
     if not server:
         raise Http404()
 
@@ -442,4 +449,13 @@ def live(request, secret: str):
     for message in raw_messages:
         messages.append(loads(message.message))
     response = {"status": status, "messages": messages}
+    # unpack the livery thumbnails, if needed
+    server_key_path = join(MEDIA_ROOT, "thumbs", key)
+    server_pack_path = join(server_key_path, "thumbs.tar.gz")
+    if exists(server_pack_path):
+        # unpack liveries
+        file = tarfile.open(server_pack_path)
+        file.extractall(path=server_key_path)
+        file.close()
+        unlink(server_pack_path)
     return JsonResponse(response)
