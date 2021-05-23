@@ -63,6 +63,8 @@
                     <span
                       :class="'label label-primary class-label class-' +  getClassDisplayName(vehicle.carClass).toLowerCase()">[[
                       getClassDisplayName(vehicle.carClass) ]]</span>
+                    <span class="label label-primary class-label number-label">
+                      #[[ vehicle.carNumber ]]</span>
                     <b class="car-team">[[ vehicle.vehicleName ]]</b>
                     </br>
                     <span class="car-driver" v-if="typeof liveData.drivers[vehicle.slotID] === 'undefined'"> <span
@@ -77,7 +79,7 @@
                   </p>
                 </td>
                 <td v-on:click="toggleOpen(vehicle.slotID)" class="clickable">
-                  <div v-if="openMessages.indexOf(vehicle.slotID) !== -1">
+                  <div class="scrollable-45" v-if="openMessages.indexOf(vehicle.slotID) !== -1">
 
                     <div class="tile tile-centered" v-for="(message, message_key) in vehicle.messages"
                       :key="message_key" v-if="message.type=='LC'">
