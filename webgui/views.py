@@ -446,10 +446,27 @@ def live(request, secret: str):
         .filter(session=status["session"])
         .order_by("id")
     )
-    messages = []
+    messages = {}
+    drivers = {}
     for message in raw_messages:
-        messages.append(loads(message.message))
+        message_content = loads(message.message)
+        slot_id = message_content["slot_id"]
+        if slot_id not in messages:
+            messages[slot_id] = []
+        messages[slot_id].append(message_content)
+
+        if message.type == "DS":
+            old_driver = message_content["old_driver"]
+            new_driver = message_content["new_driver"]
+            if slot_id not in drivers:
+                drivers[slot_id] = []
+
+            if old_driver not in drivers[slot_id]:
+                drivers[slot_id].append(old_driver)
+            if new_driver not in drivers[slot_id]:
+                drivers[slot_id].append(new_driver)
     status["vehicles"] = sorted(status["vehicles"], key=lambda x: x["position"])
+
     # create in-class positions
     class_cars = {}
     for vehicle in status["vehicles"]:
@@ -457,7 +474,10 @@ def live(request, secret: str):
             class_cars[vehicle["carClass"]] = 0
         class_cars[vehicle["carClass"]] = class_cars[vehicle["carClass"]] + 1
         vehicle["classPosition"] = class_cars[vehicle["carClass"]]
-    response = {"status": status, "messages": messages, "media_url": MEDIA_URL}
+        vehicle["messages"] = (
+            messages[vehicle["slotID"]] if vehicle["slotID"] in messages else []
+        )
+    response = {"status": status, "media_url": MEDIA_URL, "drivers": drivers}
     # unpack the livery thumbnails, if needed
     server_key_path = join(MEDIA_ROOT, "thumbs", key)
     server_pack_path = join(server_key_path, "thumbs.tar.gz")

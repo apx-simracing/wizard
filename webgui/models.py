@@ -952,6 +952,7 @@ class TickerMessageType(models.TextChoices):
     LapsCompletedChange = "LC", "LapsCompletedChange"
     PittingStart = "PSS", "PittingStart"
     PittingEnd = "PSE", "PittingEnd"
+    DriverSwap = "DS", "DriverSwap"
 
 
 class TickerMessage(models.Model):
@@ -1041,6 +1042,11 @@ class TickerMessage(models.Model):
             if self.type == "PB":
                 return "New personal best for {}: {}".format(
                     data["driver"], data["new_best"]
+                )
+
+            if self.type == "DS":
+                return "Driver Swap: {} out, {} in".format(
+                    data["old_driver"], data["new_driver"]
                 )
 
             if self.type == "PS":

@@ -14,76 +14,99 @@
     rel="stylesheet">
 </head>
 
-<body style="background: #c7c6c3 url({% static 'webgui/timing_backdrop.png' %}) repeat 50% 0;"">
+<body style="background: #c7c6c3 url({% static 'webgui/timing_backdrop.png' %}) repeat 50% 0;">
+  <div class="loadingbar"></div>
   <div class=" container" id="vue-app">
-  <div class="columns">
-    <div class="columns col-2"></div>
-    <div class="columns col-10">
+    <div class="columns">
+      <div class="columns col-2"></div>
       <div class="columns col-10">
-        <div class="columns col-12">
-          <div class="col-10">
-            <img src="https://www.rf2ln.de/home/templates/driverally/images/logo.png">
+        <div class="columns col-10">
+          <div class="columns col-12">
+            <div class="col-10">
+              <img src="https://www.rf2ln.de/home/templates/driverally/images/logo.png">
+            </div>
+            <div class="col-2" v-if="liveData !== null && liveData.status.maxLaps === 2147483647">
+              Timing...
+            </div>
           </div>
-          <div class="col-2" v-if="liveData !== null && liveData.status.maxLaps === 2147483647">
-            Timing...
-          </div>
+
+          <table class="table table-striped">
+            <thead>
+              <tr>
+                <th>Position (in class)</th>
+                <th>Car</th>
+                <th>Team</th>
+                <th>Laps</th>
+                <th>Stops</th>
+                <th>Gap</th>
+              </tr>
+            </thead>
+            <tbody v-if="liveData !== null">
+              <tr v-for="(vehicle, index) in liveData.status.vehicles" :key="index"
+                :class="'flag-'+[[vehicle.flag.toLowerCase()]] +' overall-state-'+[[getOverallState(vehicle)]]">
+                <td>[[ vehicle.position ]] ([[vehicle.classPosition]])
+
+                  <span>
+                    <span title="Pitting" v-if="vehicle.pitState !== 'NONE' || vehicle.pitting"
+                      class="label label-primary state state-pit">P</span>
+
+                    <span title="Pending penalty" v-if="vehicle.penalties > 0"
+                      class="label label-primary state state-penalty">Pen</span>
+                  </span>
+                </td>
+                <td>
+                  <img class="car-thumb"
+                    :src="'http://localhost:8181/thumbs/f03346eb3a99be025979045e8fa1a281c5159611/'+vehicle.carId+'.png'" />
+                </td>
+                <td>
+                  <p>
+                    <span
+                      :class="'label label-primary class-label class-' +  getClassDisplayName(vehicle.carClass).toLowerCase()">[[
+                      getClassDisplayName(vehicle.carClass) ]]</span>
+                    <b class="car-team">[[ vehicle.vehicleName ]]</b>
+                    </br>
+                    <span class="car-driver" v-if="typeof liveData.drivers[vehicle.slotID] === 'undefined'"> <span
+                        class="driver-state driver-online">⬤</span>[[
+                      vehicle.driverName ]] </span>
+                    <span class="car-driver" v-for="(driver, driver_key) in liveData.drivers[vehicle.slotID]"
+                      :key="driver_key">
+                      <span class="driver-state driver-online" v-if="driver===vehicle.driverName">⬤</span>
+                      <span class="driver-state driver-offline" v-if="driver!==vehicle.driverName">⬤</span>
+                      [[ driver
+                      ]] </span>
+                  </p>
+                </td>
+                <td v-on:click="toggleOpen(vehicle.slotID)" class="clickable">
+                  <div v-if="openMessages.indexOf(vehicle.slotID) !== -1">
+
+                    <div class="tile tile-centered" v-for="(message, message_key) in vehicle.messages"
+                      :key="message_key" v-if="message.type=='LC'">
+
+                      <div class=" tile-content">
+                        <div class="tile-title">[[translateMessage(message)]]</div>
+                      </div>
+
+                    </div>
+                  </div>
+                  <span v-else>[[ vehicle.lapsCompleted ]]</span>
+                </td>
+                <td>[[ vehicle.pitstops ]]</td>
+
+                <td v-if="vehicle.lapsBehindNext === 0 && vehicle.position !== 1">
+                  +[[ getTime(vehicle.timeBehindNext) ]]
+                </td>
+                <td v-if="vehicle.lapsBehindNext > 0 && vehicle.position !== 1">
+                  +[[ vehicle.lapsBehindNext]] laps
+                </td>
+                <td v-if="vehicle.position === 1">
+                  Int
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
-
-        <table class="table table-striped">
-          <thead>
-            <tr>
-              <th>Position (in class)</th>
-              <th>Car</th>
-              <th>Team</th>
-              <th>Laps</th>
-              <th>Stops</th>
-              <th>Gap</th>
-            </tr>
-          </thead>
-          <tbody v-if="liveData !== null">
-            <tr v-for="(vehicle, index) in liveData.status.vehicles" :key="index"
-              :class="'flag-'+[[vehicle.flag.toLowerCase()]] +' overall-state-'+[[getOverallState(vehicle)]]">
-              <td>[[ vehicle.position ]] ([[vehicle.classPosition]])
-
-                <span>
-                  <span title="Pitting" v-if="vehicle.pitState !== 'NONE' || vehicle.pitting"
-                    class="label label-primary state state-pit">P</span>
-
-                  <span title="Pending penalty" v-if="vehicle.penalties > 0"
-                    class="label label-primary state state-penalty">Pen</span>
-                </span>
-              </td>
-              <td>
-                <img class="car-thumb"
-                  :src="'http://localhost:8181/thumbs/f03346eb3a99be025979045e8fa1a281c5159611/'+vehicle.carId+'.png'" />
-              </td>
-              <td>
-                <p>
-                  <span
-                    :class="'label label-primary class-label class-' +  getClassDisplayName(vehicle.carClass).toLowerCase()">[[
-                    getClassDisplayName(vehicle.carClass) ]]</span>
-                  <b class="car-team">[[ vehicle.vehicleName ]]</b>
-                  <span class="car-driver ">[[ vehicle.driverName ]]</span>
-                </p>
-              </td>
-              <td>[[ vehicle.lapsCompleted ]]</td>
-              <td>[[ vehicle.pitstops ]]</td>
-
-              <td v-if="vehicle.lapsBehindNext === 0 && vehicle.position !== 1">
-                +[[ getTime(vehicle.timeBehindNext) ]]
-              </td>
-              <td v-if="vehicle.lapsBehindNext > 0 && vehicle.position !== 1">
-                +[[ vehicle.lapsBehindNext]] laps
-              </td>
-              <td v-if="vehicle.position === 1">
-                Int
-              </td>
-            </tr>
-          </tbody>
-        </table>
       </div>
     </div>
-  </div>
   </div>
   <script>
     var app = new Vue({
@@ -97,9 +120,29 @@
           "Alpine A110 CUP": "Alpine Cup",
           "Civic BTCC 2013": "SP3T",
           "WTCR 2018": "TCR"
-        }
+        },
+        openMessages: []
       },
       methods: {
+        translateMessage: function(message) {
+          if (message.type === "LC") {
+            return "Lap " + message.laps + ": " + this.getTime(message.last_lap_time)
+          }
+          if (message.type === "PSE") {
+            return "Pitting end"
+          }
+          if (message.type === "PS" && message.old_status == "EXITING" && message.status === "NONE") {
+            return "Car exited pitlane"
+          }
+          return message
+        },
+        toggleOpen: function(slotId) {
+          if (this.openMessages.indexOf(slotId) !== -1) {
+            this.openMessages.splice(this.openMessages.indexOf(slotId), 1)
+          } else {
+            this.openMessages.push(slotId)
+          }
+        },
         getOverallState: (vehicle) => {
 
           if (vehicle.finishStatus === 'FSTAT_DQ') {
@@ -123,6 +166,9 @@
             .then(data => self.liveData = data);
         },
         getTime: (s) => {
+          if (!s) {
+            return "N/A"
+          }
           var ms = s % 1000;
           s = (s - ms) / 1000;
           var secs = s % 60;

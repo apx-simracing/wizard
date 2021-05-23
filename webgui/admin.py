@@ -328,7 +328,6 @@ class ServerAdmin(admin.ModelAdmin):
                 "server_key",
                 "server_unlock_key",
                 "public_secret",
-                "session_id",
             )
         if self.is_running(obj):
             return self.readonly_fields + (
@@ -337,7 +336,6 @@ class ServerAdmin(admin.ModelAdmin):
                 "status_failures",
                 "status_info",
                 "public_secret",
-                "session_id",
             )
         return self.readonly_fields + (
             "locked",
@@ -345,7 +343,6 @@ class ServerAdmin(admin.ModelAdmin):
             "status_failures",
             "status_info",
             "public_secret",
-            "session_id",
         )
 
     def is_running(self, obj):
