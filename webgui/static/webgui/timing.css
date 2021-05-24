@@ -51,8 +51,44 @@
   font-weight: bold;
 }
 
+.label-car-best {
+  background: green;
+  color: white;
+}
+
+.event-list-laps {
+  color: #e12e2e;
+  margin-left: 0.25vw;
+  font-family: "Oswald", sans-serif;
+  letter-spacing: 1px;
+  font-weight: bold;
+}
+
 tr p {
   margin-bottom: unset;
+}
+
+.session-info h1 {
+  color: white !important;
+}
+
+.session-info h1 .light {
+  color: #5b5b5b !important;
+}
+
+.session-info p {
+  color: white;
+}
+
+.timing-header {
+  margin-top: 1em;
+  text-align: center;
+}
+
+.car-laps {
+  color: white;
+  margin-top: 1em;
+  width: 100%;
 }
 
 .car-thumb {
@@ -94,9 +130,15 @@ tr p {
   padding-right: 0.3vw;
 }
 
-.number-label {
+.number-label,
+.session-label {
   background-color: white !important;
   color: black !important;
+}
+
+.label-overall-leader {
+  background-color: purple;
+  color: white;
 }
 
 .class-sp9 {

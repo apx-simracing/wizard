@@ -454,7 +454,6 @@ def live(request, secret: str):
         if slot_id not in messages:
             messages[slot_id] = []
         messages[slot_id].append(message_content)
-
         if message.type == "DS":
             old_driver = message_content["old_driver"]
             new_driver = message_content["new_driver"]
@@ -465,6 +464,7 @@ def live(request, secret: str):
                 drivers[slot_id].append(old_driver)
             if new_driver not in drivers[slot_id]:
                 drivers[slot_id].append(new_driver)
+
     status["vehicles"] = sorted(status["vehicles"], key=lambda x: x["position"])
 
     # create in-class positions
@@ -477,6 +477,7 @@ def live(request, secret: str):
         vehicle["messages"] = (
             messages[vehicle["slotID"]] if vehicle["slotID"] in messages else []
         )
+        vehicle["messages"].reverse()
     response = {"status": status, "media_url": MEDIA_URL, "drivers": drivers}
     # unpack the livery thumbnails, if needed
     server_key_path = join(MEDIA_ROOT, "thumbs", key)
