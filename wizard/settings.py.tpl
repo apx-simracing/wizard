@@ -122,6 +122,7 @@ STATIC_URL = "/static/"
 
 MEDIA_URL = "http://localhost:8000/"
 
+PUBLIC_URL = None
 
 FAILURE_THRESHOLD = 500
 

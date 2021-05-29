@@ -9,6 +9,7 @@ from wizard.settings import (
     INSTANCE_NAME,
     OPENWEATHERAPI_KEY,
     BASE_DIR,
+    PUBLIC_URL,
 )
 import hashlib
 import subprocess
@@ -524,6 +525,11 @@ def do_server_interaction(server):
         event_config = get_event_config(server.event.pk)
         event_config["branch"] = server.branch
         event_config["update_on_build"] = server.update_on_build
+        event_config["callback_target"] = (
+            "{}addmessage/{}".format(PUBLIC_URL, server.public_secret)
+            if PUBLIC_URL
+            else None
+        )
         config_path = join(APX_ROOT, "configs", key + ".json")
         with open(config_path, "w") as file:
             file.write(dumps(event_config))
