@@ -130,6 +130,20 @@ tr p {
   padding-right: 0.3vw;
 }
 
+.class-label.disabled {
+  background: gray !important;
+  color: #373737 !important;
+}
+
+.toggle-label {
+  cursor: pointer;
+}
+
+.class-header {
+  text-align: right !important;
+  margin-bottom: 1em;
+}
+
 .number-label,
 .session-label {
   background-color: white !important;
@@ -190,11 +204,11 @@ tr p {
 }
 
 .flag-blue {
-  border-left: 10px solid #7a7aff;
+  border-bottom: 10px solid #7a7aff;
 }
 
 .flag-yellow {
-  border-left: 10px solid yellow;
+  border-bottom: 5px solid yellow;
 }
 
 .flag-green {

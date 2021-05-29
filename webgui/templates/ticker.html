@@ -47,6 +47,10 @@
               /
               [[getHourString(liveData.status.race_time)]]</span>
           </div>
+          <div class="col-12 class-header" title="Click to toggle class">
+            <span v-for="(car_class, class_index) in classList" :key="class_index" v-on:click="toggleClass(car_class)"
+              :class="'label toggle-label label-primary class-label class-' +  car_class.toLowerCase() + ' ' + (classFilters.indexOf(car_class) !== -1 ? 'disabled': '')">[[car_class]]</span>
+          </div>
           <table class="table table-striped">
             <thead>
               <tr>
@@ -54,13 +58,16 @@
                 <th>Car</th>
                 <th>Team</th>
                 <th>Laps</th>
+                <th>Best lap</th>
+                <th>Last lap</th>
                 <th>Stops</th>
                 <th>Gap</th>
               </tr>
             </thead>
             <tbody v-if="liveData !== null">
               <tr v-for="(vehicle, index) in liveData.status.vehicles" :key="index"
-                :class="'flag-'+[[vehicle.flag.toLowerCase()]] +' overall-state-'+[[getOverallState(vehicle)]]">
+                :class="'flag-'+[[vehicle.flag.toLowerCase()]] +' overall-state-'+[[getOverallState(vehicle)]] + (vehicle.underYellow ? ' flag-yellow' : '')"
+                v-if="classFilters.indexOf(getClassDisplayName(vehicle.carClass)) === -1">
                 <td>[[ vehicle.position ]] ([[vehicle.classPosition]])
                   <span v-if="vehicle.position==1" class="label label-overall-leader">
                     LEADER
@@ -169,6 +176,8 @@
                 <td>
                   <span>[[ vehicle.lapsCompleted ]]</span>
                 </td>
+                <td>[[ vehicle.bestLapTime > 0 ? getHourString(vehicle.bestLapTime, true) : '-' ]]</td>
+                <td>[[ vehicle.lastLapTime > 0 ? getHourString(vehicle.lastLapTime, true) : '-']]</td>
                 <td>[[ vehicle.pitstops ]]</td>
 
                 <td v-if="vehicle.lapsBehindNext === 0 && vehicle.position !== 1">
@@ -200,9 +209,32 @@
           "Civic BTCC 2013": "SP3T",
           "WTCR 2018": "TCR"
         },
+        classFilters: [],
         openMessages: []
       },
+      computed: {
+        classList: function() {
+          var result = []
+          if (this.liveData) {
+            for (var i in this.liveData.status.vehicles) {
+              var vehicle = this.liveData.status.vehicles[i]
+              var carClass = this.getClassDisplayName(vehicle.carClass)
+              if (result.indexOf(carClass) === -1) {
+                result.push(carClass)
+              }
+            }
+          }
+          return result;
+        },
+      },
       methods: {
+        toggleClass: function(classToToggle) {
+          if (this.classFilters.indexOf(classToToggle) !== -1) {
+            this.classFilters.splice(this.classFilters.indexOf(classToToggle), 1)
+          } else {
+            this.classFilters.push(classToToggle)
+          }
+        },
         getGamePhase() {
           if (this.liveData.status.session.indexOf("RACE") !== -1 && this.liveData.status.vehicles.length > 0 && this.liveData.status.vehicles[0].gamePhase === "FORMATION") {
             return "Formation"
@@ -271,6 +303,10 @@
             .filter((v, i) => v !== "00" || i > 0)
             .join(":")
 
+          if (result.indexOf("NaN") !== -1) {
+            return "0"
+          }
+
           if (ms) {
             var raw_str = secs.toString()
             if (raw_str.indexOf(".") !== -1) {
@@ -303,7 +339,8 @@
           }
         },
         getClassDisplayName: function(reportedName) {
-          if (typeof this.classMap[reportedName] !== undefined) {
+          var keys = Object.keys(this.classMap)
+          if (keys.indexOf(reportedName) !== -1) {
             return this.classMap[reportedName]
           }
           return reportedName
