@@ -426,10 +426,10 @@ import tarfile
 def live(request, secret: str):
     server = Server.objects.filter(public_secret=secret).first()
 
-    url = server.url
-    key = get_server_hash(url)
     if not server:
         raise Http404()
+    url = server.url
+    key = get_server_hash(url)
 
     status = loads(
         ServerStatustext.objects.filter(server=server).order_by("id").last().status
