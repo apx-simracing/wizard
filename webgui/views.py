@@ -474,7 +474,12 @@ def live(request, secret: str):
         vehicle["messages"].reverse()
     response = {"status": status, "media_url": MEDIA_URL, "drivers": drivers}
     # unpack the livery thumbnails, if needed
+    if not exists(join(MEDIA_ROOT, "thumbs")):
+        mkdir(join(MEDIA_ROOT, "thumbs"))
     server_key_path = join(MEDIA_ROOT, "thumbs", key)
+    if not exists(server_key_path):
+        mkdir(server_key_path)
+
     server_pack_path = join(server_key_path, "thumbs.tar.gz")
     if exists(server_pack_path):
         # unpack liveries
