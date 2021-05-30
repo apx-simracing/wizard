@@ -6,68 +6,371 @@
   <link rel="stylesheet" href="{% static 'webgui/lib/spectre.min.css' %}">
   <link rel="stylesheet" href="{% static 'webgui/lib/spectre-exp.min.css' %}">
   <link rel="stylesheet" href="{% static 'webgui/lib/spectre-icons.min.css' %}">
-  <link rel="stylesheet" href="{% static 'webgui/style.css' %}">
+  <link rel="stylesheet" href="{% static 'webgui/timing-baseline.css' %}">
+  <link rel="stylesheet" href="{% static 'webgui/rf2ln.css' %}">
+  <!-- Add your custom includes after this line -->
+  <script src="https://cdn.jsdelivr.net/npm/vue@2.6.12/dist/vue.js"></script>
+  <link rel="preconnect" href="https://fonts.gstatic.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat&family=Oswald:wght@300&family=Viga&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"
+    integrity="sha512-iBBXm8fW90+nuLcSKlbmrPcLa0OT92xO1BIsZ+ywDWZCvqsWgccV3gFoRBv0z+8dLJgyAHIhR35VZc2oM/gI1w=="
+    crossorigin="anonymous" referrerpolicy="no-referrer" />
 </head>
 
 <body>
-  <div class="container">
+  <div class="loadingbar"></div>
+  <div class=" container" id="vue-app">
     <div class="columns">
       <div class="columns col-2"></div>
-      <div class="columns col-7">
+      <div class="columns col-10">
         <div class="columns col-10">
-          <table class="table table-striped table-hover">
+          <div class="columns col-12">
+            <div class="col-10">
+              <span class="logo">
+            </div>
+            <div class="col-2 session-info" v-if="liveData !== null && liveData.status.maxLaps === 2147483647">
+              <h1>[[getSession(liveData.status.session)]] <span class="light">[[getGamePhase()]]</span></h1>
+              <p title="Track and air temperature">
+                <i class="fas fa-thermometer-quarter"></i> [[ liveData.status.weather.ambient.toFixed(2)]] °C
+                <i class="fas fa-road"></i> [[ liveData.status.weather.track.toFixed(2)]] °C
+              </p>
+              <p title="Rain: min/max/avg">
+                <i class="fas fa-cloud-showers-heavy" title=></i> [[ liveData.status.weather.rain.min.toFixed(2) ]]/ [[
+                liveData.status.weather.rain.max.toFixed(2) ]]/ [[ liveData.status.weather.rain.avg.toFixed(2) ]]
+              </p>
+
+            </div>
+          </div>
+          <div class="col-12 timing-header">
+            <span
+              class="label session-label">[[getHourString(liveData.status.time_completion*liveData.status.race_time)]]
+              /
+              [[getHourString(liveData.status.race_time)]]</span>
+          </div>
+          <div class="col-12 class-header" title="Click to toggle class">
+            <span v-for="(car_class, class_index) in classList" :key="class_index" v-on:click="toggleClass(car_class)"
+              :class="'label toggle-label label-primary class-label class-' +  car_class.toLowerCase() + ' ' + (classFilters.indexOf(car_class) !== -1 ? 'disabled': '')">[[car_class]]</span>
+          </div>
+          <table class="table table-striped">
             <thead>
               <tr>
-                <th>Position</th>
-                <th>Class</th>
+                <th>Position (Class)</th>
+                <th>Car</th>
                 <th>Team</th>
-                <th>Driver</th>
                 <th>Laps</th>
+                <th>Best lap</th>
+                <th>Last lap</th>
+                <th>Stops</th>
                 <th>Gap</th>
               </tr>
             </thead>
-            <tbody>
-              {% for position, vehicle in vehicles.items %}
+            <tbody v-if="liveData !== null">
+              <tr v-for="(vehicle, index) in liveData.status.vehicles" :key="index"
+                :class="'flag-'+[[vehicle.flag.toLowerCase()]] +' overall-state-'+[[getOverallState(vehicle)]] + (vehicle.underYellow ? ' flag-yellow' : '')"
+                v-if="classFilters.indexOf(getClassDisplayName(vehicle.carClass)) === -1"
+                v-on:click="toggleOpen(vehicle.slotID)">
+                <td>[[ vehicle.position ]] ([[vehicle.classPosition]])
+                  <span v-if="vehicle.position==1" class="label label-overall-leader">
+                    OVERALL LEAD
+                  </span>
+                  <span v-if="vehicle.position!=1 && vehicle.classPosition === 1"
+                    :class="'label label-overall-leader class-' +  getClassDisplayName(vehicle.carClass).toLowerCase()">
+                    [[getClassDisplayName(vehicle.carClass)]] LEAD
+                  </span>
+                  <span>
+                    <span title="Pitting" v-if="vehicle.pitState !== 'NONE' || vehicle.pitting"
+                      class="label label-primary state state-pit">P</span>
 
-              <tr>
-                <td>{{vehicle.position}} </td>
-                <td>{{vehicle.carClass}}</td>
-                <td>{{vehicle.vehicleName}}</td>
-                <td>{{vehicle.driverName}}</td>
-                <td>{{vehicle.lapsCompleted}}</td>
+                    <span title="Pending penalty" v-if="vehicle.penalties > 0"
+                      class="label label-primary state state-penalty">Pen</span>
+                  </span>
+                </td>
                 <td>
-                  {% if vehicle.lapsBehindNext == 0 %}
-                  {{vehicle.timeBehindNext}}
-                  {% else %}
-                  {{vehicle.lapsBehindNext}}
-                  {% endif %}
+                  <img class="car-thumb"
+                    :src="'http://localhost:8181/thumbs/f03346eb3a99be025979045e8fa1a281c5159611/'+vehicle.carId+'.png'" />
+                </td>
+                <td>
+                  <p>
+                    <span
+                      :class="'label label-primary class-label class-' +  getClassDisplayName(vehicle.carClass).toLowerCase()">[[
+                      getClassDisplayName(vehicle.carClass) ]]</span>
+                    <span class="label label-primary class-label number-label">
+                      #[[ vehicle.carNumber ]]</span>
+                    <b class="car-team">[[ vehicle.vehicleName ]]</b>
+                    </br>
+                    <span class="car-driver" v-if="typeof liveData.drivers[vehicle.slotID] === 'undefined'"> <span
+                        class="driver-state driver-online" title="Driver in car">⬤</span>[[
+                      vehicle.driverName ]] </span>
+                    <span class="car-driver" v-for="(driver, driver_key) in liveData.drivers[vehicle.slotID]"
+                      :key="driver_key">
+                      <span class="driver-state driver-online" title="Driver in car"
+                        v-if="driver===vehicle.driverName">⬤</span>
+                      <span class="driver-state driver-offline" title="Driver currently not in car"
+                        v-if="driver!==vehicle.driverName">⬤</span>
+                      [[ driver
+                      ]] </span>
+                  </p>
+                  <div class="scrollable-45" v-if="openMessages.indexOf(vehicle.slotID) !== -1"
+                    v-on:click="toggleOpen(vehicle.slotID)">
+                    <table class="car-laps" title="click to close">
+                      <tr v-for="(message, message_key) in vehicle.messages" :key="message_key"
+                        v-if="['LC', 'P+', 'P-', 'S', 'DS'].indexOf(message.type) !== -1 || (message.type==='PS' && message.status === 'STOPPED')">
+                        <td class="event-list-laps">
+                          <span v-if=" message.type==='LC'" :title="message.driver">
+                            L[[message.laps]]
+                          </span>
+                          <span v-if=" message.type==='PS'">
+                            <i class="far fa-stop-circle"></i>
+                          </span>
+                          <span v-if=" message.type==='P-' || message.type==='P+'">
+                            <i class="fas fa-gavel"></i>
+                          </span>
+                          <span v-if=" message.type==='S'">
+                            <i class="fas fa-bell"></i>
+                          </span>
+                          <span v-if=" message.type==='DS'">
+                            <i class="fas fa-exchange-alt"></i>
+                          </span>
+                        </td>
+                        <td>
+                          <span v-if=" message.type==='LC'"
+                            :title="[[getHourString(message.last_lap_time - vehicle.bestLapTime, true)]] +  ' slower than best'">
+                            <span v-if="message.last_lap_time > 0">[[getHourString(message.last_lap_time, true)]]</span>
+                            <span v-else>
+                              Lap corrected by race control/ invalid
+                            </span>
+                          </span>
+                          <span v-if=" message.type==='PS' && message.status === 'STOPPED'">
+                            In pit
+                          </span>
+                          <span v-if=" message.type==='P+'">
+                            Recieved penalty
+                          </span>
+                          <span v-if=" message.type==='P-'">
+                            Penalty removed
+                          </span>
+                          <span v-if=" message.type==='S'">
+                            Status changed
+                          </span>
+                          <span v-if=" message.type==='DS'">
+                            Driver swap
+                          </span>
+                        </td>
+                        <td>
+                          <span title=" Best lap of this car" class="label label-car-best"
+                            v-if=" message.type==='LC' && message.last_lap_time === vehicle.bestLapTime">
+                            BL
+                          </span>
+                          <span v-if=" message.type==='S'">
+                            Now [[message.status.replace("FSTAT_", "")]]
+                          </span>
+                          <span v-if=" message.type==='DS'">
+                            [[message.old_driver]] out </br>
+                            [[message.new_driver]] in
+                          </span>
+                          <span v-if=" message.type==='P+' || message.type==='P-'">
+                            In sum [[message.sum]] penalties left
+                          </span>
+
+                        </td>
+                      </tr>
+                    </table>
+
+                  </div>
+                </td>
+                <td>
+                  <span>[[ vehicle.lapsCompleted ]]</span>
+                </td>
+                <td>[[ vehicle.bestLapTime > 0 ? getHourString(vehicle.bestLapTime, true) : '-' ]]</td>
+                <td>[[ vehicle.lastLapTime > 0 ? getHourString(vehicle.lastLapTime, true) : '-']]</td>
+                <td>[[ vehicle.pitstops ]]</td>
+
+                <td v-if="vehicle.lapsBehindNext === 0 && vehicle.position !== 1 && classFilters.length === 0">
+                  +[[ getTime(vehicle.timeBehindNext) ]]
+                </td>
+                <td v-if="vehicle.lapsBehindNext > 0 && vehicle.position !== 1 && classFilters.length === 0">
+                  +[[ vehicle.lapsBehindNext]] laps
+                </td>
+                <td v-if="vehicle.position === 1 && classFilters.length === 0">
+                  <span v-if="classFilters.length === 0">
+                    Int
+                  </span>
+                </td>
+                <td v-else-if="classFilters.length !== 0">
+                  -
                 </td>
               </tr>
-              {% endfor%}
             </tbody>
           </table>
         </div>
-        <div class="columns col-2">
-          {% for message in messages %}
-          <div class="columns col-12">
-            <div class="col-2">
-              <i class="icon icon-2x icon-mail"></i>
-            </div>
-            <div class="col-10">
-              <b>{{message.message}}</b>
-              <ul>
-                {% for vehicle in message.affected_vehicles.all %}
-                <li>{{vehicle.vehicle_number}}: {{vehicle.team_name}}</li>
-                {% endfor%}
-              </ul>
-            </div>
-          </div>
-          {% endfor%}
-        </div>
       </div>
-      <div class="column col-2"></div>
     </div>
   </div>
+  <script>
+    var app = new Vue({
+      delimiters: ["[[", "]]"],
+      el: '#vue-app',
+      data: {
+        liveData: null,
+        classMap: {},
+        classFilters: [],
+        openMessages: [],
+        serverSecret: null
+      },
+      computed: {
+        classList: function() {
+          var result = []
+          if (this.liveData) {
+            for (var i in this.liveData.status.vehicles) {
+              var vehicle = this.liveData.status.vehicles[i]
+              var carClass = this.getClassDisplayName(vehicle.carClass)
+              if (result.indexOf(carClass) === -1) {
+                result.push(carClass)
+              }
+            }
+          }
+          return result;
+        },
+      },
+      methods: {
+        toggleClass: function(classToToggle) {
+          if (this.classFilters.indexOf(classToToggle) !== -1) {
+            this.classFilters.splice(this.classFilters.indexOf(classToToggle), 1)
+          } else {
+            this.classFilters.push(classToToggle)
+          }
+        },
+        getGamePhase() {
+          if (this.liveData.status.session.indexOf("RACE") !== -1 && this.liveData.status.vehicles.length > 0 && this.liveData.status.vehicles[0].gamePhase === "FORMATION") {
+            return "Formation"
+          }
+          if (this.liveData.status.session.indexOf("RACE") !== -1 && this.liveData.status.vehicles.length > 0 && this.liveData.status.vehicles[0].gamePhase === "GREEN") {
+            return "Green"
+          }
+          if (this.liveData.status.session.indexOf("RACE") !== -1 && this.liveData.status.vehicles.length > 0) {
+            return this.liveData.status.vehicles[0].gamePhase
+          }
+          return ""
+        },
+        getSession(session) {
+          return session.match(/[A-Z]+/)[0]
+        },
+        translateMessage: function(message, vehicle) {
+          if (message.type === "LC") {
+            var best_lap = this.getHourString(vehicle.bestLapTime, true)
+            var lap_time = this.getHourString(message.last_lap_time, true)
+            return "Lap " + message.laps + ": " + lap_time + "" + (best_lap === lap_time ? "PB" : "")
+          }
+          if (message.type === "PSE") {
+            return "Pitting end"
+          }
+          if (message.type === "PS" && message.old_status == "EXITING" && message.status === "NONE") {
+            return "Car exited pitlane"
+          }
+          return message
+        },
+        toggleOpen: function(slotId) {
+          if (this.openMessages.indexOf(slotId) !== -1) {
+            this.openMessages.splice(this.openMessages.indexOf(slotId), 1)
+          } else {
+            this.openMessages.push(slotId)
+          }
+        },
+        getOverallState: (vehicle) => {
+          if (vehicle.finishStatus === 'FSTAT_DQ') {
+            return "dq"
+          }
+
+          if (vehicle.finishStatus === 'FSTAT_DNF') {
+            return "dnf"
+          }
+          if (vehicle.pitState !== 'NONE' || vehicle.pitting) {
+            return "pitting"
+          }
+          if (vehicle.inGarageStall) {
+            return "garage"
+          }
+          return "running"
+        },
+        fetchData: (self) => {
+          fetch(window.location.origin + "/live/" + self.serverSecret)
+            .then(response => response.json())
+            .then(data => {self.liveData = data, self.classMap = self.liveData.status.ticker_classes});
+        },
+        getHourString: (secs, ms = false) => {
+          var sec_num = parseInt(secs, 10)
+          var hours = Math.floor(sec_num / 3600)
+          var minutes = Math.floor(sec_num / 60) % 60
+          var seconds = sec_num % 60
+
+          var result = [hours, minutes, seconds]
+            .map(v => v < 10 ? "0" + v : v)
+            .filter((v, i) => v !== "00" || i > 0)
+            .join(":")
+
+          if (result.indexOf("NaN") !== -1) {
+            return "0"
+          }
+
+          if (ms) {
+            var raw_str = secs.toString()
+            if (raw_str.indexOf(".") !== -1) {
+              return result + "." + raw_str.split(".")[1].substring(0, 3)
+            }
+            return result
+          }
+          return result
+        },
+        getTime: (s) => {
+          if (!s) {
+            return "N/A"
+          }
+          var ms = s % 1000;
+          s = (s - ms) / 1000;
+          var secs = s % 60;
+          s = (s - secs) / 60;
+          var mins = s % 60;
+          var hrs = (s - mins) / 60;
+
+          ms = Math.abs(ms).toFixed(3)
+          if (hrs === 0 && mins === 0 && secs == 0) {
+            return ms;
+          }
+          if (hrs === 0 && mins === 0) {
+            return secs + '.' + ms;
+          }
+          if (hrs === 0) {
+            return mins + ':' + secs + '.' + ms;
+          }
+        },
+        getClassDisplayName: function(reportedName) {
+          var keys = Object.keys(this.classMap)
+          if (keys.indexOf(reportedName) !== -1) {
+            return this.classMap[reportedName]
+          }
+          return reportedName
+        },
+        getServerSecret: function() {
+          var raw = window.location.pathname;
+
+          raw = raw.replace("ticker/", "");
+
+          raw = raw.replace("/", "")
+          this.serverSecret = raw;
+        }
+      },
+      created: function() {
+        var self = this;
+        self.getServerSecret()
+        self.fetchData(self)
+        setInterval(function() {
+          self.fetchData(self)
+        }, 5000)
+      }
+    })
+  </script>
 </body>
 
 </html>

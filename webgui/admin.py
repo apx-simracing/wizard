@@ -295,6 +295,7 @@ class ServerAdmin(admin.ModelAdmin):
                     "public_secret",
                     "user",
                     "status_failures",
+                    "session_id",
                 ]
             },
         ),
@@ -387,6 +388,8 @@ class ServerStatustextAdmin(admin.ModelAdmin):
         else:
             return ServerStatustext.objects.all()
 
+    list_display = ["server", "session_id", "__str__"]
+
 
 class TickerMessageAdmin(admin.ModelAdmin):
     def get_form(self, request, obj=None, **kwargs):
@@ -404,6 +407,8 @@ class TickerMessageAdmin(admin.ModelAdmin):
             return TickerMessage.objects.filter(user=request.user)
         else:
             return TickerMessage.objects.all()
+
+    list_display = ["date", "type", "session_id", "event_time", "session", "__str__"]
 
 
 class ServerPluginAdmin(admin.ModelAdmin):

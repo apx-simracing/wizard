@@ -570,6 +570,12 @@ class Event(models.Model):
     )
     plugins = models.ManyToManyField(ServerPlugin, blank=True)
 
+    timing_classes = models.TextField(
+        default="{}",
+        blank=True,
+        help_text="JSON Config to rename classes, if needed",
+    )
+
     def __str__(self):
         return "{}".format(self.name)
 
@@ -584,6 +590,11 @@ class Event(models.Model):
             loads(self.overwrites_player)
         except:
             raise ValidationError("The overwrites for the player.JSON are not valid")
+
+        try:
+            loads(self.timing_classes)
+        except:
+            raise ValidationError("The overwrites for the timing are not valid")
 
 
 class ServerStatus(models.TextChoices):
@@ -692,6 +703,13 @@ class Server(models.Model):
     update_on_build = models.BooleanField(
         default=False,
         help_text="Decides if APX will call dedicated server update when refreshing the content",
+    )
+    session_id = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        default=None,
+        help_text="APX Session Id",
     )
 
     @property
@@ -916,13 +934,36 @@ class ServerStatustext(models.Model):
         Server, on_delete=models.CASCADE, blank=False, null=False, default=None
     )
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    session_id = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        default=None,
+        help_text="APX Session Id",
+    )
 
     def __str__(self):
         return "{} @ {}".format(self.server, self.date.strftime("%m/%d/%Y, %H:%M:%S"))
 
 
 class TickerMessageType(models.TextChoices):
-    Penalty = "P+", "Penalty"
+    PenaltyAdd = "P+", "PenaltyAdd"
+    PenaltyRemove = "P-", "Penaltyrevoke"
+    SlowCar = "V", "SlowCar"
+    PitEntry = "PI", "PitEntry"
+    PitExit = "PO", "PitExit"
+    GarageEntry = "GI", "GarageEntry"
+    GarageExit = "GO", "GarageExit"
+    StatusChange = "S", "StatusChange"
+    PositionChange = "P", "PositionChange"
+    PositionChangeUnderYellow = "PY", "PositionChangeUnderYellow"
+    BestLapChange = "PB", "BestLapChange"
+    PitStatusChange = "PS", "PitStatusChange"
+    Lag = "L", "Lag"
+    LapsCompletedChange = "LC", "LapsCompletedChange"
+    PittingStart = "PSS", "PittingStart"
+    PittingEnd = "PSE", "PittingEnd"
+    DriverSwap = "DS", "DriverSwap"
 
 
 class TickerMessage(models.Model):
@@ -934,7 +975,6 @@ class TickerMessage(models.Model):
     )
 
     date = models.DateTimeField(auto_now_add=True)
-    affected_vehicles = models.ManyToManyField(Entry, blank=True)
     message = models.CharField(
         max_length=255,
         blank=False,
@@ -952,3 +992,97 @@ class TickerMessage(models.Model):
         help_text="Type",
         verbose_name="Type",
     )
+
+    event_time = models.IntegerField(default=0)
+    session_id = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        default=None,
+        help_text="APX Session Id",
+    )
+    session = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        default=None,
+        help_text="In game session identifier",
+    )
+
+    def __str__(self):
+        try:
+            data = loads(self.message)
+            if self.type == "P+":
+                return "Penalty added for {}".format(data["driver"])
+
+            if self.type == "P-":
+                return "Penalty revoked for {}".format(data["driver"])
+
+            if self.type == "V":
+                return "Slow car: {}".format(data["driver"])
+
+            if self.type == "PI":
+                return "Pit entry {}".format(data["driver"])
+
+            if self.type == "PO":
+                return "Pit exit {}".format(data["driver"])
+
+            if self.type == "GI":
+                return "Garage entry {}".format(data["driver"])
+
+            if self.type == "GO":
+                return "Garage exit {}".format(data["driver"])
+
+            if self.type == "S":
+                return "Status change {} (was: {} is: {})".format(
+                    data["driver"], data["old_status"], data["status"]
+                )
+
+            if self.type == "P":
+                return "New position for {}: P{} ({:+})".format(
+                    data["driver"], data["new_pos"], data["new_pos"] - data["old_pos"]
+                )
+
+            if self.type == "PY":
+                return "New position (possibly under yellow) for {}: P{} ({:+})".format(
+                    data["driver"],
+                    data["new_pos"],
+                    data["new_pos"] - data["old_pos"],
+                )
+
+            if self.type == "PB":
+                return "New personal best for {}: {}".format(
+                    data["driver"], data["new_best"]
+                )
+
+            if self.type == "DS":
+                return "Driver Swap: {} out, {} in".format(
+                    data["old_driver"], data["new_driver"]
+                )
+
+            if self.type == "PS":
+                return "Pit status change for {}: {} (was {})".format(
+                    data["driver"], data["status"], data["old_status"]
+                )
+
+            if self.type == "LC":
+                return "Driver {} now completed {} laps".format(
+                    data["driver"], data["laps"]
+                )
+
+            if self.type == "PSS":
+                return "Pitting start for {}".format(data["driver"])
+
+            if self.type == "PSE":
+                return "Pitting end for {}".format(data["driver"])
+
+            if self.type == "L":
+                return "Lag suspect for {}, nearby: {}. Speed difference was {}".format(
+                    data["driver"],
+                    "".join(data["nearby"]) if len(data["nearby"]) else "Nobody",
+                    data["old_speed"] - data["speed"],
+                )
+        except Exception as e:
+            print(e)
+            pass
+        return self.type

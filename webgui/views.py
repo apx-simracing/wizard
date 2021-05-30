@@ -15,6 +15,7 @@ from wizard.settings import (
     USER_SIGNUP_RULE_TEXT,
     INSTANCE_NAME,
     MEDIA_ROOT,
+    MEDIA_URL,
 )
 from .models import (
     EntryFile,
@@ -30,11 +31,14 @@ from .models import (
 import pathlib
 import zipfile
 import tempfile
-from json import loads
-from os import listdir, mkdir
-from os.path import join, basename
+from json import loads, dumps
+from django.core import serializers
+from os import listdir, mkdir, unlink
+from os.path import join, basename, exists
 from django.core.files import File
-from .util import get_hash, get_random_string, do_post, do_rc_post
+from .util import get_hash, get_random_string, do_post, do_rc_post, get_server_hash
+from django.views.decorators.csrf import csrf_exempt
+import tarfile
 
 
 def get_status(request, secret: str):
@@ -375,13 +379,7 @@ from collections import OrderedDict
 
 def get_ticker(request, secret: str):
     messages = TickerMessage.objects.filter(server__public_secret=secret)
-    """
-    last_status = (
-        ServerStatustext.objects.filter(server__public_secret=secret)
-        .order_by("-date")
-        .first()
-    )
-    """
+
     last_status = (
         ServerStatustext.objects.filter(server__public_secret=secret)
         .order_by("-id")
@@ -399,3 +397,89 @@ def get_ticker(request, secret: str):
         "ticker.html",
         {"messages": messages, "status": raw_status, "vehicles": vehicles},
     )
+
+
+@csrf_exempt
+def add_message(request, secret: str):
+    server = Server.objects.filter(public_secret=secret).first()
+    if not server:
+        raise Http404()
+
+    data = request.body.decode("utf-8")
+    parsed = loads(data)
+    ticker = TickerMessage()
+    ticker.message = data
+    ticker.type = parsed["type"]
+    ticker.event_time = parsed["event_time"]
+    ticker.session = parsed["session"]
+    ticker.server = server
+    ticker.user = server.user
+    ticker.session_id = server.session_id
+    ticker.save()
+    return JsonResponse({})
+
+
+import tarfile
+
+
+@csrf_exempt
+def live(request, secret: str):
+    server = Server.objects.filter(public_secret=secret).first()
+
+    url = server.url
+    key = get_server_hash(url)
+    if not server:
+        raise Http404()
+
+    status = loads(
+        ServerStatustext.objects.filter(server=server).order_by("id").last().status
+    )
+    raw_messages = (
+        TickerMessage.objects.filter(server=server)
+        .filter(session_id=server.session_id)
+        .filter(session=status["session"])
+        .order_by("id")
+    )
+    messages = {}
+    drivers = {}
+    for message in raw_messages:
+        message_content = loads(message.message)
+        slot_id = message_content["slot_id"]
+        if slot_id not in messages:
+            messages[slot_id] = []
+        messages[slot_id].append(message_content)
+        if message.type == "DS":
+            old_driver = message_content["old_driver"]
+            new_driver = message_content["new_driver"]
+            if slot_id not in drivers:
+                drivers[slot_id] = []
+
+            if old_driver not in drivers[slot_id]:
+                drivers[slot_id].append(old_driver)
+            if new_driver not in drivers[slot_id]:
+                drivers[slot_id].append(new_driver)
+
+    status["vehicles"] = sorted(status["vehicles"], key=lambda x: x["position"])
+    status["ticker_classes"] = loads(server.event.timing_classes)
+    # create in-class positions
+    class_cars = {}
+    for vehicle in status["vehicles"]:
+        if vehicle["carClass"] not in class_cars:
+            class_cars[vehicle["carClass"]] = 0
+        class_cars[vehicle["carClass"]] = class_cars[vehicle["carClass"]] + 1
+        vehicle["classPosition"] = class_cars[vehicle["carClass"]]
+        vehicle["messages"] = (
+            messages[vehicle["slotID"]] if vehicle["slotID"] in messages else []
+        )
+        vehicle["messages"].reverse()
+    response = {"status": status, "media_url": MEDIA_URL, "drivers": drivers}
+    # unpack the livery thumbnails, if needed
+    server_key_path = join(MEDIA_ROOT, "thumbs", key)
+    server_pack_path = join(server_key_path, "thumbs.tar.gz")
+    if exists(server_pack_path):
+        # unpack liveries
+        file = tarfile.open(server_pack_path)
+        file.extractall(path=server_key_path)
+        file.close()
+        unlink(server_pack_path)
+    return JsonResponse(response)

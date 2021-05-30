@@ -1,0 +1,232 @@
+body {
+  background: #c7c6c3 url("../webgui/timing_backdrop.png") repeat 50% 0;
+}
+
+#vue-app {
+  margin-bottom: 1em;
+}
+
+.logo {
+  background: no-repeat left/80% url("https://www.rf2ln.de/home/templates/driverally/images/logo.png");
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.loadingbar {
+  border-top: 1px #e12e2e solid;
+  width: 100%;
+  height: 1px;
+  position: fixed;
+  bottom: 0;
+  animation: loading 5s linear infinite;
+}
+@keyframes loading {
+  from {
+    left: 0%;
+    width: 0;
+    z-index: 100;
+  }
+  to {
+    left: 0;
+    width: 100%;
+  }
+}
+
+.clickable {
+  cursor: pointer;
+}
+
+.scrollable-45 {
+  overflow-x: hidden;
+  overflow-y: auto;
+  height: 45vh;
+}
+
+.table {
+  color: white;
+}
+
+.table td {
+  border: unset !important;
+}
+
+.table.table-striped tbody tr:nth-of-type(2n + 1) {
+  background: #202020 !important;
+}
+
+.label {
+  border-radius: 0px !important;
+  font-size: 1.5vh !important;
+  text-transform: uppercase;
+  font-weight: bold;
+}
+
+.label-car-best {
+  background: green;
+  color: white;
+}
+
+.event-list-laps {
+  color: #e12e2e;
+  margin-left: 0.25vw;
+  font-family: "Oswald", sans-serif;
+  letter-spacing: 1px;
+  font-weight: bold;
+}
+
+tr p {
+  margin-bottom: unset;
+}
+
+.session-info h1 {
+  color: white !important;
+}
+
+.session-info h1 .light {
+  color: #5b5b5b !important;
+}
+
+.session-info p {
+  color: white;
+}
+
+.timing-header {
+  margin-top: 1em;
+  text-align: center;
+}
+
+.car-laps {
+  color: white;
+  margin-top: 1em;
+  width: 100%;
+}
+
+.car-thumb {
+  height: 60px;
+}
+
+.car-team {
+  font-size: 2vh;
+  color: #e12e2e;
+  margin-left: 0.25vw;
+  font-family: "Oswald", sans-serif;
+  letter-spacing: 1px;
+}
+
+.car-driver {
+  margin-top: 1vh;
+  display: inline-block;
+  font-family: "Montserrat", sans-serif;
+}
+
+.driver-state {
+  margin-right: 0.2em;
+  margin-left: 0.3em;
+}
+
+.driver-online {
+  color: green;
+}
+
+.driver-offline {
+  color: red;
+}
+
+/* Classes */
+
+.class-label {
+  font-family: "Viga", sans-serif;
+  font-size: 1.8vh !important;
+  padding-right: 0.3vw;
+}
+
+.class-label.disabled {
+  background: gray !important;
+  color: #373737 !important;
+}
+
+.toggle-label {
+  cursor: pointer;
+}
+
+.class-header {
+  text-align: right !important;
+  margin-bottom: 1em;
+}
+
+.number-label,
+.session-label {
+  background-color: white !important;
+  color: black !important;
+}
+
+.label-overall-leader {
+  background-color: purple;
+  color: white;
+}
+
+.class-alpine-cup {
+  background-color: lightskyblue !important;
+  color: black !important;
+}
+
+.class-sp9 {
+  background-color: #0f5621 !important;
+}
+
+.class-sp10 {
+  background-color: #c800c8 !important;
+}
+.class-cup2 {
+  background-color: #151378 !important;
+}
+.class-cup5 {
+  background-color: #00c8c8 !important;
+}
+.class-sp3t {
+  background-color: #dcdc00 !important;
+  color: black !important;
+}
+.class-h2 {
+  background-color: #c82808 !important;
+}
+.class-tcr {
+  background-color: #009ada !important;
+}
+
+.state {
+  display: table-cell;
+}
+
+.state-pit {
+  background-color: white !important;
+  color: black !important;
+}
+
+.overall-state-dq {
+  border-left: 10px solid black !important;
+  color: grey;
+}
+
+.overall-state-dnf {
+  border-left: 10px solid #aa1b1b !important;
+  color: grey;
+}
+
+.state-penalty {
+  background-color: red !important;
+  color: white !important;
+}
+
+.flag-blue {
+  border-bottom: 10px solid #7a7aff;
+}
+
+.flag-yellow {
+  border-bottom: 5px solid yellow;
+}
+
+.flag-green {
+  border-left: 10px solid darkgreen;
+}
