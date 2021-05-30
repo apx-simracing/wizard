@@ -570,6 +570,12 @@ class Event(models.Model):
     )
     plugins = models.ManyToManyField(ServerPlugin, blank=True)
 
+    timing_classes = models.TextField(
+        default="{}",
+        blank=True,
+        help_text="JSON Config to rename classes, if needed",
+    )
+
     def __str__(self):
         return "{}".format(self.name)
 
@@ -584,6 +590,11 @@ class Event(models.Model):
             loads(self.overwrites_player)
         except:
             raise ValidationError("The overwrites for the player.JSON are not valid")
+
+        try:
+            loads(self.timing_classes)
+        except:
+            raise ValidationError("The overwrites for the timing are not valid")
 
 
 class ServerStatus(models.TextChoices):

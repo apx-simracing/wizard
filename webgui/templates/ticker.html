@@ -6,7 +6,8 @@
   <link rel="stylesheet" href="{% static 'webgui/lib/spectre.min.css' %}">
   <link rel="stylesheet" href="{% static 'webgui/lib/spectre-exp.min.css' %}">
   <link rel="stylesheet" href="{% static 'webgui/lib/spectre-icons.min.css' %}">
-  <link rel="stylesheet" href="{% static 'webgui/timing.css' %}">
+  <link rel="stylesheet" href="{% static 'webgui/timing-baseline.css' %}">
+  <!-- Add your custom includes after this line -->
   <script src="https://cdn.jsdelivr.net/npm/vue@2.6.12/dist/vue.js"></script>
   <link rel="preconnect" href="https://fonts.gstatic.com">
   <link rel="preconnect" href="https://fonts.gstatic.com">
@@ -17,7 +18,7 @@
     crossorigin="anonymous" referrerpolicy="no-referrer" />
 </head>
 
-<body style="background: #c7c6c3 url({% static 'webgui/timing_backdrop.png' %}) repeat 50% 0;">
+<body>
   <div class="loadingbar"></div>
   <div class=" container" id="vue-app">
     <div class="columns">
@@ -26,7 +27,7 @@
         <div class="columns col-10">
           <div class="columns col-12">
             <div class="col-10">
-              <img src="https://www.rf2ln.de/home/templates/driverally/images/logo.png">
+              <span class="logo">
             </div>
             <div class="col-2 session-info" v-if="liveData !== null && liveData.status.maxLaps === 2147483647">
               <h1>[[getSession(liveData.status.session)]] <span class="light">[[getGamePhase()]]</span></h1>
@@ -67,10 +68,15 @@
             <tbody v-if="liveData !== null">
               <tr v-for="(vehicle, index) in liveData.status.vehicles" :key="index"
                 :class="'flag-'+[[vehicle.flag.toLowerCase()]] +' overall-state-'+[[getOverallState(vehicle)]] + (vehicle.underYellow ? ' flag-yellow' : '')"
-                v-if="classFilters.indexOf(getClassDisplayName(vehicle.carClass)) === -1">
+                v-if="classFilters.indexOf(getClassDisplayName(vehicle.carClass)) === -1"
+                v-on:click="toggleOpen(vehicle.slotID)">
                 <td>[[ vehicle.position ]] ([[vehicle.classPosition]])
                   <span v-if="vehicle.position==1" class="label label-overall-leader">
-                    LEADER
+                    OVERALL LEAD
+                  </span>
+                  <span v-if="vehicle.position!=1 && vehicle.classPosition === 1"
+                    :class="'label label-overall-leader class-' +  getClassDisplayName(vehicle.carClass).toLowerCase()">
+                    [[getClassDisplayName(vehicle.carClass)]] LEAD
                   </span>
                   <span>
                     <span title="Pitting" v-if="vehicle.pitState !== 'NONE' || vehicle.pitting"
@@ -85,7 +91,7 @@
                     :src="'http://localhost:8181/thumbs/f03346eb3a99be025979045e8fa1a281c5159611/'+vehicle.carId+'.png'" />
                 </td>
                 <td>
-                  <p v-on:click="toggleOpen(vehicle.slotID)" class="clickable">
+                  <p>
                     <span
                       :class="'label label-primary class-label class-' +  getClassDisplayName(vehicle.carClass).toLowerCase()">[[
                       getClassDisplayName(vehicle.carClass) ]]</span>
@@ -180,14 +186,19 @@
                 <td>[[ vehicle.lastLapTime > 0 ? getHourString(vehicle.lastLapTime, true) : '-']]</td>
                 <td>[[ vehicle.pitstops ]]</td>
 
-                <td v-if="vehicle.lapsBehindNext === 0 && vehicle.position !== 1">
+                <td v-if="vehicle.lapsBehindNext === 0 && vehicle.position !== 1 && classFilters.length === 0">
                   +[[ getTime(vehicle.timeBehindNext) ]]
                 </td>
-                <td v-if="vehicle.lapsBehindNext > 0 && vehicle.position !== 1">
+                <td v-if="vehicle.lapsBehindNext > 0 && vehicle.position !== 1 && classFilters.length === 0">
                   +[[ vehicle.lapsBehindNext]] laps
                 </td>
-                <td v-if="vehicle.position === 1">
-                  Int
+                <td v-if="vehicle.position === 1 && classFilters.length === 0">
+                  <span v-if="classFilters.length === 0">
+                    Int
+                  </span>
+                </td>
+                <td v-else-if="classFilters.length !== 0">
+                  -
                 </td>
               </tr>
             </tbody>
@@ -202,15 +213,10 @@
       el: '#vue-app',
       data: {
         liveData: null,
-        classMap: {
-          "Clio Cup 2010": "H2",
-          "Alpine A110 GT4": "SP10",
-          "Alpine A110 CUP": "Alpine Cup",
-          "Civic BTCC 2013": "SP3T",
-          "WTCR 2018": "TCR"
-        },
+        classMap: {},
         classFilters: [],
-        openMessages: []
+        openMessages: [],
+        serverSecret: null
       },
       computed: {
         classList: function() {
@@ -245,7 +251,7 @@
           if (this.liveData.status.session.indexOf("RACE") !== -1 && this.liveData.status.vehicles.length > 0) {
             return this.liveData.status.vehicles[0].gamePhase
           }
-          return "N/A"
+          return ""
         },
         getSession(session) {
           return session.match(/[A-Z]+/)[0]
@@ -288,9 +294,9 @@
           return "running"
         },
         fetchData: (self) => {
-          fetch("http://localhost:8000/live/cffhddcfgahchafbhifg")
+          fetch(window.location.origin + "/live/" + self.serverSecret)
             .then(response => response.json())
-            .then(data => self.liveData = data);
+            .then(data => {self.liveData = data, self.classMap = self.liveData.status.ticker_classes});
         },
         getHourString: (secs, ms = false) => {
           var sec_num = parseInt(secs, 10)
@@ -344,10 +350,19 @@
             return this.classMap[reportedName]
           }
           return reportedName
+        },
+        getServerSecret: function() {
+          var raw = window.location.pathname;
+
+          raw = raw.replace("ticker/", "");
+
+          raw = raw.replace("/", "")
+          this.serverSecret = raw;
         }
       },
       created: function() {
         var self = this;
+        self.getServerSecret()
         self.fetchData(self)
         setInterval(function() {
           self.fetchData(self)

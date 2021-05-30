@@ -1,5 +1,16 @@
+body {
+  background: #c7c6c3 url("../webgui/timing_backdrop.png") repeat 50% 0;
+}
+
 #vue-app {
   margin-bottom: 1em;
+}
+
+.logo {
+  background: no-repeat left/80% url("https://www.rf2ln.de/home/templates/driverally/images/logo.png");
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 .loadingbar {
@@ -153,6 +164,11 @@ tr p {
 .label-overall-leader {
   background-color: purple;
   color: white;
+}
+
+.class-alpine-cup {
+  background-color: lightskyblue !important;
+  color: black !important;
 }
 
 .class-sp9 {

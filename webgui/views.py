@@ -31,7 +31,7 @@ from .models import (
 import pathlib
 import zipfile
 import tempfile
-from json import loads
+from json import loads, dumps
 from django.core import serializers
 from os import listdir, mkdir, unlink
 from os.path import join, basename, exists
@@ -379,13 +379,7 @@ from collections import OrderedDict
 
 def get_ticker(request, secret: str):
     messages = TickerMessage.objects.filter(server__public_secret=secret)
-    """
-    last_status = (
-        ServerStatustext.objects.filter(server__public_secret=secret)
-        .order_by("-date")
-        .first()
-    )
-    """
+
     last_status = (
         ServerStatustext.objects.filter(server__public_secret=secret)
         .order_by("-id")
@@ -466,7 +460,7 @@ def live(request, secret: str):
                 drivers[slot_id].append(new_driver)
 
     status["vehicles"] = sorted(status["vehicles"], key=lambda x: x["position"])
-
+    status["ticker_classes"] = loads(server.event.timing_classes)
     # create in-class positions
     class_cars = {}
     for vehicle in status["vehicles"]:
