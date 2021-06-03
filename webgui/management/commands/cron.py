@@ -47,43 +47,6 @@ class Command(BaseCommand):
             url = server.url
             key = get_server_hash(url)
             try:
-                got = run_apx_command(key, "--cmd status")
-                server.status = got
-
-                text = ServerStatustext()
-                try:
-                    parsed_text = loads(got)
-                    if (
-                        "session_id" in parsed_text
-                        and parsed_text["session_id"] is not None
-                    ):
-                        old_id = server.session_id
-                        server.session_id = parsed_text["session_id"]
-
-                        text.session_id = server.session_id
-                        if old_id != server.session_id:
-                            media_thumbs_root = join(MEDIA_ROOT, "thumbs")
-                            if not exists(media_thumbs_root):
-                                mkdir(media_thumbs_root)
-
-                            server_thumbs_path = join(media_thumbs_root, key)
-                            if not exists(server_thumbs_path):
-                                mkdir(server_thumbs_path)
-
-                            # server may changed -> download thumbs
-                            thumbs_command = run_apx_command(
-                                key,
-                                "--cmd thumbnails --args {}".format(
-                                    join(server_thumbs_path, "thumbs.tar.gz")
-                                ),
-                            )
-
-                except:
-                    pass
-                text.user = server.user
-                text.server = server
-                text.status = got
-                text.save()
                 # download server key, if needed:
                 if not server.server_key:
                     try:

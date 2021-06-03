@@ -419,7 +419,47 @@ def add_message(request, secret: str):
     return JsonResponse({})
 
 
-import tarfile
+@csrf_exempt
+def add_status(request, secret: str):
+    server = Server.objects.filter(secret=secret).first()
+    if not server:
+        raise Http404()
+    got = request.body.decode("utf-8")
+    server.status = got
+
+    text = ServerStatustext()
+    try:
+        parsed_text = loads(got)
+        if "session_id" in parsed_text and parsed_text["session_id"] is not None:
+            old_id = server.session_id
+            server.session_id = parsed_text["session_id"]
+
+            text.session_id = server.session_id
+            if old_id != server.session_id:
+                media_thumbs_root = join(MEDIA_ROOT, "thumbs")
+                if not exists(media_thumbs_root):
+                    mkdir(media_thumbs_root)
+
+                server_thumbs_path = join(media_thumbs_root, key)
+                if not exists(server_thumbs_path):
+                    mkdir(server_thumbs_path)
+
+                # server may changed -> download thumbs
+                thumbs_command = run_apx_command(
+                    key,
+                    "--cmd thumbnails --args {}".format(
+                        join(server_thumbs_path, "thumbs.tar.gz")
+                    ),
+                )
+
+    except:
+        pass
+    text.user = server.user
+    text.server = server
+    text.status = got
+    text.save()
+    server.save()
+    return HttpResponse("OK")
 
 
 @csrf_exempt
