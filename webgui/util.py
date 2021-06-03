@@ -565,3 +565,50 @@ def do_server_interaction(server):
             server.action = ""
             server.locked = False
             server.save()
+
+    # download server key, if needed:
+    if not server.server_key:
+        try:
+            key_root_path = join(MEDIA_ROOT, "keys", key)
+            if not exists(key_root_path):
+                mkdir(key_root_path)
+            key_path = join(key_root_path, "ServerKeys.bin")
+            relative_path = join("keys", key, "ServerKeys.bin")
+            download_key_command = run_apx_command(
+                key, "--cmd lockfile --args {}".format(key_path)
+            )
+            if exists(key_path):
+                server.server_key = relative_path
+                server.locked = False
+                server.save()
+        except:
+            print("{} does not offer a key".format(server.pk))
+            do_post(
+                "[{}]: Server {} - {} does not offer a key".format(
+                    INSTANCE_NAME, server.pk, server.name
+                )
+            )
+
+    # if an unlock key is present - attempt unlock!
+    if server.server_unlock_key:
+        try:
+            key_root_path = join(MEDIA_ROOT, "keys", key)
+            if not exists(key_root_path):
+                mkdir(key_root_path)
+            key_path = join(key_root_path, "ServerUnlock.bin")
+            download_key_command = run_apx_command(
+                key, "--cmd unlock --args {}".format(key_path)
+            )
+            server.server_unlock_key = None
+        except Exception as e:
+
+            print("{} unlock failed".format(server.pk))
+
+            do_post(
+                "[{}]: Server {} - {} unlock failed: {}".format(
+                    INSTANCE_NAME, server.pk, server.name, e
+                )
+            )
+
+        finally:
+            server.save()

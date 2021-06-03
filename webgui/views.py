@@ -425,7 +425,6 @@ def add_status(request, secret: str):
     if not server:
         raise Http404()
     got = request.body.decode("utf-8")
-    server.status = got
 
     text = ServerStatustext()
     try:

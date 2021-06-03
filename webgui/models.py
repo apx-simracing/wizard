@@ -661,12 +661,6 @@ class Server(models.Model):
         null=False,
         help_text="Public steam branch",
     )
-    status = models.TextField(
-        blank=True,
-        null=True,
-        default=None,
-        help_text="Shows the reported status of the server. Can be empty or a JSON blob.",
-    )
     locked = models.BooleanField(
         default=False,
         help_text="Shows if the server is currently processed by the background worker. During processing, you cannot change settings.",
@@ -674,21 +668,14 @@ class Server(models.Model):
     )
     server_key = models.FileField(
         upload_to=get_key_root_path,
-        help_text="Keyfile of the server. Will be filled automatically.",
+        help_text="Keyfile of the server. Will be filled on save",
         blank=True,
         default=None,
         null=True,
     )
     server_unlock_key = models.FileField(
         upload_to=get_key_root_path,
-        help_text="Unlock keyfile of the server, usually named ServerUnlock.bin, required to use paid content. The field will clear after unlocking",
-        blank=True,
-        default=None,
-        null=True,
-    )
-    log = models.FileField(
-        upload_to=get_logfile_root_path,
-        help_text="The logfile of the server for troublsehooting purposes",
+        help_text="Unlock keyfile of the server, usually named ServerUnlock.bin, required to use paid content. The field will cleared after unlocking",
         blank=True,
         default=None,
         null=True,
@@ -712,58 +699,58 @@ class Server(models.Model):
         help_text="APX Session Id",
     )
 
-    @property
-    def build(self):
-        if self.status and "build" in self.status:
-            content = loads(self.status.replace("'", '"'))
-            return content["build"]
-        else:
-            return "-"
+    def get_status(self):
+        status = None
+        try:
+            status = ServerStatustext.objects.filter(server=self.pk).latest("id").status
+        except:
+            pass
+        return status
 
     @property
-    def release(self):
-        if self.status and "release" in self.status:
-            content = loads(self.status.replace("'", '"'))
-            return content["release"]
-        else:
-            return None
+    def logfile(self):
+        key = get_server_hash(self.url)
+        path = join(MEDIA_ROOT, "logs", key, "reciever.log")
+        contents = None
+        if exists(path):
+            with open(path, "r") as file:
+                contents = file.read()
+        return contents
 
     @property
     def status_info(self):
+        status = self.get_status()
         # no status to report (e. g. new server)
         response = '<img src="{}admin/img/icon-no.svg" alt="Not Running"> Server is not running</br>'.format(
             STATIC_URL
         )
-        if self.release and self.release != RECIEVER_COMP_INFO:
-            response = '<img src="{}admin/img/icon-no.svg" alt="Wrong version"> The reciever has an incompatible version. Them={}, We={}</br>'.format(
-                STATIC_URL, self.release, RECIEVER_COMP_INFO
-            )
-        elif self.status_failures >= FAILURE_THRESHOLD:
+
+        if self.status_failures >= FAILURE_THRESHOLD:
             response = '<img src="{}admin/img/icon-no.svg" alt="Not Running"> Server is disabled due to errors.</br>'.format(
                 STATIC_URL
             )
-        elif not self.status:
+        elif not status:
             response = '<img src="{}admin/img/icon-no.svg" alt="Not Running"> Server did not return a status yet</br>'.format(
                 STATIC_URL
             )
         elif (
-            self.status
-            and "in_deploy" in self.status
+            status
+            and "in_deploy" in status
             and self.status_failures <= FAILURE_THRESHOLD
         ):
             response = '<img src="{}admin/img/icon-no.svg" alt="Not Running"> The server is deploying</br>'.format(
                 STATIC_URL
             )
         elif (
-            self.status
-            and "not_running" not in self.status
+            status
+            and "not_running" not in status
             and self.status_failures <= FAILURE_THRESHOLD
         ):
             response = '<img src="{}admin/img/icon-yes.svg" alt="Running"> Server is running</br>'.format(
                 STATIC_URL
             )
             try:
-                content = loads(self.status.replace("'", '"'))
+                content = loads(status.replace("'", '"'))
                 for vehicle in content["vehicles"]:
                     vehicle_text = (
                         "[{}, Pit {}] {}: {} (SteamID:{}), penalties: {}".format(
@@ -784,48 +771,41 @@ class Server(models.Model):
         return self.url if not self.name else self.name
 
     def clean(self):
+        status = self.get_status()
         if not self.server_key and self.action:
             raise ValidationError(
                 "The server was not processed yet. Wait a short time until the key is present."
             )
-        if (
-            self.status is not None
-            and "not_running" in self.status
-            and self.action == "R-"
-        ):
+        if status is not None and "not_running" in status and self.action == "R-":
             raise ValidationError("The server is not running")
 
-        if (
-            self.status is not None
-            and "not_running" not in self.status
-            and self.action == "D"
-        ):
+        if status is not None and "not_running" not in status and self.action == "D":
             raise ValidationError("Stop the server first")
 
-        if (
-            self.status is not None
-            and "not_running" not in self.status
-            and self.action == "S+"
-        ):
+        if status is not None and "not_running" not in status and self.action == "S+":
             raise ValidationError("Stop the server first")
 
         if self.action == "D" and not self.event:
             raise ValidationError("You have to add an event before deploying")
 
-        if self.status and "in_deploy" in self.status:
+        if status and "in_deploy" in status:
             raise ValidationError("Wait until deployment is over")
 
-        if self.action == "W" and self.status and "in_deploy" in self.status:
+        if self.action == "W" and status and "in_deploy" in status:
             raise ValidationError("Wait until deployment is over")
 
-        if self.action == "W" and self.status and "not_running" in self.status:
+        if self.action == "W" and status and "not_running" in status:
             raise ValidationError("Start the server first")
 
         if not str(self.url).endswith("/"):
             raise ValidationError("The server url must end with a slash!")
         self.status_failures = 0
 
-        if self.action != "":
+        if (
+            self.action != ""
+            or self.server_key is None
+            or self.server_unlock_key is not None
+        ):
             self.locked = True
             background_thread = Thread(
                 target=background_action_server, args=(self,), daemon=True

@@ -46,78 +46,24 @@ class Command(BaseCommand):
         for server in all_servers:
             url = server.url
             key = get_server_hash(url)
+            # download the logfile
+            log_root_path = join(MEDIA_ROOT, "logs", key)
+            if not exists(log_root_path):
+                mkdir(log_root_path)
+            log_path = join(log_root_path, "reciever.log")
+            relative_path = join("logs", key, "reciever.log")
             try:
-                # download server key, if needed:
-                if not server.server_key:
-                    try:
-                        key_root_path = join(MEDIA_ROOT, "keys", key)
-                        if not exists(key_root_path):
-                            mkdir(key_root_path)
-                        key_path = join(key_root_path, "ServerKeys.bin")
-                        relative_path = join("keys", key, "ServerKeys.bin")
-                        download_key_command = run_apx_command(
-                            key, "--cmd lockfile --args {}".format(key_path)
-                        )
-                        if exists(key_path):
-                            server.server_key = relative_path
-                    except:
-                        print("{} does not offer a key".format(server.pk))
-                        do_post(
-                            "[{}]: Server {} - {} does not offer a key".format(
-                                INSTANCE_NAME, server.pk, server.name
-                            )
-                        )
-
-                # if an unlock key is present - attempt unlock!
-                if server.server_unlock_key:
-                    try:
-                        key_root_path = join(MEDIA_ROOT, server.server_unlock_key.name)
-                        download_key_command = run_apx_command(
-                            key, "--cmd unlock --args {}".format(key_root_path)
-                        )
-                        server.server_unlock_key = None
-                    except:
-
-                        print("{} unlock failed".format(server.pk))
-
-                        do_post(
-                            "[{}]: Server {} - {} unlock failed".format(
-                                INSTANCE_NAME, server.pk, server.name
-                            )
-                        )
-
-                # download the logfile
-                log_root_path = join(MEDIA_ROOT, "logs", key)
-                if not exists(log_root_path):
-                    mkdir(log_root_path)
-                log_path = join(log_root_path, "reciever.log")
-                relative_path = join("logs", key, "reciever.log")
-                try:
-                    download_log_command = run_apx_command(
-                        key, "--cmd log --args {}".format(log_path)
-                    )
-                    server.log = relative_path
-                except:
-                    print("{} logfile download failed".format(server.pk))
-
-                    do_post(
-                        "[{}]: Server {} - {} logfile failed".format(
-                            INSTANCE_NAME, server.pk, server.name
-                        )
-                    )
-
-            except Exception as e:
-                print("Failed to recieve status for {}: {}".format(server.pk, e))
-                server.status = None
-                server.status_failures = server.status_failures + 1
+                download_log_command = run_apx_command(
+                    key, "--cmd log --args {}".format(log_path)
+                )
+            except:
+                print("{} logfile download failed".format(server.pk))
 
                 do_post(
-                    "[{}]: Server {} - {} failed to retrieve status. Fail count is now at {}".format(
-                        INSTANCE_NAME, server.pk, server.name, server.status_failures
+                    "[{}]: Server {} - {} logfile failed".format(
+                        INSTANCE_NAME, server.pk, server.name
                     )
                 )
-            finally:
-                server.save()
 
     def thread_action(servers):
         print("Thread {} action start".format(get_ident()))

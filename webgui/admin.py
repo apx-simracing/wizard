@@ -282,7 +282,7 @@ class ServerAdmin(admin.ModelAdmin):
         else:
             return Server.objects.all()
 
-    list_display = ("name", "server_name", "track_name", "status_info", "build")
+    list_display = ("name", "server_name", "track_name", "status_info")
     fieldsets = [
         (
             "APX Settings",
@@ -305,11 +305,18 @@ class ServerAdmin(admin.ModelAdmin):
         ),
         (
             "Actions and status",
-            {"fields": ["action", "locked", "status_info", "update_on_build"]},
+            {
+                "fields": [
+                    "action",
+                    "locked",
+                    "status_info",
+                    "update_on_build",
+                ]
+            },
         ),
         (
             "Keys",
-            {"fields": ["server_key", "server_unlock_key", "log"]},
+            {"fields": ["server_key", "server_unlock_key", "logfile"]},
         ),
     ]
 
@@ -320,11 +327,11 @@ class ServerAdmin(admin.ModelAdmin):
                 "public_ip",
                 "secret",
                 "url",
-                "status",
                 "locked",
                 "action",
                 "status_failures",
                 "status_info",
+                "logfile",
                 "server_key",
                 "server_unlock_key",
                 "public_secret",
@@ -336,6 +343,7 @@ class ServerAdmin(admin.ModelAdmin):
                 "status_failures",
                 "status_info",
                 "public_secret",
+                "logfile",
             )
         return self.readonly_fields + (
             "locked",
@@ -343,28 +351,42 @@ class ServerAdmin(admin.ModelAdmin):
             "status_failures",
             "status_info",
             "public_secret",
+            "logfile",
         )
 
     def is_running(self, obj):
-        if not obj or not obj.status:
+        if not obj:
             return False
-        return "not_running" not in obj.status
+        status = self.get_status(obj)
+        if not status:
+            return False
+        return "not_running" not in status
 
     is_running.short_description = "Running"
 
+    def get_status(self, obj):
+        status = None
+        try:
+            status = ServerStatustext.objects.filter(server=obj.pk).latest("id").status
+        except:
+            pass
+        return status
+
     def server_name(self, obj):
-        if not obj or not obj.status:
+        status = self.get_status(obj)
+        if not obj or not status:
             return "-"
-        json = loads(obj.status)
+        json = loads(status)
         return json["name"] if "name" in json else "-"
 
     server_name.short_description = "Server name"
 
     def track_name(self, obj):
-        if not obj or not obj.status:
+        status = self.get_status(obj)
+        if not obj or not status:
             return "-"
-        json = loads(obj.status)
-        return json["track"] if "track" in obj.status else "-"
+        json = loads(status)
+        return json["track"] if "track" in status else "-"
 
     track_name.short_description = "Track"
 
