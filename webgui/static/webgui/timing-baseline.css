@@ -9,6 +9,10 @@
   height: 100%;
 }
 
+.vehicle {
+  cursor: pointer;
+}
+
 .loadingbar {
   border-top: 1px #08003b solid;
   width: 100%;

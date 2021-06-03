@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="{% static 'webgui/lib/spectre-exp.min.css' %}">
   <link rel="stylesheet" href="{% static 'webgui/lib/spectre-icons.min.css' %}">
   <link rel="stylesheet" href="{% static 'webgui/timing-baseline.css' %}">
+  <link rel="stylesheet" href="{% static 'webgui/rf2ln.css' %}">
   <!-- Add your custom includes after this line -->
   <script src="https://cdn.jsdelivr.net/npm/vue@2.6.12/dist/vue.js"></script>
   <link rel="preconnect" href="https://fonts.gstatic.com">
@@ -66,8 +67,8 @@
               </tr>
             </thead>
             <tbody v-if="liveData !== null">
-              <tr v-for="(vehicle, index) in liveData.status.vehicles" :key="index"
-                :class="'flag-'+[[vehicle.flag.toLowerCase()]] +' overall-state-'+[[getOverallState(vehicle)]] + (vehicle.underYellow ? ' flag-yellow' : '')"
+              <tr title="Click to expand" v-for="(vehicle, index) in liveData.status.vehicles" :key="index"
+                :class="'vehicle flag-'+[[vehicle.flag.toLowerCase()]] +' overall-state-'+[[getOverallState(vehicle)]] + (vehicle.underYellow ? ' flag-yellow' : '')"
                 v-if="classFilters.indexOf(getClassDisplayName(vehicle.carClass)) === -1"
                 v-on:click="toggleOpen(vehicle.slotID)">
                 <td>[[ vehicle.position ]] ([[vehicle.classPosition]])
@@ -117,21 +118,10 @@
                       <tr v-for="(message, message_key) in vehicle.messages" :key="message_key"
                         v-if="['LC', 'P+', 'P-', 'S', 'DS'].indexOf(message.type) !== -1 || (message.type==='PS' && message.status === 'STOPPED')">
                         <td class="event-list-laps">
-                          <span v-if=" message.type==='LC'" :title="message.driver">
+                          <span :title="message.driver">
                             L[[message.laps]]
                           </span>
-                          <span v-if=" message.type==='PS'">
-                            <i class="far fa-stop-circle"></i>
-                          </span>
-                          <span v-if=" message.type==='P-' || message.type==='P+'">
-                            <i class="fas fa-gavel"></i>
-                          </span>
-                          <span v-if=" message.type==='S'">
-                            <i class="fas fa-bell"></i>
-                          </span>
-                          <span v-if=" message.type==='DS'">
-                            <i class="fas fa-exchange-alt"></i>
-                          </span>
+
                         </td>
                         <td>
                           <span v-if=" message.type==='LC'"
@@ -163,7 +153,7 @@
                             BL
                           </span>
                           <span v-if=" message.type==='S'">
-                            Now [[message.status.replace("FSTAT_", "")]]
+                            Now "[[message.status.replace("FSTAT_", "")]]"
                           </span>
                           <span v-if=" message.type==='DS'">
                             [[message.old_driver]] out </br>
