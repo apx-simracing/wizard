@@ -437,7 +437,7 @@ def add_log(request, secret: str):
             mkdir(absolute_path)
         path = join("logs", key, "reciever.log")
         default_storage.save(path, ContentFile(file.read()))
-        file.save(path)
+        return HttpResponse()
     else:
         raise HttpResponseBadRequest()
 
