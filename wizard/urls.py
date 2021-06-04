@@ -27,6 +27,7 @@ from webgui.views import (
     get_ticker,
     add_message,
     add_status,
+    add_log,
     live,
 )
 from wizard.settings import ENTRY_SIGNUP_ENABLED
@@ -47,6 +48,7 @@ if ENTRY_SIGNUP_ENABLED:
         path("ticker/<str:secret>", get_ticker),
         path("addmessage/<str:secret>", add_message),
         path("addstatus/<str:secret>", add_status),
+        path("addlog/<str:secret>", add_log),
         path("live/<str:secret>", live),
     ]
 else:
@@ -61,5 +63,6 @@ else:
         path("ticker/<str:secret>", get_ticker),
         path("addmessage/<str:secret>", add_message),
         path("addstatus/<str:secret>", add_status),
+        path("addlog/<str:secret>", add_log),
         path("live/<str:secret>", live),
     ]

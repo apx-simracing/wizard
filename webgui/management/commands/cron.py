@@ -34,72 +34,10 @@ import pytz
 
 class Command(BaseCommand):
     help = "Recieves status of servers"
-    kill_all_threads = False
-
-    def status_job(servers: list):
-        all_servers = Server.objects.filter(
-            pk__in=servers,
-            locked=False,
-            status_failures__lt=FAILURE_THRESHOLD,
-        )
-
-        for server in all_servers:
-            url = server.url
-            key = get_server_hash(url)
-            # download the logfile
-            log_root_path = join(MEDIA_ROOT, "logs", key)
-            if not exists(log_root_path):
-                mkdir(log_root_path)
-            log_path = join(log_root_path, "reciever.log")
-            relative_path = join("logs", key, "reciever.log")
-            try:
-                download_log_command = run_apx_command(
-                    key, "--cmd log --args {}".format(log_path)
-                )
-            except:
-                print("{} logfile download failed".format(server.pk))
-
-                do_post(
-                    "[{}]: Server {} - {} logfile failed".format(
-                        INSTANCE_NAME, server.pk, server.name
-                    )
-                )
-
-    def thread_action(servers):
-        print("Thread {} action start".format(get_ident()))
-        while not Command.kill_all_threads:
-            Command.status_job(servers)
-            sleep(CRON_TIMEOUT)
-        print("Thread {} action end".format(get_ident()))
-
-    def chunks(lst, n):
-        # https://stackoverflow.com/questions/312443/how-do-you-split-a-list-into-evenly-sized-chunks
-        """Yield successive n-sized chunks from lst."""
-        for i in range(0, len(lst), n):
-            yield lst[i : i + n]
-
-    def chunk_list():
-        Command.kill_all_threads = False
-        servers = Server.objects.filter(
-            status_failures__lt=FAILURE_THRESHOLD
-        ).values_list("pk", flat=True)
-
-        server_chunks = list(Command.chunks(servers, CRON_CHUNK_SIZE))
-        threads = []
-        for servers in server_chunks:
-            chunk_thread = Thread(
-                target=Command.thread_action, args=(servers,), daemon=True
-            )
-            threads.append(chunk_thread)
-            chunk_thread.start()
-
-        return threads
 
     def handle(self, *args, **options):
         time_zone = pytz.timezone(CRON_TIMEZONE)
         try:
-            print("Chunking servers to allow new and changed servers to be included")
-            threads = Command.chunk_list()
             cron_jobs = ServerCron.objects.all()
             local_date = time_zone.localize(datetime.now())
             for cron_job in cron_jobs:
@@ -129,16 +67,10 @@ class Command(BaseCommand):
                                 server.event = event
                             server.clean()
                             server.save()
-                            print("executing", event)
-                            print("action", action)
                 except:
-                    print("Exception while running", cron_job)
+                    pass
 
             sleep(CRON_THREAD_KILL_TIMEOUT)
-            Command.kill_all_threads = True
-            for thread in threads:
-                thread.join()
-            print("Exiting")
 
         except KeyboardInterrupt:
-            Command.kill_all_threads = True
+            pass

@@ -1,6 +1,8 @@
-from django.http import HttpResponse, Http404, JsonResponse
+from django.http import HttpResponse, Http404, JsonResponse, HttpResponseBadRequest
 from django.shortcuts import render
 from django.core.exceptions import ValidationError
+from django.core.files.storage import default_storage
+from django.core.files.base import ContentFile
 from django.contrib.auth.models import User, Group
 from django.db.models import Q
 from .forms import (
@@ -417,6 +419,27 @@ def add_message(request, secret: str):
     ticker.session_id = server.session_id
     ticker.save()
     return JsonResponse({})
+
+
+@csrf_exempt
+def add_log(request, secret: str):
+    server = Server.objects.filter(secret=secret).first()
+    if not server:
+        raise Http404()
+
+    url = server.url
+    key = get_server_hash(url)
+
+    if "log" in request.FILES:
+        file = request.FILES["log"]
+        absolute_path = join(MEDIA_ROOT, "logs", key)
+        if not exists(absolute_path):
+            mkdir(absolute_path)
+        path = join("logs", key, "reciever.log")
+        default_storage.save(path, ContentFile(file.read()))
+        file.save(path)
+    else:
+        raise HttpResponseBadRequest()
 
 
 @csrf_exempt

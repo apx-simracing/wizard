@@ -282,6 +282,23 @@ class ServerAdmin(admin.ModelAdmin):
         else:
             return Server.objects.all()
 
+    actions = ["reset_status", "force_unlock"]
+
+    def reset_status(self, request, queryset):
+        for server in queryset:
+            text = ServerStatustext()
+            text.status = None
+            text.user = request.user
+            text.server = server
+            text.save()
+
+    reset_status.short_description = "Reset status (if stuck)"
+
+    def force_unlock(self, request, queryset):
+        queryset.update(locked=False)
+
+    force_unlock.short_description = "Unlock (if stuck)"
+
     list_display = ("name", "server_name", "track_name", "status_info")
     fieldsets = [
         (
