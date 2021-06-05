@@ -38,7 +38,14 @@ from django.core import serializers
 from os import listdir, mkdir, unlink
 from os.path import join, basename, exists
 from django.core.files import File
-from .util import get_hash, get_random_string, do_post, do_rc_post, get_server_hash
+from .util import (
+    get_hash,
+    get_random_string,
+    do_post,
+    do_rc_post,
+    get_server_hash,
+    run_apx_command,
+)
 from django.views.decorators.csrf import csrf_exempt
 import tarfile
 
@@ -455,25 +462,7 @@ def add_status(request, secret: str):
         if "session_id" in parsed_text and parsed_text["session_id"] is not None:
             old_id = server.session_id
             server.session_id = parsed_text["session_id"]
-
             text.session_id = server.session_id
-            if old_id != server.session_id:
-                media_thumbs_root = join(MEDIA_ROOT, "thumbs")
-                if not exists(media_thumbs_root):
-                    mkdir(media_thumbs_root)
-
-                server_thumbs_path = join(media_thumbs_root, key)
-                if not exists(server_thumbs_path):
-                    mkdir(server_thumbs_path)
-
-                # server may changed -> download thumbs
-                thumbs_command = run_apx_command(
-                    key,
-                    "--cmd thumbnails --args {}".format(
-                        join(server_thumbs_path, "thumbs.tar.gz")
-                    ),
-                )
-
     except:
         pass
     text.user = server.user
@@ -522,7 +511,9 @@ def live(request, secret: str):
                 drivers[slot_id].append(new_driver)
 
     status["vehicles"] = sorted(status["vehicles"], key=lambda x: x["position"])
-    status["ticker_classes"] = loads(server.event.timing_classes)
+    status["ticker_classes"] = (
+        loads(server.event.timing_classes) if server.event else {}
+    )
     # create in-class positions
     class_cars = {}
     for vehicle in status["vehicles"]:
@@ -535,18 +526,5 @@ def live(request, secret: str):
         )
         vehicle["messages"].reverse()
     response = {"status": status, "media_url": MEDIA_URL, "drivers": drivers}
-    # unpack the livery thumbnails, if needed
-    if not exists(join(MEDIA_ROOT, "thumbs")):
-        mkdir(join(MEDIA_ROOT, "thumbs"))
-    server_key_path = join(MEDIA_ROOT, "thumbs", key)
-    if not exists(server_key_path):
-        mkdir(server_key_path)
 
-    server_pack_path = join(server_key_path, "thumbs.tar.gz")
-    if exists(server_pack_path):
-        # unpack liveries
-        file = tarfile.open(server_pack_path)
-        file.extractall(path=server_key_path)
-        file.close()
-        unlink(server_pack_path)
     return JsonResponse(response)

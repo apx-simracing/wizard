@@ -33,9 +33,11 @@ from webgui.storage import OverwriteStorage
 from django.utils.html import mark_safe
 import re
 from os.path import exists, join
-from os import mkdir
+from os import mkdir, linesep
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from datetime import datetime, timedelta
+import pytz
 
 USE_WAND = True
 try:
@@ -575,6 +577,12 @@ class Event(models.Model):
         blank=True,
         help_text="JSON Config to rename classes, if needed",
     )
+    welcome_message = models.TextField(
+        default=None,
+        null=True,
+        blank=True,
+        help_text="Welcome message",
+    )
 
     def __str__(self):
         return "{}".format(self.name)
@@ -595,6 +603,14 @@ class Event(models.Model):
             loads(self.timing_classes)
         except:
             raise ValidationError("The overwrites for the timing are not valid")
+
+        if self.welcome_message:
+            parts = self.welcome_message.split(linesep)
+            for part in parts:
+                if len(part) > 50:
+                    raise ValidationError(
+                        "Limit the line length of each line of the welcome text to 50!"
+                    )
 
 
 class ServerStatus(models.TextChoices):
@@ -702,8 +718,8 @@ class Server(models.Model):
     def get_status(self):
         status = None
         try:
-            status = ServerStatustext.objects.filter(server=self.pk).latest("id").status
-        except:
+            status = ServerStatustext.objects.filter(server=self.pk).first().status
+        except Exception as e:
             pass
         return status
 

@@ -383,6 +383,7 @@ def get_event_config(event_id: int):
         "temp_offset": server.temp_offset,
         "comp": RECIEVER_COMP_INFO,
         "plugins": plugins,
+        "welcome_message": server.welcome_message,
         "mod": {
             "name": mod_name,
             "version": "1.0.{}".format(get_random_string(5)),
