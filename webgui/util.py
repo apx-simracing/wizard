@@ -629,9 +629,10 @@ def do_server_interaction(server):
                 conditions = server.event.conditions
                 for session in conditions.sessions.all():
                     update_weather(session)
-                config_path = join(APX_ROOT, "configs", key + ".json")
-                command_line = "--cmd weatherupdate --args {}".format(config_path)
-                run_apx_command(key, command_line)
+                if server.update_weather_on_start:
+                    config_path = join(APX_ROOT, "configs", key + ".json")
+                    command_line = "--cmd weatherupdate --args {}".format(config_path)
+                    run_apx_command(key, command_line)
             run_apx_command(key, "--cmd start")
             do_post(
                 "[{}]: 🚀 Starting looks complete for {}!".format(

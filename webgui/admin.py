@@ -380,6 +380,7 @@ class ServerAdmin(admin.ModelAdmin):
                     "locked",
                     "status_info",
                     "update_on_build",
+                    "update_weather_on_start",
                 ]
             },
         ),
