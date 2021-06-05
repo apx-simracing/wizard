@@ -350,6 +350,7 @@ def get_event_config(event_id: int):
                     "length": session.length,
                     "laps": session.laps,
                     "start": str(session.start) if session.start is not None else None,
+                    "weather": session.weather,
                 }
             )
     else:
@@ -457,6 +458,146 @@ def create_virtual_config():
         file.write(dumps(server_data))
 
 
+def degrees_to_direction(raw):
+    val = int((raw / 22.5) + 0.5)
+    arr = [
+        "0",
+        "1",
+        "1",
+        "2",
+        "2",
+        "3",
+        "3",
+        "4",
+        "4",
+        "5",
+        "5",
+        "6",
+        "6",
+        "7",
+        "7",
+        "0",
+    ]
+    return int(arr[(val % 16)])
+
+
+def get_clouds(raw, rain=False):
+    result = 0
+    if rain:
+        result = 5
+    if raw <= 20:
+        return result
+    if raw > 20 and raw <= 40:
+        return result + 1
+    if raw > 40 and raw <= 60:
+        return result + 2
+    if raw > 60 and raw <= 80:
+        return result + 3
+    if raw >= 80 and raw <= 100:
+        return result + 4
+
+
+def update_weather(session):
+    from requests import get
+    import datetime
+    from math import floor
+
+    if session.start and session.track:
+        forecast = get(
+            "https://api.openweathermap.org/data/2.5/onecall?lat="
+            + str(session.track.lat)
+            + "&lon="
+            + str(session.track.lon)
+            + "&exclude=daily,current,minutely&appid="
+            + OPENWEATHERAPI_KEY
+            + "&units=metric"
+        ).json()
+
+        forecast_data = forecast["hourly"]
+        start = int(session.start.hour)
+        start_from_midnight = start * 60 + session.start.minute
+
+        duration = (
+            24 * 60
+        )  # TODO: DEBUG IF THIS CAUSES ISSUES TO ADD 24h on each session
+        end_time = start_from_midnight + duration
+
+        starting_index = 0
+        matching_forecast = []
+        for index, forecast_entry in enumerate(forecast_data):
+            # forecast is hourly, we only interested in the full hour numbers
+            hour = int(
+                datetime.datetime.fromtimestamp(forecast_entry["dt"]).strftime("%H")
+            )
+            if hour == start and starting_index == 0:
+                starting_index = index
+
+            if starting_index != 0 and len(matching_forecast) <= 24:
+                matching_forecast.append(forecast_entry)
+
+        last_rain = None
+        weather_blocks = []
+        for index, next_forecast in enumerate(matching_forecast):
+            temp = floor(next_forecast["temp"])
+            wind = floor(next_forecast["wind_speed"])
+            wind_direction = degrees_to_direction(next_forecast["wind_deg"])
+
+            block_length = (
+                60  # 60 minutes block length, as the api does not delivery ynthing more
+            )
+
+            rain_volume = 0
+            maximum_rain_volume = (
+                300  # we assume that 30cm/hr ist the maximum amount of rain possible
+            )
+            # unit: mm per hour
+            rain_percentage = 0
+            if "rain" in next_forecast:
+                rain_volume = next_forecast["rain"]["1h"]
+                rain_percentage = floor(100 / (maximum_rain_volume / rain_volume))
+
+            humidity = floor(next_forecast["humidity"])
+
+            clouds = get_clouds(next_forecast["clouds"])
+            start_time = start_from_midnight + index * 60
+            day_max = 24 * 60
+            if start_time > day_max:
+                start_time = start_time - day_max
+            block = {
+                "HumanDate": str(datetime.datetime.fromtimestamp(next_forecast["dt"])),
+                "StartTime": start_time,
+                "Duration": block_length,
+                "Sky": clouds,
+                "RainChange": 0,
+                "RainDensity": rain_percentage - last_rain
+                if last_rain is not None
+                else rain_percentage,
+                "Temperature": temp,
+                "Humidity": humidity,
+                "WindSpeed": wind,
+                "WindDirection": wind_direction,
+            }
+            last_rain = rain_percentage
+            weather_blocks.append(block)
+        wet_file_content = []
+        for block in weather_blocks:
+            wet_file_content.append("//Weather block: " + block["HumanDate"])
+            for line in [
+                "StartTime",
+                "Duration",
+                "Sky",
+                "RainChange",
+                "RainDensity",
+                "Temperature",
+                "Humidity",
+                "WindSpeed",
+                "WindDirection",
+            ]:
+                wet_file_content.append(line + "=(" + str(block[line]) + ")")
+        session.weather = linesep.join(wet_file_content)
+        session.save()
+
+
 def do_server_interaction(server):
     secret = server.secret
     url = server.url
@@ -483,6 +624,14 @@ def do_server_interaction(server):
 
     if server.action == "S+":
         try:
+            # update weather, if needed
+            if server.event and server.event.real_weather:
+                conditions = server.event.conditions
+                for session in conditions.sessions.all():
+                    update_weather(session)
+                config_path = join(APX_ROOT, "configs", key + ".json")
+                command_line = "--cmd weatherupdate --args {}".format(config_path)
+                run_apx_command(key, command_line)
             run_apx_command(key, "--cmd start")
             do_post(
                 "[{}]: 🚀 Starting looks complete for {}!".format(
@@ -501,6 +650,33 @@ def do_server_interaction(server):
             server.locked = False
             server.save()
 
+    if server.action == "WU":
+        try:
+            event_config = get_event_config(server.event.pk)
+            event_config["branch"] = server.branch
+            event_config["update_on_build"] = server.update_on_build
+            event_config["callback_target"] = (
+                "{}addmessage/{}".format(PUBLIC_URL, server.public_secret)
+                if PUBLIC_URL
+                else None
+            )
+            config_path = join(APX_ROOT, "configs", key + ".json")
+            with open(config_path, "w") as file:
+                file.write(dumps(event_config))
+            command_line = "--cmd weatherupdate --args {}".format(config_path)
+            run_apx_command(key, command_line)
+
+        except Exception as e:
+            print(e)
+            do_post(
+                "[{}]: 😱 Failed starting server {}: {}".format(
+                    INSTANCE_NAME, server.name, str(e)
+                )
+            )
+        finally:
+            server.action = ""
+            server.locked = False
+            server.save()
     if server.action == "R-":
 
         try:

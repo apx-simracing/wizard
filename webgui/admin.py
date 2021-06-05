@@ -15,6 +15,7 @@ from webgui.models import (
     TickerMessage,
     ServerPlugin,
 )
+from wizard.settings import OPENWEATHERAPI_KEY
 from django.contrib import messages
 from django.utils.html import mark_safe
 from django.contrib.auth.models import User
@@ -26,9 +27,10 @@ from json import loads
 from datetime import datetime, timedelta
 import pytz
 import tarfile
-from os import unlink, mkdir
+from os import unlink, mkdir, linesep
 from os.path import join, exists
 from wizard.settings import MEDIA_ROOT
+from math import floor
 
 admin.site.site_url = None
 admin.site.site_title = "APX"

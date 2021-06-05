@@ -213,6 +213,8 @@ class RaceSessions(models.Model):
     length = models.IntegerField(
         default=0, help_text="Target length of the session in minutes"
     )
+    weather = models.TextField(blank=True, null=True, default=None)
+    track = models.ForeignKey("Track", on_delete=models.CASCADE, blank=True, null=True)
 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
 
@@ -233,6 +235,9 @@ class RaceSessions(models.Model):
         str = "[{}] {}, {} minutes, {} laps".format(
             self.type, self.description, self.length, self.laps
         )
+
+        if self.track:
+            str = str + f" [{self.track}]"
 
         if self.grip:
             str = str + ", gripfile: {}".format(basename(self.grip.name))
@@ -274,6 +279,12 @@ class Track(models.Model):
     component = models.ForeignKey(Component, on_delete=models.DO_NOTHING)
     layout = models.CharField(default="", blank=False, max_length=200)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    lon = models.FloatField(
+        default=None, blank=True, null=True, verbose_name="Longitute"
+    )
+    lat = models.FloatField(
+        default=None, blank=True, null=True, verbose_name="Latitute"
+    )
 
     def __str__(self):
         return "{}@{}".format(self.layout, self.component)
@@ -618,6 +629,7 @@ class ServerStatus(models.TextChoices):
     STOPREQUESTED = "R-", "Stop"
     DEPLOY = "D", "Update config and redeploy"
     RESTARTWEEKEND = "W", "Restart weekend"
+    WEATHERUPDATE = "WU", "Weather forecast update"
 
 
 class ServerBranch(models.TextChoices):
@@ -812,6 +824,12 @@ class Server(models.Model):
 
         if self.action == "W" and status and "not_running" in status:
             raise ValidationError("Start the server first")
+
+        if status is not None and "not_running" not in status and self.action == "WU":
+            raise ValidationError("Start the server first")
+
+        if self.event and not self.event.real_weather and self.action == "WU":
+            raise ValidationError("The event has no real weather enabled")
 
         if not str(self.url).endswith("/"):
             raise ValidationError("The server url must end with a slash!")
