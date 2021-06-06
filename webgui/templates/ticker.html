@@ -44,10 +44,9 @@
             </div>
           </div>
           <div class="col-12 timing-header">
-            <span
-              class="label session-label">[[getHourString(liveData.status.time_completion*liveData.status.race_time)]]
+            <span class="label session-label">[[getHourString(liveData.status.currentEventTime)]]
               /
-              [[getHourString(liveData.status.race_time)]]</span>
+              [[getHourString(liveData.status.endEventTime)]]</span>
           </div>
           <div class="col-12 class-header" title="Click to toggle class">
             <span v-for="(car_class, class_index) in classList" :key="class_index" v-on:click="toggleClass(car_class)"
