@@ -380,7 +380,6 @@ def get_event_config(event_id: int):
         "track": track_groups,
         "start_type": start_type,
         "real_weather": server.real_weather,
-        "real_weather_key": OPENWEATHERAPI_KEY,
         "temp_offset": server.temp_offset,
         "comp": RECIEVER_COMP_INFO,
         "plugins": plugins,
