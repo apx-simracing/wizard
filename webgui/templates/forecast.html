@@ -1,0 +1,81 @@
+{% load static %}
+<html>
+
+<head>
+  <title>Weather forecast {{event.name}}</title>
+  <link rel="stylesheet" href="{% static 'webgui/lib/spectre.min.css' %}">
+  <link rel="stylesheet" href="{% static 'webgui/lib/spectre-exp.min.css' %}">
+  <link rel="stylesheet" href="{% static 'webgui/lib/spectre-icons.min.css' %}">
+  <link rel="stylesheet" href="{% static 'webgui/timing-baseline.css' %}">
+  <!-- Add your custom includes after this line -->
+  <link rel="preconnect" href="https://fonts.gstatic.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat&family=Oswald:wght@300&family=Viga&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"
+    integrity="sha512-iBBXm8fW90+nuLcSKlbmrPcLa0OT92xO1BIsZ+ywDWZCvqsWgccV3gFoRBv0z+8dLJgyAHIhR35VZc2oM/gI1w=="
+    crossorigin="anonymous" referrerpolicy="no-referrer" />
+</head>
+
+<body>
+  <h1>Weather forecast for {{event.name}}</h1>
+  <!-- standard Accordions example -->
+  {% for session in sessions %}
+  <div class="accordion">
+    <input type="checkbox" id="{{session.id}}" name="accordion-checkbox" hidden>
+    <label class="accordion-header" for="{{session.id}}">
+      <i class="icon icon-arrow-right mr-1"></i>
+      <span
+        class="label label-rounded label-primary label-session-{{session.type | lower }}">{{session.type}}</span>{{session.description}}
+      <i class="far fa-clock" title="start"></i> {{session.start}}
+    </label>
+    <div class="accordion-body">
+      {% for session_id, entries  in forecast.items %}
+      {% if session_id == session.id %}
+      {% if session.length == 0 %}
+      <div class="toast toast-primary">
+        <button class="btn btn-clear float-right"></button>
+        The session has no length configured. Displaying next 24 hours.
+      </div>
+      {% endif %}
+      <table class="table table-striped table-hover">
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>Temperature</th>
+            <th>Rain</th>
+            <th>Humidity</th>
+            <th>Wind</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for entry in entries %}
+          <tr>
+            <td>{{entry.HumanTime}} ({{entry.Duration}} minutes)</td>
+            <td>{{entry.Temperature}}°C</td>
+            <td>{{entry.RainChange}}%
+              {% if entry.RainChange > 0 %}
+              (probability {{entry.Probability}}%)
+              {% endif %}
+              {% if entry.RainChange > 0 and unlocked and entry.MatchedProbability > entry.Probability %}
+              Will be raining
+              {% endif %}
+              {% if entry.RainDensity != 0 %}
+              <i class="fas fa-cloud-showers-heavy"></i> Heavy rain
+              {% endif %}
+            </td>
+            <td>{{entry.Humidity}}%</td>
+            <td>{{entry.WindSpeed}} m/s</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      {% endif %}
+      {% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+</body>
+
+</html>

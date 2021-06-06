@@ -226,3 +226,32 @@ tr p {
 .flag-green {
   border-left: 10px solid darkgreen;
 }
+
+.accordion input:checked ~ .accordion-body,
+.accordion[open] .accordion-body {
+  max-height: 100% !important;
+}
+
+.label-session-p1 {
+  background-color: greenyellow !important;
+  color: black !important;
+  margin-right: 0.5em;
+}
+
+.label-session-q1 {
+  background-color: red !important;
+  color: white !important;
+  margin-right: 0.5em;
+}
+
+.label-session-wu {
+  background-color: blue !important;
+  color: white !important;
+  margin-right: 0.5em;
+}
+
+.label-session-r1 {
+  background-color: darkgreen !important;
+  color: white !important;
+  margin-right: 0.5em;
+}

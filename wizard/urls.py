@@ -28,6 +28,7 @@ from webgui.views import (
     add_message,
     add_status,
     add_log,
+    get_weather,
     live,
 )
 from wizard.settings import ENTRY_SIGNUP_ENABLED
@@ -50,6 +51,7 @@ if ENTRY_SIGNUP_ENABLED:
         path("addstatus/<str:secret>", add_status),
         path("addlog/<str:secret>", add_log),
         path("live/<str:secret>", live),
+        path("weather/<str:secret>", get_weather),
     ]
 else:
     urlpatterns = [
@@ -65,4 +67,5 @@ else:
         path("addstatus/<str:secret>", add_status),
         path("addlog/<str:secret>", add_log),
         path("live/<str:secret>", live),
+        path("weather/<str:secret>", get_weather),
     ]

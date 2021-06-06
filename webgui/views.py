@@ -48,6 +48,7 @@ from .util import (
 )
 from django.views.decorators.csrf import csrf_exempt
 import tarfile
+from math import floor
 
 
 def get_status(request, secret: str):
@@ -405,6 +406,85 @@ def get_ticker(request, secret: str):
         request,
         "ticker.html",
         {"messages": messages, "status": raw_status, "vehicles": vehicles},
+    )
+
+
+def get_weather(request, secret: str):
+    server = Server.objects.filter(public_secret=secret).first()
+    if not server or not server.event or not server.event.real_weather:
+        raise Http404()
+    unlocked = False
+    if "secret" in request.GET:
+        print(server.secret)
+        unlocked = server.secret == request.GET["secret"]
+    sessions = server.event.conditions.sessions.all()
+
+    forecast = {}
+    for session in sessions:
+        start = session.start
+        if start:
+            lines = session.weather.splitlines()
+            blocks = []
+            current_block = None
+            for line in lines:
+                if "StartTime" in line:
+                    if current_block is not None:
+                        blocks.append(current_block)
+                    current_block = {}
+                if "//" not in line:
+                    parts = line.split("=")
+                    raw = int(parts[1].replace("(", "").replace(")", ""))
+                    if "StartTime" in line:
+                        humanTime = ""
+                        hours = floor(raw / 60)
+                        minutes = raw % 60
+                        if len(str(hours)) == 1:
+                            humanTime = humanTime + "0" + str(hours)
+                        else:
+                            if hours == 24:
+                                humanTime = humanTime + "00"
+                            else:
+                                humanTime = humanTime + str(hours)
+
+                        if len(str(minutes)) == 1:
+                            humanTime = humanTime + ":0" + str(minutes)
+                        else:
+                            humanTime = humanTime + ":" + str(minutes)
+                        current_block["HumanTime"] = humanTime
+
+                    current_block[parts[0]] = raw
+                if "//POP=" in line and current_block:
+                    current_block["Probability"] = line.replace("//POP=", "")
+                if "//SERVERPOP=" in line and current_block:
+                    current_block["MatchedProbability"] = line.replace(
+                        "//SERVERPOP=", ""
+                    )
+
+            if session.length:
+                # session has a length
+                # get all blocks for the session
+                block_length = 0
+                for block in blocks:
+                    if block_length > session.length:
+                        break
+                    if session.id not in forecast:
+                        forecast[session.id] = []
+                    forecast[session.id].append(block)
+                    block_length = block_length + block["Duration"]
+            else:
+                for block in blocks:
+                    if session.id not in forecast:
+                        forecast[session.id] = []
+                    forecast[session.id].append(block)
+    return render(
+        request,
+        "forecast.html",
+        {
+            "unlocked": unlocked,
+            "event": server.event,
+            "sessions": sessions,
+            "forecast": forecast,
+        },
     )
 
 

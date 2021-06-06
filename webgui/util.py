@@ -558,20 +558,38 @@ def update_weather(session):
 
             humidity = floor(next_forecast["humidity"])
 
-            clouds = get_clouds(next_forecast["clouds"])
+            clouds = get_clouds(next_forecast["clouds"], rain_percentage > 20)
             start_time = start_from_midnight + index * 60
             day_max = 24 * 60
             if start_time > day_max:
                 start_time = start_time - day_max
+
+            rain_density = 0
+            probability = next_forecast["pop"] * 100  # 0.0 > 1
+
+            # as there is no propability -> randomize
+            # 20 -> random 5 -> rain
+            # 20 -> random 21 -> no rain
+
+            match = random.randint(0, 100)
+
+            # if the random number larger than the number, reset it
+            # if the random number is lower than the one, let it rain!
+            if match >= probability:
+                rain_density = 0
+                rain_percentage = 0
+
+            if next_forecast["clouds"] > 80 and rain_percentage > 80:
+                rain_density = 2
             block = {
                 "HumanDate": str(datetime.datetime.fromtimestamp(next_forecast["dt"])),
+                "Probability": floor(probability),
+                "MatchedProbability": match,
                 "StartTime": start_time,
                 "Duration": block_length,
                 "Sky": clouds,
-                "RainChange": 0,
-                "RainDensity": rain_percentage - last_rain
-                if last_rain is not None
-                else rain_percentage,
+                "RainChange": rain_percentage,
+                "RainDensity": rain_density,
                 "Temperature": temp,
                 "Humidity": humidity,
                 "WindSpeed": wind,
@@ -579,9 +597,12 @@ def update_weather(session):
             }
             last_rain = rain_percentage
             weather_blocks.append(block)
+
         wet_file_content = []
         for block in weather_blocks:
-            wet_file_content.append("//Weather block: " + block["HumanDate"])
+            wet_file_content.append("//Weather block real date: " + block["HumanDate"])
+            wet_file_content.append("//POP=" + str(block["Probability"]))
+            wet_file_content.append("//SERVERPOP=" + str(block["MatchedProbability"]))
             for line in [
                 "StartTime",
                 "Duration",
@@ -629,9 +650,21 @@ def do_server_interaction(server):
                 conditions = server.event.conditions
                 for session in conditions.sessions.all():
                     update_weather(session)
+
                 if server.update_weather_on_start:
+                    event_config = get_event_config(server.event.pk)
+                    event_config["branch"] = server.branch
+                    event_config["update_on_build"] = server.update_on_build
+                    event_config["callback_target"] = (
+                        "{}addmessage/{}".format(PUBLIC_URL, server.public_secret)
+                        if PUBLIC_URL
+                        else None
+                    )
                     config_path = join(APX_ROOT, "configs", key + ".json")
+                    with open(config_path, "w") as file:
+                        file.write(dumps(event_config))
                     command_line = "--cmd weatherupdate --args {}".format(config_path)
+
                     run_apx_command(key, command_line)
             run_apx_command(key, "--cmd start")
             do_post(
