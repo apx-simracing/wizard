@@ -14,6 +14,7 @@ from webgui.models import (
     ServerCron,
     TickerMessage,
     ServerPlugin,
+    TrackFile,
 )
 from wizard.settings import OPENWEATHERAPI_KEY
 from django.contrib import messages
@@ -521,6 +522,28 @@ class ServerPluginAdmin(admin.ModelAdmin):
             return ServerPlugin.objects.all()
 
 
+class TrackFileAdmin(admin.ModelAdmin):
+    def get_form(self, request, obj=None, **kwargs):
+        form = super(TrackFileAdmin, self).get_form(request, obj=None, **kwargs)
+        form.base_fields["user"].queryset = User.objects.filter(pk=request.user.pk)
+        form.base_fields["track"].queryset = Component.objects.filter(
+            user=request.user, type="LOC"
+        )
+        return form
+
+    def get_changeform_initial_data(self, request):
+        get_data = super(TrackFileAdmin, self).get_changeform_initial_data(request)
+        get_data["user"] = request.user.pk
+        return get_data
+
+    def get_queryset(self, request):
+        if not request.user.is_superuser:
+            return TrackFile.objects.filter(user=request.user)
+        else:
+            return TrackFile.objects.all()
+
+
+admin.site.register(TrackFile, TrackFileAdmin)
 admin.site.register(TickerMessage, TickerMessageAdmin)
 admin.site.register(Component, ComponentAdmin)
 admin.site.register(ComponentFile, ComponentFileAdmin)

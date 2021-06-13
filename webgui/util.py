@@ -92,6 +92,16 @@ def get_conditions_file_root(instance, filename):
     return join(user_root, "conditions", filename)
 
 
+def track_filename(instance, filename):
+    component_short_name = instance.track.short_name
+    component_name = instance.track.component_name
+    user_root = get_hash(str(instance.user.pk))
+    path = join(MEDIA_ROOT, user_root, "tracks", component_name)
+
+    file_path = join(path, filename)
+    return file_path
+
+
 def livery_filename(instance, filename):
     vehicle_number = instance.entry.vehicle_number
     component_short_name = instance.entry.component.short_name
@@ -329,9 +339,10 @@ def get_event_config(event_id: int):
             "component": {
                 "version": track_component.component_version,
                 "name": track_component.component_name,
-                "update": False,
+                "update": track_component.do_update,
             },
         }
+        break  # mutliple tracks are still not supported
     if not server.mod_name or len(server.mod_name) == 0:
         mod_name = "apx_{}".format(get_server_hash(server.name)[:8])
     else:
@@ -433,6 +444,8 @@ def create_virtual_config():
         build_path = join(MEDIA_ROOT, get_hash(str(server.user.pk)), "liveries")
         packs_path = join(PACKS_ROOT, get_hash(str(server.user.pk)))
         templates_path = join(MEDIA_ROOT, get_hash(str(server.user.pk)), "templates")
+        tracks_path = join(MEDIA_ROOT, get_hash(str(server.user.pk)), "tracks")
+
         if not exists(packs_path):
             mkdir(packs_path)
 
@@ -441,6 +454,9 @@ def create_virtual_config():
 
         if not exists(templates_path):
             mkdir(templates_path)
+
+        if not exists(tracks_path):
+            mkdir(tracks_path)
         server_data[key] = {
             "url": server.url,
             "secret": server.secret,
@@ -449,6 +465,7 @@ def create_virtual_config():
                 "build_path": build_path,
                 "packs_path": packs_path,
                 "templates_path": templates_path,
+                "tracks_path": tracks_path,
             },
         }
 
@@ -747,6 +764,20 @@ def do_server_interaction(server):
         rfm_path = join(MEDIA_ROOT, server.event.conditions.rfm.name)
 
         try:
+            # check if track needs update
+            for track in server.event.tracks.all():
+                if track.component.do_update:
+                    files = models.TrackFile.objects.filter(track=track.component)
+                    files_to_attach = []
+                    for file in files:
+                        file_name = basename(str(file.file))
+                        files_to_attach.append(file_name)
+                    command_line = "--cmd build_track --args {} {}".format(
+                        track.component.component_name, " ".join(files_to_attach)
+                    )
+                    run_apx_command(key, command_line)
+                break  # more than one at the moment not supported
+
             command_line = "--cmd build_skins --args {} {}".format(
                 config_path, rfm_path
             )
@@ -760,17 +791,8 @@ def do_server_interaction(server):
                     files = files + " " + join(MEDIA_ROOT, str(plugin.plugin_file))
                 command_line = "--cmd plugins --args {}".format(files)
                 run_apx_command(key, command_line)
-            do_post(
-                "[{}]: 😎 Deployment looks good for {}!".format(
-                    INSTANCE_NAME, server.name
-                )
-            )
         except Exception as e:
-            do_post(
-                "[{}]: 😱 Failed deploying server {}: {}".format(
-                    INSTANCE_NAME, server.name, str(e)
-                )
-            )
+            print(e)
         finally:
             server.action = ""
             server.locked = False

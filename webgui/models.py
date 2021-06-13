@@ -11,6 +11,7 @@ from json import loads
 from django.core.validators import RegexValidator
 from webgui.util import (
     livery_filename,
+    track_filename,
     run_apx_command,
     get_server_hash,
     get_key_root_path,
@@ -131,10 +132,6 @@ class Component(models.Model):
     template = models.TextField(default="", null=True, blank=True)
 
     def clean(self):
-        if self.type != ComponentType.VEHICLE and self.do_update:
-            raise ValidationError(
-                "Only vehicle components can currently recieve updates (for liveries)"
-            )
         if self.type != ComponentType.VEHICLE and self.update:
             raise ValidationError("Only vehicle components can get an Update.ini file")
 
@@ -371,6 +368,20 @@ class ComponentFile(models.Model):
 
     def __str__(self):
         return "{} {}: {}".format(self.component, self.type, self.file)
+
+
+class TrackFile(models.Model):
+    file = models.FileField(
+        upload_to=track_filename, storage=OverwriteStorage, max_length=500
+    )
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+
+    track = models.ForeignKey(
+        Component, on_delete=models.CASCADE, blank=False, null=False, default=None
+    )
+
+    def __str__(self):
+        return str(self.track) + ": " + str(self.file)
 
 
 class EntryFile(models.Model):
