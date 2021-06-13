@@ -71,6 +71,10 @@ alphanumeric_validator = RegexValidator(
     r"^[0-9a-zA-Z_]*$", "Only alphanumeric characters and dashes are allowed."
 )
 
+alphanumeric_validator_dots = RegexValidator(
+    r"^[0-9a-zA-Z.]*$", "Only alphanumeric characters and dots are allowed."
+)
+
 
 class Component(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
@@ -592,6 +596,15 @@ class Event(models.Model):
         help_text="Name of the mod to install. If no value is given, the scheme apx_{randomstring} will be used. Max length is 50 chars.",
         validators=[alphanumeric_validator],
     )
+
+    mod_version = models.CharField(
+        default="",
+        blank=True,
+        max_length=50,
+        help_text="Version suffix to be used. If not set, the value '.9apx' will be used.",
+        validators=[alphanumeric_validator_dots],
+    )
+
     plugins = models.ManyToManyField(ServerPlugin, blank=True)
 
     timing_classes = models.TextField(

@@ -750,6 +750,12 @@ def do_server_interaction(server):
     if server.action == "D":
         # save event json
         event_config = get_event_config(server.event.pk)
+
+        event_config["suffix"] = (
+            server.event.mod_version
+            if server.event and server.event.mod_version
+            else None
+        )
         event_config["branch"] = server.branch
         event_config["update_on_build"] = server.update_on_build
         event_config["callback_target"] = (
