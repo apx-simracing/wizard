@@ -29,7 +29,7 @@
       <a class="close-map-button btn btn-primary" href="#" v-on:click="showTrackmap = !showTrackmap"
         v-if="showTrackmap">Close
         map</a>
-      <svg v-if="trackmap" xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" version="1.1"
+      <svg v-if="trackmap" xmlns="http://www.w3.org/2000/svg" width="1920" height="800" version="1.1"
         :view-box.camel="trackmap.viewBox">
         <path :d="trackmap.track" style="stroke: white; stroke-width: 12px; fill: none;" />
         <g v-for="(vehicle, vehicle_index) in trackmap.vehicles" :key="vehicle_index"><text :x="[[vehicle.x]]"
