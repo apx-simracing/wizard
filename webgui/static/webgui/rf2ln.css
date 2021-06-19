@@ -56,7 +56,7 @@ body {
 }
 
 .label {
-  border-radius: 0px !important;
+  border-radius: 0.1rem !important;
   font-size: 1.5vh !important;
   text-transform: uppercase;
   font-weight: bold;
@@ -102,16 +102,8 @@ tr p {
   width: 100%;
 }
 
-.car-thumb {
-  height: 60px;
-}
-
 .car-team {
-  font-size: 2vh;
   color: #e12e2e;
-  margin-left: 0.25vw;
-  font-family: "Oswald", sans-serif;
-  letter-spacing: 1px;
 }
 
 .car-driver {
@@ -195,6 +187,36 @@ tr p {
   background-color: #009ada !important;
 }
 
+.pin-alpine-cup {
+  fill: black !important;
+}
+
+.pin-sp9 {
+  fill: #0f5621 !important;
+}
+
+.pin-sp10 {
+  fill: #c800c8 !important;
+}
+
+.pin-cup2 {
+  fill: #151378 !important;
+}
+.pin-cup5 {
+  fill: #00c8c8 !important;
+}
+.pin-sp3t {
+  fill: black !important;
+}
+
+.pin-h2 {
+  fill: #c82808 !important;
+}
+
+.pin-tcr {
+  fill: #009ada !important;
+}
+
 .state {
   display: table-cell;
 }
@@ -217,16 +239,4 @@ tr p {
 .state-penalty {
   background-color: red !important;
   color: white !important;
-}
-
-.flag-blue {
-  border-bottom: 10px solid #7a7aff;
-}
-
-.flag-yellow {
-  border-bottom: 5px solid yellow;
-}
-
-.flag-green {
-  border-left: 10px solid darkgreen;
 }

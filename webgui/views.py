@@ -48,7 +48,7 @@ from .util import (
 )
 from django.views.decorators.csrf import csrf_exempt
 import tarfile
-from math import floor
+from math import floor, ceil
 
 
 def get_status(request, secret: str):
@@ -388,10 +388,14 @@ from collections import OrderedDict
 
 
 def get_ticker(request, secret: str):
+    server = Server.objects.get(public_secret=secret)
+
     messages = TickerMessage.objects.filter(server__public_secret=secret)
 
+    session_id = server.session_id
+
     last_status = (
-        ServerStatustext.objects.filter(server__public_secret=secret)
+        ServerStatustext.objects.filter(server=server, session_id=session_id)
         .order_by("-id")
         .first()
     )
@@ -559,11 +563,15 @@ def live(request, secret: str):
 
     if not server:
         raise Http404()
+    session_id = server.session_id
     url = server.url
     key = get_server_hash(url)
 
     status = loads(
-        ServerStatustext.objects.filter(server=server).order_by("id").last().status
+        ServerStatustext.objects.filter(server=server, session_id=session_id)
+        .order_by("id")
+        .last()
+        .status
     )
     raw_messages = (
         TickerMessage.objects.filter(server=server)

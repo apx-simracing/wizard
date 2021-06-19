@@ -12,7 +12,8 @@
   <script src="https://cdn.jsdelivr.net/npm/vue@2.6.12/dist/vue.js"></script>
   <link rel="preconnect" href="https://fonts.gstatic.com">
   <link rel="preconnect" href="https://fonts.gstatic.com">
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat&family=Oswald:wght@300&family=Viga&display=swap"
+  <link
+    href="https://fonts.googleapis.com/css2?family=Montserrat&family=Oswald:wght@300&family=Viga&family=Roboto:ital,wght@0,700;1,700&display=swap"
     rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"
     integrity="sha512-iBBXm8fW90+nuLcSKlbmrPcLa0OT92xO1BIsZ+ywDWZCvqsWgccV3gFoRBv0z+8dLJgyAHIhR35VZc2oM/gI1w=="
@@ -22,6 +23,21 @@
 <body>
   <div class="loadingbar"></div>
   <div class=" container" id="vue-app">
+    <a class="show-map-button btn btn-primary" href="#" v-on:click="showTrackmap = !showTrackmap"
+      v-if="!showTrackmap">Show map</a>
+    <div class="map-parent" v-if="showTrackmap">
+      <a class="close-map-button btn btn-primary" href="#" v-on:click="showTrackmap = !showTrackmap"
+        v-if="showTrackmap">Close
+        map</a>
+      <svg v-if="trackmap" xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" version="1.1"
+        :view-box.camel="trackmap.viewBox">
+        <path :d="trackmap.track" style="stroke: white; stroke-width: 12px; fill: none;" />
+        <g v-for="(vehicle, vehicle_index) in trackmap.vehicles" :key="vehicle_index"><text :x="[[vehicle.x]]"
+            :y="[[vehicle.y]]" dominant-baseline="middle" font-size="200"
+            :class="'pin pin-' + getClassDisplayName(vehicle.class).toLowerCase()">[[vehicle.number]]</text></g>
+      </svg>
+
+    </div>
     <div class="columns">
       <div class="columns col-2"></div>
       <div class="columns col-10">
@@ -63,11 +79,12 @@
                 <th>Last lap</th>
                 <th>Stops</th>
                 <th>Gap</th>
+                <th></th>
               </tr>
             </thead>
             <tbody v-if="liveData !== null">
               <tr title="Click to expand" v-for="(vehicle, index) in liveData.status.vehicles" :key="index"
-                :class="'vehicle flag-'+[[vehicle.flag.toLowerCase()]] +' overall-state-'+[[getOverallState(vehicle)]] + (vehicle.underYellow ? ' flag-yellow' : '')"
+                :class="'vehicle overall-state-'+[[getOverallState(vehicle)]] + (vehicle.underYellow ? ' flag-yellow' : '')"
                 v-if="classFilters.indexOf(getClassDisplayName(vehicle.carClass)) === -1"
                 v-on:click="toggleOpen(vehicle.slotID)">
                 <td>[[ vehicle.position ]] ([[vehicle.classPosition]])
@@ -90,25 +107,37 @@
                   <img class="car-thumb" :src="'http://localhost:8181/'+vehicle.carId+'.png'" />
                 </td>
                 <td>
+                  <div class="container">
+                    <div class="columns">
+                      <div class="column col-3"><span
+                          :class="'label label-primary class-label class-' +  getClassDisplayName(vehicle.carClass).toLowerCase()">[[
+                          getClassDisplayName(vehicle.carClass) ]]</span>
+                        <span class="label label-primary class-label number-label">
+                          [[ vehicle.carNumber ]]</span></div>
+                      <div class="column col-8"><b class="car-team">[[ vehicle.vehicleName.replace("#" +
+                          vehicle.carNumber, "") ]]</b></div>
+                    </div>
+                    <div class="columns">
+                      <div class="column col-12">
+                        <span class="car-driver" v-if="typeof liveData.drivers[vehicle.slotID] === 'undefined'"> <span
+                            class="driver-state driver-online" title="Driver in car">⬤</span>[[
+                          vehicle.driverName ]] </span>
+                        <span class="car-driver" v-for="(driver, driver_key) in liveData.drivers[vehicle.slotID]"
+                          :key="driver_key">
+                          <span class="driver-state driver-online" title="Driver in car"
+                            v-if="driver===vehicle.driverName">⬤</span>
+                          <span class="driver-state driver-offline" title="Driver currently not in car"
+                            v-if="driver!==vehicle.driverName">⬤</span>
+                          [[ driver
+                          ]] </span>
+                      </div>
+                    </div>
+                  </div>
                   <p>
-                    <span
-                      :class="'label label-primary class-label class-' +  getClassDisplayName(vehicle.carClass).toLowerCase()">[[
-                      getClassDisplayName(vehicle.carClass) ]]</span>
-                    <span class="label label-primary class-label number-label">
-                      #[[ vehicle.carNumber ]]</span>
-                    <b class="car-team">[[ vehicle.vehicleName ]]</b>
+
+
                     </br>
-                    <span class="car-driver" v-if="typeof liveData.drivers[vehicle.slotID] === 'undefined'"> <span
-                        class="driver-state driver-online" title="Driver in car">⬤</span>[[
-                      vehicle.driverName ]] </span>
-                    <span class="car-driver" v-for="(driver, driver_key) in liveData.drivers[vehicle.slotID]"
-                      :key="driver_key">
-                      <span class="driver-state driver-online" title="Driver in car"
-                        v-if="driver===vehicle.driverName">⬤</span>
-                      <span class="driver-state driver-offline" title="Driver currently not in car"
-                        v-if="driver!==vehicle.driverName">⬤</span>
-                      [[ driver
-                      ]] </span>
+
                   </p>
                   <div class="scrollable-45" v-if="openMessages.indexOf(vehicle.slotID) !== -1"
                     v-on:click="toggleOpen(vehicle.slotID)">
@@ -188,6 +217,9 @@
                 <td v-else-if="classFilters.length !== 0">
                   -
                 </td>
+                <td>
+                  <i class="fas fa-flag" :class="'fas fa-flag flag-'+[[vehicle.flag.toLowerCase()]]"></i>
+                </td>
               </tr>
             </tbody>
           </table>
@@ -204,7 +236,8 @@
         classMap: {},
         classFilters: [],
         openMessages: [],
-        serverSecret: null
+        serverSecret: null,
+        showTrackmap: false
       },
       computed: {
         classList: function() {
@@ -220,6 +253,65 @@
           }
           return result;
         },
+        trackmap: function() {
+          if (!this.liveData) {
+            return null;
+          }
+
+          trackPath = "M"
+          waypoints = this.liveData.status.waypoints.loadingStatus.track.trackmap
+          var minX = null
+          var minY = null
+          var minZ = null
+          var maxX = null
+          var maxY = null
+          var maxZ = null
+          for (var i = 0;i < waypoints.length;i++) {
+            var waypoint = waypoints[i]
+            if (waypoint.type == 0) {
+              if (i === 0) {
+                trackPath += waypoint.z + "," + waypoint.x
+              }
+
+              trackPath += " L" + waypoint.z + "," + waypoint.x
+            }
+
+
+            if (minX === null || minX > waypoint.x)
+              minX = waypoint.x
+
+            if (minZ === null || minZ > waypoint.z)
+              minZ = waypoint.z
+
+            if (maxX === null || maxX < waypoint.x)
+              maxX = waypoint.x
+
+
+            if (maxZ === null || maxZ < waypoint.z)
+              maxZ = waypoint.z
+          }
+          vehicles = []
+          for (var i = 0;i < this.liveData.status.vehicles.length;i++) {
+            var vehicle = this.liveData.status.vehicles[i]
+            if (this.classFilters.indexOf(this.getClassDisplayName(vehicle.carClass)) === -1) {
+              vehicles.push(
+                {
+                  "x": vehicle.carPosition.z,
+                  "y": vehicle.carPosition.x,
+                  "number": vehicle.carNumber,
+                  "class": vehicle.carClass
+                }
+              )
+            }
+          }
+
+          var viewBox = Math.ceil(minX + 0.1 * minX) + " -" + Math.ceil(maxX + 0.1 * maxX) + " " + Math.ceil((Math.abs(minX) + Math.abs(maxX)) * 1.1) + " " + Math.ceil((Math.abs(minZ) + Math.abs(maxZ)) * 1.1)
+          return {
+            "track": trackPath,
+            "vehicles": vehicles,
+            "viewBox": viewBox
+          }
+        }
       },
       methods: {
         toggleClass: function(classToToggle) {

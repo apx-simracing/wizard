@@ -11,6 +11,7 @@
 
 .vehicle {
   cursor: pointer;
+  height: 12vh;
 }
 
 .loadingbar {
@@ -20,7 +21,9 @@
   position: fixed;
   bottom: 0;
   animation: loading 5s linear infinite;
+  z-index: 200000;
 }
+
 @keyframes loading {
   from {
     left: 0%;
@@ -52,10 +55,10 @@
 }
 
 .label {
-  border-radius: 0px !important;
   font-size: 1.5vh !important;
   text-transform: uppercase;
   font-weight: bold;
+  padding-right: 0.4rem !important;
 }
 
 .label-car-best {
@@ -92,6 +95,33 @@ tr p {
   text-align: center;
 }
 
+.map-parent {
+  width: 100%;
+  height: 100%;
+  position: fixed;
+  top: 0px;
+  left: 0px;
+  background: black;
+}
+
+.show-map-button {
+  transform: rotate(-90deg);
+  position: fixed;
+  top: 50%;
+  left: 0px;
+}
+
+.close-map-button {
+  position: fixed;
+  margin: 1em;
+}
+
+.pin {
+  fill: white;
+  text-transform: uppercase;
+  font-weight: bold;
+}
+
 .car-laps {
   color: #08003b;
   margin-top: 1em;
@@ -99,15 +129,15 @@ tr p {
 }
 
 .car-thumb {
-  height: 60px;
+  max-width: 14vw;
 }
 
 .car-team {
   font-size: 2vh;
+  font-size: 2.1vh;
+  margin-top: -0.3vh;
+  display: block;
   color: #08003b;
-  margin-left: 0.25vw;
-  font-family: "Oswald", sans-serif;
-  letter-spacing: 1px;
 }
 
 .car-driver {
@@ -149,6 +179,18 @@ tr p {
 .class-header {
   text-align: right !important;
   margin-bottom: 1em;
+  z-index: 1000000000000;
+}
+
+.class-header .label {
+  border-radius: unset !important;
+}
+
+.number-label,
+.class-label {
+  font-family: "Roboto", sans-serif;
+  font-style: italic;
+  border-radius: 0px !important;
 }
 
 .number-label,
@@ -216,15 +258,15 @@ tr p {
 }
 
 .flag-blue {
-  border-bottom: 10px solid #7a7aff;
+  color: blue;
 }
 
 .flag-yellow {
-  border-bottom: 5px solid yellow;
+  color: yellow;
 }
 
 .flag-green {
-  border-left: 10px solid darkgreen;
+  color: darkgreen;
 }
 
 .accordion input:checked ~ .accordion-body,
