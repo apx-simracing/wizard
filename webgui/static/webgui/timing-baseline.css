@@ -104,6 +104,10 @@ tr p {
   background: black;
 }
 
+g text {
+  font-size: 40px;
+}
+
 .show-map-button {
   transform: rotate(-90deg);
   position: fixed;
@@ -117,7 +121,23 @@ tr p {
 }
 
 .pin {
-  fill: white;
+  fill: black;
+  text-transform: uppercase;
+  font-weight: bold;
+}
+
+.pin-hazard {
+  animation: blink 2s infinite alternate;
+}
+
+@keyframes blink {
+  to {
+    fill: #f06d06;
+  }
+}
+
+.pin {
+  fill: black;
   text-transform: uppercase;
   font-weight: bold;
 }

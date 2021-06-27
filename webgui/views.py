@@ -613,6 +613,38 @@ def live(request, secret: str):
             messages[vehicle["slotID"]] if vehicle["slotID"] in messages else []
         )
         vehicle["messages"].reverse()
-    response = {"status": status, "media_url": MEDIA_URL, "drivers": drivers}
+
+    # get ticker messages
+    ticker = []
+    ticker_messages_raw = raw_messages.filter(type="VL")
+    current_time = status["currentEventTime"]
+    # we have only vlow atm
+    for message in ticker_messages_raw:
+        message_content = loads(message.message)
+        driver = message_content["driver"]
+        laps = message_content["laps"]
+        event_time = message_content["event_time"]
+
+        location = message_content["location"]
+        # remove duplicate hits if the car remains staionary
+        matches = list(
+            filter(
+                lambda x: x["driver"] == driver
+                and x["laps"] == laps
+                and (
+                    x["location"] >= location - 100 and x["location"] <= location + 100
+                ),
+                ticker,
+            )
+        )
+        if event_time >= current_time - 20 and not len(matches) > 0:
+            ticker.append(message_content)
+
+    response = {
+        "status": status,
+        "media_url": MEDIA_URL,
+        "drivers": drivers,
+        "ticker": ticker,
+    }
 
     return JsonResponse(response)

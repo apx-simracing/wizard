@@ -1006,6 +1006,7 @@ class TickerMessageType(models.TextChoices):
     PittingStart = "PSS", "PittingStart"
     PittingEnd = "PSE", "PittingEnd"
     DriverSwap = "DS", "DriverSwap"
+    VLow = "VL", "VLow"
 
 
 class TickerMessage(models.Model):
@@ -1123,6 +1124,11 @@ class TickerMessage(models.Model):
                     data["driver"],
                     "".join(data["nearby"]) if len(data["nearby"]) else "Nobody",
                     data["old_speed"] - data["speed"],
+                )
+
+            if self.type == "VL":
+                return "Low speed or stationary car {}, nearby {}".format(
+                    data["driver"], data["nearby"]
                 )
         except Exception as e:
             print(e)

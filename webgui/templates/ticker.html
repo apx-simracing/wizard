@@ -32,16 +32,19 @@
       <svg v-if="trackmap" xmlns="http://www.w3.org/2000/svg" width="1920" height="800" version="1.1"
         :view-box.camel="trackmap.viewBox">
         <path :d="trackmap.track" style="stroke: white; stroke-width: 12px; fill: none;" />
-        <g v-for="(vehicle, vehicle_index) in trackmap.vehicles" :key="vehicle_index"><text :x="[[vehicle.x]]"
-            :y="[[vehicle.y]]" dominant-baseline="middle" font-size="200"
-            :class="'pin pin-' + getClassDisplayName(vehicle.class).toLowerCase()">[[vehicle.number]]</text></g>
+        <g v-for="(vehicle, vehicle_index) in trackmap.vehicles" :key="vehicle_index">
+          <circle :class="(vehicle.isHazard ? 'pin-hazard': '')" r="40" :cx="[[vehicle.x]]" :cy="[[vehicle.y]]"
+            stroke="black" stroke-width="2" fill="white" />
+          <text :x="[[vehicle.x - (vehicle.positon < 10 ? 30 : 20)]]" :y="[[vehicle.y + 5]]" dominant-baseline="middle"
+            :class="'pin pin-' + getClassDisplayName(vehicle.class).toLowerCase()">[[vehicle.position]]</text>
+        </g>
       </svg>
 
     </div>
     <div class="columns">
-      <div class="columns col-2"></div>
-      <div class="columns col-10">
-        <div class="columns col-10">
+      <div class="columns col-1"></div>
+      <div class="columns col-9">
+        <div class="columns col-11">
           <div class="columns col-12">
             <div class="col-10">
               <span class="logo">
@@ -225,6 +228,21 @@
           </table>
         </div>
       </div>
+      <div class="columns col-2">
+        <div v-if="liveData !== null">
+          <h1>
+            Messages
+          </h1>
+          <table class="table table-striped table-hover">
+            <tr v-for="(ticker_message, ticker_key) in ticker" :key="ticker_key" :title="ticker_message.event_time">
+              <td><i class="fas fa-exclamation"></i></td>
+              <td>[[ticker_message.driver]]</td>
+              <td>[[Math.floor(ticker_message.speed)]] km/h</td>
+              <td>[[Math.floor(ticker_message.location)]] m</td>
+            </tr>
+          </table>
+        </div>
+      </div>
     </div>
   </div>
   <script>
@@ -240,6 +258,12 @@
         showTrackmap: false
       },
       computed: {
+        ticker: function() {
+          if (!this.liveData) {
+            return []
+          }
+          return this.liveData.ticker
+        },
         classList: function() {
           var result = []
           if (this.liveData) {
@@ -293,19 +317,23 @@
           vehicles = []
           for (var i = 0;i < this.liveData.status.vehicles.length;i++) {
             var vehicle = this.liveData.status.vehicles[i]
+            var isHazard = this.ticker.filter(x => x.driver === vehicle.driverName).length > 0
             if (this.classFilters.indexOf(this.getClassDisplayName(vehicle.carClass)) === -1) {
               vehicles.push(
                 {
                   "x": vehicle.carPosition.z,
                   "y": vehicle.carPosition.x,
+                  "position": vehicle.position,
                   "number": vehicle.carNumber,
-                  "class": vehicle.carClass
+                  "class": vehicle.carClass,
+                  "driver": vehicle.driverName,
+                  "isHazard": isHazard
                 }
               )
             }
           }
 
-          var viewBox = Math.ceil(minX + 0.1 * minX) + " -" + Math.ceil(maxX + 0.1 * maxX) + " " + Math.ceil((Math.abs(minX) + Math.abs(maxX)) * 1.1) + " " + Math.ceil((Math.abs(minZ) + Math.abs(maxZ)) * 1.1)
+          var viewBox = Math.ceil(minX + 0.1 * minX) + " -" + Math.ceil(maxX + 0.1 * maxX) + " " + Math.ceil((Math.abs(minX) + Math.abs(maxX)) * 1.1) + " " + Math.ceil((Math.abs(minZ) + Math.abs(maxZ)) * 1.4)
           return {
             "track": trackPath,
             "vehicles": vehicles,
