@@ -24,6 +24,18 @@
   z-index: 200000;
 }
 
+.open-trackmap-classes {
+  position: absolute;
+  top: 1em;
+  right: 1em;
+}
+
+.open-trackmap-ticker {
+  z-index: 100000;
+  top: 3em;
+  position: absolute;
+}
+
 @keyframes loading {
   from {
     left: 0%;
@@ -105,7 +117,7 @@ tr p {
 }
 
 g text {
-  font-size: 40px;
+  font-size: 100px;
 }
 
 .show-map-button {
@@ -133,6 +145,16 @@ g text {
 @keyframes blink {
   to {
     fill: #f06d06;
+  }
+}
+
+.icon-hazard {
+  animation: blink_color 2s infinite alternate;
+}
+
+@keyframes blink_color {
+  to {
+    color: #f06d06;
   }
 }
 

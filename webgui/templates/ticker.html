@@ -29,13 +29,14 @@
       <a class="close-map-button btn btn-primary" href="#" v-on:click="showTrackmap = !showTrackmap"
         v-if="showTrackmap">Close
         map</a>
-      <svg v-if="trackmap" xmlns="http://www.w3.org/2000/svg" width="1920" height="800" version="1.1"
+      <svg v-if="trackmap" xmlns="http://www.w3.org/2000/svg" width="1920" height="1200" version="1.1"
         :view-box.camel="trackmap.viewBox">
         <path :d="trackmap.track" style="stroke: white; stroke-width: 12px; fill: none;" />
         <g v-for="(vehicle, vehicle_index) in trackmap.vehicles" :key="vehicle_index">
-          <circle :class="(vehicle.isHazard ? 'pin-hazard': '')" r="40" :cx="[[vehicle.x]]" :cy="[[vehicle.y]]"
+          <circle :class="(vehicle.isHazard ? 'pin-hazard': '')" r="100" :cx="[[vehicle.x]]" :cy="[[vehicle.y]]"
             stroke="black" stroke-width="2" fill="white" />
-          <text :x="[[vehicle.x - (vehicle.positon < 10 ? 30 : 20)]]" :y="[[vehicle.y + 5]]" dominant-baseline="middle"
+          <text :x="[[vehicle.x - (vehicle.position < 10 ? 25 : 50)]]" :y="[[vehicle.y + 15]]"
+            dominant-baseline="middle"
             :class="'pin pin-' + getClassDisplayName(vehicle.class).toLowerCase()">[[vehicle.position]]</text>
         </g>
       </svg>
@@ -67,7 +68,8 @@
               /
               [[getHourString(liveData.status.endEventTime)]]</span>
           </div>
-          <div class="col-12 class-header" title="Click to toggle class">
+          <div :class="'col-12 class-header '  +(showTrackmap? 'open-trackmap-classes': '') "
+            title="Click to toggle class">
             <span v-for="(car_class, class_index) in classList" :key="class_index" v-on:click="toggleClass(car_class)"
               :class="'label toggle-label label-primary class-label class-' +  car_class.toLowerCase() + ' ' + (classFilters.indexOf(car_class) !== -1 ? 'disabled': '')">[[car_class]]</span>
           </div>
@@ -229,16 +231,39 @@
         </div>
       </div>
       <div class="columns col-2">
-        <div v-if="liveData !== null">
+        <div v-if="liveData !== null" :class="'ticker ' +(showTrackmap? 'open-trackmap-ticker': '') ">
           <h1>
-            Messages
+            Messages<span class="light">60s</span>
           </h1>
-          <table class="table table-striped table-hover">
-            <tr v-for="(ticker_message, ticker_key) in ticker" :key="ticker_key" :title="ticker_message.event_time">
-              <td><i class="fas fa-exclamation"></i></td>
-              <td>[[ticker_message.driver]]</td>
-              <td>[[Math.floor(ticker_message.speed)]] km/h</td>
-              <td>[[Math.floor(ticker_message.location)]] m</td>
+          <table class="table">
+            <tr v-for="(ticker_message, ticker_key) in ticker" :key="ticker_key" :title="ticker_message.driver">
+              <td>
+                <span v-if="Math.floor(ticker_message.speed) === 0">
+                  <i class="fas fa-exclamation-triangle icon-hazard"></i>
+                </span>
+                <span v-else>
+                  <i class="fas fa-tachometer-alt icon-hazard"></i>
+                </span>
+              </td>
+
+              <td>
+                [[getHourString(ticker_message.event_time)]]
+              </td>
+              <td>
+                <div class="columns" v-if="ticker_message.vehicle">
+                  <div class="column col-12">
+                    [[ticker_message.vehicle.vehicleName ]]
+                  </div>
+                  <div class="column col-12">
+                    <span v-if="Math.floor(ticker_message.speed) === 0">
+                      Standing, [[ticker_message.location_text]]
+                    </span>
+                    <span v-else>
+                      Slow car, [[ticker_message.location_text]]
+                    </span>
+                  </div>
+                </div>
+              </td>
             </tr>
           </table>
         </div>

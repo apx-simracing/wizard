@@ -6,6 +6,12 @@ body {
   margin-bottom: 1em;
 }
 
+.btn-primary {
+  background: #e12e2e !important;
+  color: white !important;
+  border: unset !important;
+}
+
 .logo {
   background: no-repeat left/80% url("https://www.rf2ln.de/home/templates/driverally/images/logo.png");
   display: block;
@@ -79,11 +85,13 @@ tr p {
   margin-bottom: unset;
 }
 
-.session-info h1 {
+.session-info h1,
+.ticker h1 {
   color: white !important;
 }
 
-.session-info h1 .light {
+.session-info h1 .light,
+.ticker h1 .light {
   color: #5b5b5b !important;
 }
 

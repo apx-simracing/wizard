@@ -35,7 +35,7 @@ import zipfile
 import tempfile
 from json import loads, dumps
 from django.core import serializers
-from os import listdir, mkdir, unlink
+from os import listdir, mkdir, unlink, linesep
 from os.path import join, basename, exists
 from django.core.files import File
 from .util import (
@@ -615,6 +615,19 @@ def live(request, secret: str):
         vehicle["messages"].reverse()
 
     # get ticker messages
+    sections = OrderedDict()
+    if server.event and server.event.tracks.all()[0].section_list:
+        lines = server.event.tracks.all()[0].section_list.split(linesep)
+        for line in lines:
+            parts = line.split(";")
+            section_name = parts[0]
+            section_start = int(parts[1])
+            section_end = None
+            try:
+                section_end = int(parts[2])
+            except:
+                pass
+            sections[section_name] = [section_start, section_end]
     ticker = []
     ticker_messages_raw = raw_messages.filter(type="VL")
     current_time = status["currentEventTime"]
@@ -625,7 +638,52 @@ def live(request, secret: str):
         laps = message_content["laps"]
         event_time = message_content["event_time"]
 
+        # find vehicle the driver is in
+        driver_vehicle = None
+        for vehicle in status["vehicles"]:
+            if vehicle["driverName"] == driver:
+                driver_vehicle = vehicle
+                break
+        message_content["vehicle"] = driver_vehicle
+
         location = message_content["location"]
+        # find corner name, if possible
+        possible_location_names = []
+        for section, dimensions in sections.items():
+            start = dimensions[0]
+            end = dimensions[1]
+            location_start = location - 100
+            location_end = location
+
+            if end is None:
+                # it's a point, not an interval, compare with location interval
+                if start >= location_start and start <= location_end:
+                    possible_location_names.append(section)
+            else:
+                if start <= location and end >= location:
+                    possible_location_names.append(section)
+        if possible_location_names == []:
+            for section, dimensions in sections.items():
+                start = dimensions[0]
+                if location > start:
+                    possible_location_names.append("~" + section)
+                break
+
+        # create text
+
+        location_text = None
+        if len(possible_location_names) > 0:
+            if len(possible_location_names) == 2:
+                location_text = "between " + " and ".join(possible_location_names)
+
+            if len(possible_location_names) == 1:
+                if "~" in possible_location_names[0]:
+                    location_text = "near " + possible_location_names[0].replace(
+                        "~", ""
+                    )
+                else:
+                    location_text = possible_location_names[0].replace("~", "")
+        message_content["location_text"] = location_text
         # remove duplicate hits if the car remains staionary
         matches = list(
             filter(
@@ -637,7 +695,7 @@ def live(request, secret: str):
                 ticker,
             )
         )
-        if event_time >= current_time - 20 and not len(matches) > 0:
+        if event_time >= current_time - 60 and not len(matches) > 0:
             ticker.append(message_content)
 
     response = {

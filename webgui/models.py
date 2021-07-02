@@ -286,9 +286,21 @@ class Track(models.Model):
     lat = models.FloatField(
         default=None, blank=True, null=True, verbose_name="Latitute"
     )
+    section_list = models.TextField(
+        blank=True, default=None, null=True, verbose_name="Track sections"
+    )
 
     def __str__(self):
         return "{}@{}".format(self.layout, self.component)
+
+    def clean(self):
+        if self.section_list:
+            # check if sections and points are valid
+            lines = self.section_list.split(linesep)
+            for line in lines:
+                parts = line.split(";")
+                if len(parts) < 2 or len(parts) > 3:
+                    raise ValidationError(f"The parts are not valid. {line}")
 
 
 class Entry(models.Model):
