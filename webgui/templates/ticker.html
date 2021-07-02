@@ -109,7 +109,7 @@
                   </span>
                 </td>
                 <td>
-                  <img class="car-thumb" :src="'http://localhost:8181/'+vehicle.carId+'.png'" />
+                  <img class="car-thumb" :src="'https://rf2ln.apx.chmr.eu/thumbs/'+vehicle.carId+'.png'" />
                 </td>
                 <td>
                   <div class="container">
@@ -345,7 +345,9 @@
           vehicles = []
           for (var i = 0;i < this.liveData.status.vehicles.length;i++) {
             var vehicle = this.liveData.status.vehicles[i]
-            var isHazard = this.ticker.filter(x => x.driver === vehicle.driverName).length > 0
+            var currentEventTime = this.liveData.status.currentEventTime;
+
+            var isHazard = this.ticker.filter(x => x.driver === vehicle.driverName && currentEventTime - 60 < x.event_time).length > 0
             if (this.classFilters.indexOf(this.getClassDisplayName(vehicle.carClass)) === -1) {
               vehicles.push(
                 {
