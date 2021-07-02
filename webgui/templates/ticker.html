@@ -109,7 +109,7 @@
                   </span>
                 </td>
                 <td>
-                  <img class="car-thumb" :src="'https://rf2ln.apx.chmr.eu/thumbs/'+vehicle.carId+'.png'" />
+                  <img class="car-thumb" :src="'https://media.apx.chmr.eu/thumbs/'+vehicle.carId+'.png'" />
                 </td>
                 <td>
                   <div class="container">
@@ -208,11 +208,17 @@
                 <td>[[ vehicle.lastLapTime > 0 ? getHourString(vehicle.lastLapTime, true) : '-']]</td>
                 <td>[[ vehicle.pitstops ]]</td>
 
-                <td v-if="vehicle.lapsBehindNext === 0 && vehicle.position !== 1 && classFilters.length === 0">
+                <td v-if="['TESTDAY','QUALIFY'].indexOf(getSession(liveData.status.session)) === -1 && vehicle.lapsBehindNext===0 &&
+                  vehicle.position !==1 && classFilters.length===0">
                   +[[ getTime(vehicle.timeBehindNext) ]]
                 </td>
-                <td v-if="vehicle.lapsBehindNext > 0 && vehicle.position !== 1 && classFilters.length === 0">
+                <td v-if="['TESTDAY','QUALIFY'].indexOf(getSession(liveData.status.session)) === -1 && vehicle.lapsBehindNext> 0 &&
+                  vehicle.position !== 1 && classFilters.length === 0">
                   +[[ vehicle.lapsBehindNext]] laps
+                </td>
+                <td
+                  v-if="['TESTDAY','QUALIFY'].indexOf(getSession(liveData.status.session)) !== -1  &&  vehicle.position !== 1 &&   classFilters.length === 0">
+                  +[[ getHourString(getGap(vehicle), true) ]]
                 </td>
                 <td v-if="vehicle.position === 1 && classFilters.length === 0">
                   <span v-if="classFilters.length === 0">
@@ -239,10 +245,10 @@
             <tr v-for="(ticker_message, ticker_key) in ticker" :key="ticker_key" :title="ticker_message.driver">
               <td>
                 <span v-if="Math.floor(ticker_message.speed) === 0">
-                  <i class="fas fa-exclamation-triangle icon-hazard"></i>
+                  <i class="fas fa-exclamation-triangle"></i>
                 </span>
                 <span v-else>
-                  <i class="fas fa-tachometer-alt icon-hazard"></i>
+                  <i class="fas fa-tachometer-alt"></i>
                 </span>
               </td>
 
@@ -436,7 +442,25 @@
             .then(response => response.json())
             .then(data => {self.liveData = data, self.classMap = self.liveData.status.ticker_classes});
         },
+        getGap: function(vehicle) {
+          if (!this.liveData) {
+            return -1;
+          }
+          var leader = this.liveData.status.vehicles[0]
+          var bestTimeLeader = leader.bestLapTime
+
+          var bestTimeVehicle = vehicle.bestLapTime
+
+          if (bestTimeVehicle < 0 || bestTimeLeader < 0) {
+            return -1;
+          }
+
+          return bestTimeVehicle - bestTimeLeader
+        },
         getHourString: (secs, ms = false) => {
+          if (secs < 0) {
+            return "N/A"
+          }
           var sec_num = parseInt(secs, 10)
           var hours = Math.floor(sec_num / 3600)
           var minutes = Math.floor(sec_num / 60) % 60
