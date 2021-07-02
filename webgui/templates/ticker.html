@@ -250,9 +250,12 @@
                 [[getHourString(ticker_message.event_time)]]
               </td>
               <td>
-                <div class="columns" v-if="ticker_message.vehicle">
-                  <div class="column col-12">
+                <div class="columns">
+                  <div class="column col-12" v-if="ticker_message.vehicle">
                     [[ticker_message.vehicle.vehicleName ]]
+                  </div>
+                  <div class="column col-12" v-if="!ticker_message.vehicle">
+                    [[ticker_message.driver ]]
                   </div>
                   <div class="column col-12">
                     <span v-if="Math.floor(ticker_message.speed) === 0">
