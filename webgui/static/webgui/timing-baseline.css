@@ -102,6 +102,13 @@ tr p {
   color: #08003b;
 }
 
+.ticker-parent {
+  position: absolute;
+  right: 1em;
+  height: 100%;
+  overflow-y: auto;
+}
+
 .timing-header {
   margin-top: 1em;
   text-align: center;

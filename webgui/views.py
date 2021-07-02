@@ -629,7 +629,11 @@ def live(request, secret: str):
                 pass
             sections[section_name] = [section_start, section_end]
     ticker = []
-    ticker_messages_raw = raw_messages.filter(type="VL")
+    ticker_messages_raw = (
+        raw_messages.filter(type="VL")
+        .filter(session_id=session_id)
+        .order_by("event_time")
+    )
     current_time = status["currentEventTime"]
     # we have only vlow atm
     for message in ticker_messages_raw:
@@ -695,9 +699,9 @@ def live(request, secret: str):
                 ticker,
             )
         )
-        if event_time >= current_time - 60 and not len(matches) > 0:
+        if not len(matches) > 0:
             ticker.append(message_content)
-
+    ticker.reverse()
     response = {
         "status": status,
         "media_url": MEDIA_URL,
