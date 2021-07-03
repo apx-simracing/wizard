@@ -204,9 +204,12 @@
                 <td>
                   <span>[[ vehicle.lapsCompleted ]]</span>
                 </td>
-                <td>[[ vehicle.bestLapTime > 0 ? getHourString(vehicle.bestLapTime, true) : '-' ]]</td>
+                <td>
+                  [[ getBestLap(vehicle) ]]
+                </td>
                 <td>[[ vehicle.lastLapTime > 0 ? getHourString(vehicle.lastLapTime, true) : '-']]</td>
-                <td>[[ vehicle.pitstops ]]</td>
+                <td>[[ ticker.filter(t => t.vehicle && t.vehicle.slotID ===
+                  vehicle.slotID && t.type ==="PSE").length ]]</td>
 
                 <td v-if="['TESTDAY','QUALIFY'].indexOf(getSession(liveData.status.session)) === -1 && vehicle.lapsBehindNext===0 &&
                   vehicle.position !==1 && classFilters.length===0">
@@ -427,6 +430,21 @@
           } else {
             this.openMessages.push(slotId)
           }
+        },
+        getBestLap: function(vehicle) {
+          var result = "-"
+          try {
+            var got = vehicle.messages.filter(t => t.type === "LC").map(t => t.last_lap_time).filter(t => t >
+              0).sort().reverse().shift()
+            if (!got) {
+              result = "-"
+            } else {
+              result = this.getHourString(got)
+            }
+          } catch{
+            result = "-"
+          }
+          return result
         },
         getOverallState: (vehicle) => {
           if (vehicle.finishStatus === 'FSTAT_DQ') {
