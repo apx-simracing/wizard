@@ -243,15 +243,20 @@
           </h1>
           <table class="table">
             <tr v-for="(ticker_message, ticker_key) in ticker" :key="ticker_key" :title="ticker_message.driver">
-              <td>
-                <span v-if="Math.floor(ticker_message.speed) === 0">
+              <td v-if="ticker_message.type=='VL'">
+                <span v-if=" Math.floor(ticker_message.speed)===0">
                   <i class="fas fa-exclamation-triangle"></i>
                 </span>
                 <span v-else>
                   <i class="fas fa-tachometer-alt"></i>
                 </span>
               </td>
-
+              <td v-if="ticker_message.type=='PSE'">
+                <i class="fas fa-toolbox"></i>
+              </td>
+              <td v-if="ticker_message.type=='DS'">
+                <i class="fas fa-random"></i>
+              </td>
               <td>
                 [[getHourString(ticker_message.event_time)]]
               </td>
@@ -263,13 +268,19 @@
                   <div class="column col-12" v-if="!ticker_message.vehicle">
                     [[ticker_message.driver ]]
                   </div>
-                  <div class="column col-12">
+                  <div class="column col-12" v-if="ticker.type === 'VL'">
                     <span v-if="Math.floor(ticker_message.speed) === 0">
                       Standing, [[ticker_message.location_text]]
                     </span>
                     <span v-else>
                       Slow car, [[ticker_message.location_text]]
                     </span>
+                  </div>
+                  <div class="column col-12" v-if="ticker_message.type === 'PSE'">
+                    Pit stop end
+                  </div>
+                  <div class="column col-12" v-if="ticker_message.type === 'DS'">
+                    [[ticker_message.old_driver]] <i class="fas fa-random"></i> [[ticker_message.new_driver]]
                   </div>
                 </div>
               </td>

@@ -630,7 +630,7 @@ def live(request, secret: str):
             sections[section_name] = [section_start, section_end]
     ticker = []
     ticker_messages_raw = (
-        raw_messages.filter(type="VL")
+        raw_messages.filter(Q(type="VL") | Q(type="PSE") | Q(type="DS"))
         .filter(session_id=session_id)
         .order_by("event_time")
     )
@@ -638,7 +638,11 @@ def live(request, secret: str):
     # we have only vlow atm
     for message in ticker_messages_raw:
         message_content = loads(message.message)
-        driver = message_content["driver"]
+        driver = None
+        if "driver" in message_content:
+            driver = message_content["driver"]
+        if "new_driver" in message_content:
+            driver = message_content["new_driver"]
         laps = message_content["laps"]
         event_time = message_content["event_time"]
 
@@ -649,56 +653,63 @@ def live(request, secret: str):
                 driver_vehicle = vehicle
                 break
         message_content["vehicle"] = driver_vehicle
-
-        location = message_content["location"]
-        # find corner name, if possible
-        possible_location_names = []
-        for section, dimensions in sections.items():
-            start = dimensions[0]
-            end = dimensions[1]
-            location_start = location - 100
-            location_end = location
-
-            if end is None:
-                # it's a point, not an interval, compare with location interval
-                if start >= location_start and start <= location_end:
-                    possible_location_names.append(section)
-            else:
-                if start <= location and end >= location:
-                    possible_location_names.append(section)
-        if possible_location_names == []:
+        matches = []
+        if message_content["type"] == "VL":
+            # v low messages
+            location = message_content["location"]
+            # find corner name, if possible
+            possible_location_names = []
             for section, dimensions in sections.items():
                 start = dimensions[0]
-                if location > start:
-                    possible_location_names.append("~" + section)
-                break
+                end = dimensions[1]
+                location_start = location - 100
+                location_end = location
 
-        # create text
-
-        location_text = None
-        if len(possible_location_names) > 0:
-            if len(possible_location_names) == 2:
-                location_text = "between " + " and ".join(possible_location_names)
-
-            if len(possible_location_names) == 1:
-                if "~" in possible_location_names[0]:
-                    location_text = "near " + possible_location_names[0].replace(
-                        "~", ""
-                    )
+                if end is None:
+                    # it's a point, not an interval, compare with location interval
+                    if start >= location_start and start <= location_end:
+                        possible_location_names.append(section)
                 else:
-                    location_text = possible_location_names[0].replace("~", "")
-        message_content["location_text"] = location_text
-        # remove duplicate hits if the car remains staionary
-        matches = list(
-            filter(
-                lambda x: x["driver"] == driver
-                and x["laps"] == laps
-                and (
-                    x["location"] >= location - 100 and x["location"] <= location + 100
-                ),
-                ticker,
+                    if start <= location and end >= location:
+                        possible_location_names.append(section)
+            if possible_location_names == []:
+                for section, dimensions in sections.items():
+                    start = dimensions[0]
+                    if location > start:
+                        possible_location_names.append("~" + section)
+                    break
+
+            # create text
+
+            location_text = None
+            if len(possible_location_names) > 0:
+                if len(possible_location_names) == 2:
+                    location_text = "between " + " and ".join(possible_location_names)
+
+                if len(possible_location_names) == 1:
+                    if "~" in possible_location_names[0]:
+                        location_text = "near " + possible_location_names[0].replace(
+                            "~", ""
+                        )
+                    else:
+                        location_text = possible_location_names[0].replace("~", "")
+            message_content["location_text"] = location_text
+            # remove duplicate hits if the car remains staionary
+            matches = list(
+                filter(
+                    lambda x: x["driver"] == driver
+                    and x["laps"] == laps
+                    and (
+                        x["location"] >= location - 100
+                        and x["location"] <= location + 100
+                        if "location" in x
+                        else True
+                    )
+                    if "driver" in x and "location" in x
+                    else True,
+                    ticker,
+                )
             )
-        )
         if not len(matches) > 0:
             ticker.append(message_content)
     ticker.reverse()
