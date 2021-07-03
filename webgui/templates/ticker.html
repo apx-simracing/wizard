@@ -268,7 +268,7 @@
                   <div class="column col-12" v-if="!ticker_message.vehicle">
                     [[ticker_message.driver ]]
                   </div>
-                  <div class="column col-12" v-if="ticker.type === 'VL'">
+                  <div class="column col-12" v-if="ticker_message.type === 'VL'">
                     <span v-if="Math.floor(ticker_message.speed) === 0">
                       Standing, [[ticker_message.location_text]]
                     </span>
