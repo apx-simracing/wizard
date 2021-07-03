@@ -706,7 +706,7 @@ def live(request, secret: str):
                         else True
                     )
                     if "driver" in x and "location" in x
-                    else True,
+                    else False,
                     ticker,
                 )
             )
