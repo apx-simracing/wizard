@@ -832,7 +832,7 @@ class Server(models.Model):
         return self.url if not self.name else self.name
 
     def clean(self):
-        status = self.get_status()
+        status = self.status
         if not self.server_key and self.action:
             raise ValidationError(
                 "The server was not processed yet. Wait a short time until the key is present."
@@ -964,6 +964,7 @@ class ServerCron(models.Model):
             raise ValidationError("Select a server first")
         if self.action == "D" and not self.event:
             raise ValidationError("You have to add an event before deploying")
+
 
 class TickerMessageType(models.TextChoices):
     PenaltyAdd = "P+", "PenaltyAdd"
