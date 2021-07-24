@@ -766,14 +766,7 @@ class Server(models.Model):
         default=None,
         help_text="APX Session Id",
     )
-
-    def get_status(self):
-        status = None
-        try:
-            status = ServerStatustext.objects.filter(server=self.pk).first().status
-        except Exception as e:
-            pass
-        return status
+    status = models.TextField(blank=True, null=True, default=None)
 
     @property
     def logfile(self):
@@ -787,7 +780,7 @@ class Server(models.Model):
 
     @property
     def status_info(self):
-        status = self.get_status()
+        status = self.status
         # no status to report (e. g. new server)
         response = '<img src="{}admin/img/icon-no.svg" alt="Not Running"> Server is not running</br>'.format(
             STATIC_URL
@@ -971,34 +964,6 @@ class ServerCron(models.Model):
             raise ValidationError("Select a server first")
         if self.action == "D" and not self.event:
             raise ValidationError("You have to add an event before deploying")
-
-
-class ServerStatustext(models.Model):
-    class Meta:
-        verbose_name_plural = "Status history"
-
-    status = models.TextField(
-        blank=True,
-        null=True,
-        default=None,
-        help_text="Shows the reported status of the server. Can be empty or a JSON blob.",
-    )
-    date = models.DateTimeField(auto_now_add=True)
-    server = models.ForeignKey(
-        Server, on_delete=models.CASCADE, blank=False, null=False, default=None
-    )
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    session_id = models.CharField(
-        max_length=255,
-        blank=True,
-        null=True,
-        default=None,
-        help_text="APX Session Id",
-    )
-
-    def __str__(self):
-        return "{} @ {}".format(self.server, self.date.strftime("%m/%d/%Y, %H:%M:%S"))
-
 
 class TickerMessageType(models.TextChoices):
     PenaltyAdd = "P+", "PenaltyAdd"

@@ -10,7 +10,6 @@ from webgui.models import (
     Server,
     Chat,
     RaceSessions,
-    ServerStatustext,
     ServerCron,
     TickerMessage,
     ServerPlugin,
@@ -296,11 +295,8 @@ class ServerAdmin(admin.ModelAdmin):
 
     def reset_status(self, request, queryset):
         for server in queryset:
-            text = ServerStatustext()
-            text.status = None
-            text.user = request.user
-            text.server = server
-            text.save()
+            server.status = None
+            server.save()
         messages.success(request, "Status are resetted.")
 
     reset_status.short_description = "Reset status (if stuck)"
@@ -436,12 +432,7 @@ class ServerAdmin(admin.ModelAdmin):
     is_running.short_description = "Running"
 
     def get_status(self, obj):
-        status = None
-        try:
-            status = ServerStatustext.objects.filter(server=self.pk).first().status
-        except:
-            pass
-        return status
+        return obj.status
 
     def server_name(self, obj):
         status = self.get_status(obj)
@@ -460,28 +451,6 @@ class ServerAdmin(admin.ModelAdmin):
         return json["track"] if "track" in status else "-"
 
     track_name.short_description = "Track"
-
-
-class ServerStatustextAdmin(admin.ModelAdmin):
-    def get_form(self, request, obj=None, **kwargs):
-        form = super(ServerStatustextAdmin, self).get_form(request, obj=None, **kwargs)
-        form.base_fields["user"].queryset = User.objects.filter(pk=request.user.pk)
-        return form
-
-    def get_changeform_initial_data(self, request):
-        get_data = super(ServerStatustextAdmin, self).get_changeform_initial_data(
-            request
-        )
-        get_data["user"] = request.user.pk
-        return get_data
-
-    def get_queryset(self, request):
-        if not request.user.is_superuser:
-            return []
-        else:
-            return ServerStatustext.objects.all()
-
-    list_display = ["server", "session_id", "__str__"]
 
 
 class TickerMessageAdmin(admin.ModelAdmin):
@@ -554,7 +523,6 @@ admin.site.register(Event, EventAdmin)
 admin.site.register(RaceConditions, RaceConditionsAdmin)
 admin.site.register(RaceSessions, RaceSessionsAdmin)
 admin.site.register(Server, ServerAdmin)
-admin.site.register(ServerStatustext, ServerStatustextAdmin)
 admin.site.register(Chat, ChatAdmin)
 admin.site.register(ServerCron, ServerCronAdmin)
 admin.site.register(ServerPlugin, ServerPluginAdmin)

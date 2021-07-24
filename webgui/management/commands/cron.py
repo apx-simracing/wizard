@@ -1,5 +1,5 @@
 from django.core.management.base import BaseCommand, CommandError
-from webgui.models import Server, ServerStatustext, ServerCron
+from webgui.models import Server, ServerCron
 from os.path import join, exists
 from os import mkdir
 from wizard.settings import (

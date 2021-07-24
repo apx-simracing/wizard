@@ -28,7 +28,6 @@ from .models import (
     Event,
     Component,
     TickerMessage,
-    ServerStatustext,
 )
 import pathlib
 import zipfile
@@ -49,6 +48,7 @@ from .util import (
 from django.views.decorators.csrf import csrf_exempt
 import tarfile
 from math import floor, ceil
+from django.views.decorators.cache import cache_page
 
 
 def get_status(request, secret: str):
@@ -394,11 +394,7 @@ def get_ticker(request, secret: str):
 
     session_id = server.session_id
 
-    last_status = (
-        ServerStatustext.objects.filter(server=server, session_id=session_id)
-        .order_by("-id")
-        .first()
-    )
+    last_status = server.status
     vehicles = {}
     raw_status = loads(last_status.status.replace("'", '"')) if last_status else None
     if raw_status:
@@ -539,8 +535,6 @@ def add_status(request, secret: str):
     if not server:
         raise Http404()
     got = request.body.decode("utf-8")
-
-    text = ServerStatustext()
     try:
         parsed_text = loads(got)
         if "session_id" in parsed_text and parsed_text["session_id"] is not None:
@@ -549,15 +543,13 @@ def add_status(request, secret: str):
             text.session_id = server.session_id
     except:
         pass
-    text.user = server.user
-    text.server = server
-    text.status = got
-    text.save()
+    server.status = got
     server.save()
     return HttpResponse("OK")
 
 
 @csrf_exempt
+@cache_page(5)
 def live(request, secret: str):
     server = Server.objects.filter(public_secret=secret).first()
 
@@ -566,18 +558,12 @@ def live(request, secret: str):
     session_id = server.session_id
     url = server.url
     key = get_server_hash(url)
-
-    status = loads(
-        ServerStatustext.objects.filter(server=server, session_id=session_id)
-        .order_by("id")
-        .last()
-        .status
-    )
+    is_full = request.GET.get("full", None) is not None
+    status = server.status
     raw_messages = (
         TickerMessage.objects.filter(server=server)
         .filter(session_id=server.session_id)
         .filter(session=status["session"])
-        .order_by("id")
     )
     messages = {}
     drivers = {}
@@ -586,7 +572,8 @@ def live(request, secret: str):
         slot_id = message_content["slot_id"]
         if slot_id not in messages:
             messages[slot_id] = []
-        messages[slot_id].append(message_content)
+        if "event_time" in message_content and message_content["event_time"] != 0:
+            messages[slot_id].append(message_content)
         if message.type == "DS":
             old_driver = message_content["old_driver"]
             new_driver = message_content["new_driver"]
@@ -612,7 +599,7 @@ def live(request, secret: str):
         vehicle["messages"] = (
             messages[vehicle["slotID"]] if vehicle["slotID"] in messages else []
         )
-        vehicle["messages"].reverse()
+        vehicle["messages"].sort(key=lambda x: x["event_time"], reverse=True)
 
     # get ticker messages
     sections = OrderedDict()
@@ -652,7 +639,11 @@ def live(request, secret: str):
             if vehicle["driverName"] == driver:
                 driver_vehicle = vehicle
                 break
-        message_content["vehicle"] = driver_vehicle
+        message_content["vehicle"] = {
+            "slotID": vehicle["slotID"],
+            "vehicleName": vehicle["vehicleName"],
+            "carNumber": vehicle["carNumber"],
+        }
         matches = []
         if message_content["type"] == "VL":
             # v low messages
@@ -713,6 +704,8 @@ def live(request, secret: str):
         if not len(matches) > 0:
             ticker.append(message_content)
     ticker.reverse()
+    if not is_full:
+        status["waypoints"]["loadingStatus"]["track"]["trackmap"] = []
     response = {
         "status": status,
         "media_url": MEDIA_URL,
