@@ -377,6 +377,11 @@ def get_event_config(event_id: int):
     for plugin in server.plugins.all():
         name = basename(str(plugin.plugin_file))
         plugins[name] = loads(plugin.overwrites)
+    mod_version = (
+        server.event_mod_version
+        if server.event_mod_version
+        else "1.0.{}".format(get_random_string(5))
+    )
     result = {
         "server": {
             "overwrites": {
@@ -396,7 +401,7 @@ def get_event_config(event_id: int):
         "welcome_message": server.welcome_message,
         "mod": {
             "name": mod_name,
-            "version": "1.0.{}".format(get_random_string(5)),
+            "version": mod_version,
         },
     }
     return result

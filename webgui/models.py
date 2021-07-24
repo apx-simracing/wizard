@@ -610,10 +610,19 @@ class Event(models.Model):
     )
 
     mod_version = models.CharField(
+        default=None,
+        null=True,
+        blank=True,
+        max_length=50,
+        help_text="Version suffix to be used for content updates (track, cars). If not set, the value '.9apx' will be used.",
+        validators=[alphanumeric_validator_dots],
+    )
+
+    event_mod_version = models.CharField(
         default="",
         blank=True,
         max_length=50,
-        help_text="Version suffix to be used. If not set, the value '.9apx' will be used.",
+        help_text="Version suffix to be used for the mod itself. If not set, a RANDOM value in concatenation with '1.0+{random}' will be used.",
         validators=[alphanumeric_validator_dots],
     )
 
