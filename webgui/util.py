@@ -329,7 +329,6 @@ def get_event_config(event_id: int):
     tracks = server.tracks.all()
 
     conditions = server.conditions
-    rfm_url = conditions.rfm.url
 
     track_groups = {}
     for track in tracks:
@@ -398,7 +397,6 @@ def get_event_config(event_id: int):
         "mod": {
             "name": mod_name,
             "version": "1.0.{}".format(get_random_string(5)),
-            "rfm": rfm_url,
         },
     }
     return result
@@ -460,7 +458,6 @@ def create_virtual_config():
         server_data[key] = {
             "url": server.url,
             "secret": server.secret,
-            "public_ip": server.public_ip,
             "env": {
                 "build_path": build_path,
                 "packs_path": packs_path,

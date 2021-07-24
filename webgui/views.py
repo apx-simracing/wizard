@@ -396,7 +396,7 @@ def get_ticker(request, secret: str):
 
     last_status = server.status
     vehicles = {}
-    raw_status = loads(last_status.status.replace("'", '"')) if last_status else None
+    raw_status = loads(last_status.replace("'", '"')) if last_status else None
     if raw_status:
         for vehicle in raw_status["vehicles"]:
             position = vehicle["position"]
@@ -559,7 +559,7 @@ def live(request, secret: str):
     url = server.url
     key = get_server_hash(url)
     is_full = request.GET.get("full", None) is not None
-    status = server.status
+    status = loads(server.status)
     raw_messages = (
         TickerMessage.objects.filter(server=server)
         .filter(session_id=server.session_id)

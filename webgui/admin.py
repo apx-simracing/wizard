@@ -356,11 +356,9 @@ class ServerAdmin(admin.ModelAdmin):
                 "fields": [
                     "name",
                     "url",
-                    "public_ip",
                     "secret",
                     "public_secret",
                     "user",
-                    "status_failures",
                     "session_id",
                 ]
             },
@@ -391,12 +389,10 @@ class ServerAdmin(admin.ModelAdmin):
         if obj and obj.locked:
             return self.readonly_fields + (
                 "event",
-                "public_ip",
                 "secret",
                 "url",
                 "locked",
                 "action",
-                "status_failures",
                 "status_info",
                 "logfile",
                 "server_key",
@@ -407,7 +403,6 @@ class ServerAdmin(admin.ModelAdmin):
             return self.readonly_fields + (
                 "event",
                 "locked",
-                "status_failures",
                 "status_info",
                 "public_secret",
                 "logfile",
@@ -415,7 +410,6 @@ class ServerAdmin(admin.ModelAdmin):
         return self.readonly_fields + (
             "locked",
             "is_running",
-            "status_failures",
             "status_info",
             "public_secret",
             "logfile",

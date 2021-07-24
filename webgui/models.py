@@ -696,12 +696,6 @@ class Server(models.Model):
         default=get_random_string(20),
         help_text="The secret for the communication with the APX race control",
     )
-    public_ip = models.CharField(
-        blank=False,
-        max_length=500,
-        default="0.0.0.0",
-        help_text="Not used currently. Use '0.0.0.0' if unkown.",
-    )
     event = models.ForeignKey(
         Event,
         on_delete=models.DO_NOTHING,
@@ -745,12 +739,6 @@ class Server(models.Model):
         null=True,
     )
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    status_failures = models.IntegerField(
-        default=0,
-        help_text="The amount of failed status checks. The field will reset on save. If more than {} attemps will fail, the server will be ignored for status and actions..".format(
-            FAILURE_THRESHOLD
-        ),
-    )
     update_on_build = models.BooleanField(
         default=False,
         help_text="Decides if APX will call dedicated server update when refreshing the content",
@@ -786,27 +774,15 @@ class Server(models.Model):
             STATIC_URL
         )
 
-        if self.status_failures >= FAILURE_THRESHOLD:
-            response = '<img src="{}admin/img/icon-no.svg" alt="Not Running"> Server is disabled due to errors.</br>'.format(
-                STATIC_URL
-            )
-        elif not status:
+        if not status:
             response = '<img src="{}admin/img/icon-no.svg" alt="Not Running"> Server did not return a status yet</br>'.format(
                 STATIC_URL
             )
-        elif (
-            status
-            and "in_deploy" in status
-            and self.status_failures <= FAILURE_THRESHOLD
-        ):
+        elif status and "in_deploy" in status:
             response = '<img src="{}admin/img/icon-no.svg" alt="Not Running"> The server is deploying</br>'.format(
                 STATIC_URL
             )
-        elif (
-            status
-            and "not_running" not in status
-            and self.status_failures <= FAILURE_THRESHOLD
-        ):
+        elif status and "not_running" not in status:
             response = '<img src="{}admin/img/icon-yes.svg" alt="Running"> Server is running</br>'.format(
                 STATIC_URL
             )
@@ -866,7 +842,6 @@ class Server(models.Model):
 
         if not str(self.url).endswith("/"):
             raise ValidationError("The server url must end with a slash!")
-        self.status_failures = 0
 
         if (
             self.action != ""
