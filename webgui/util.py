@@ -650,7 +650,6 @@ def do_server_interaction(server):
             )
         finally:
             server.action = ""
-            server.locked = False
             server.save()
 
     if server.action == "S+":
@@ -691,7 +690,6 @@ def do_server_interaction(server):
             )
         finally:
             server.action = ""
-            server.locked = False
             server.save()
 
     if server.action == "WU":
@@ -719,7 +717,6 @@ def do_server_interaction(server):
             )
         finally:
             server.action = ""
-            server.locked = False
             server.save()
     if server.action == "R-":
 
@@ -738,7 +735,6 @@ def do_server_interaction(server):
             )
         finally:
             server.action = ""
-            server.locked = False
             server.save()
 
     if server.action == "D":
@@ -795,7 +791,6 @@ def do_server_interaction(server):
             print(e)
         finally:
             server.action = ""
-            server.locked = False
             server.save()
 
     # download server key, if needed:
@@ -811,7 +806,6 @@ def do_server_interaction(server):
             )
             if exists(key_path):
                 server.server_key = relative_path
-                server.locked = False
                 server.save()
         except:
             print("{} does not offer a key".format(server.pk))

@@ -140,7 +140,7 @@ class RaceConditionsAdmin(admin.ModelAdmin):
 
 @admin.register(Server)
 class ServerAdmin(admin.ModelAdmin):
-    actions = ["reset_status", "force_unlock", "get_thumbnails"]
+    actions = ["reset_status", "get_thumbnails"]
 
     def reset_status(self, request, queryset):
         for server in queryset:
@@ -191,13 +191,14 @@ class ServerAdmin(admin.ModelAdmin):
 
     get_thumbnails.short_description = "Get thumbnails"
 
-    def force_unlock(self, request, queryset):
-        queryset.update(locked=False)
-        messages.success(request, "Server unlocked")
-
-    force_unlock.short_description = "Unlock (if stuck)"
-
-    list_display = ("name", "server_name", "track_name", "state", "status_info")
+    list_display = (
+        "name",
+        "server_name",
+        "event",
+        "track_name",
+        "state",
+        "status_info",
+    )
     fieldsets = [
         (
             "APX Settings",
@@ -220,7 +221,6 @@ class ServerAdmin(admin.ModelAdmin):
             {
                 "fields": [
                     "action",
-                    "locked",
                     "status_info",
                     "state",
                     "update_on_build",
@@ -235,31 +235,15 @@ class ServerAdmin(admin.ModelAdmin):
     ]
 
     def get_readonly_fields(self, request, obj):
-        if obj and obj.locked:
-            return self.readonly_fields + (
-                "event",
-                "secret",
-                "url",
-                "locked",
-                "action",
-                "status_info",
-                "logfile",
-                "server_key",
-                "state",
-                "server_unlock_key",
-                "public_secret",
-            )
         if self.is_running(obj):
             return self.readonly_fields + (
                 "event",
-                "locked",
                 "status_info",
                 "state",
                 "public_secret",
                 "logfile",
             )
         return self.readonly_fields + (
-            "locked",
             "is_running",
             "status_info",
             "state",

@@ -724,11 +724,6 @@ class Server(models.Model):
         null=False,
         help_text="Public steam branch",
     )
-    locked = models.BooleanField(
-        default=False,
-        help_text="Shows if the server is currently processed by the background worker. During processing, you cannot change settings.",
-        verbose_name="Processing pending action",
-    )
     server_key = models.FileField(
         upload_to=get_key_root_path,
         help_text="Keyfile of the server. Will be filled on save",
@@ -858,7 +853,8 @@ class Server(models.Model):
             or self.server_key is None
             or self.server_unlock_key is not None
         ):
-            self.locked = True
+            if self.action == "D":
+                self.state = "Update scheduled"
             background_thread = Thread(
                 target=background_action_server, args=(self,), daemon=True
             )
