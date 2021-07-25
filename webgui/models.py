@@ -77,7 +77,7 @@ alphanumeric_validator_dots = RegexValidator(
 
 
 class Component(models.Model):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+
     type = models.CharField(
         max_length=3, choices=ComponentType.choices, default=ComponentType.VEHICLE
     )
@@ -175,7 +175,7 @@ class Component(models.Model):
 
             self.template = "".join(newLines)
             # paste parsed template
-            root_path = join(MEDIA_ROOT, get_hash(str(self.user.pk)), "templates")
+            root_path = join(MEDIA_ROOT, "templates")
             if not exists(root_path):
                 mkdir(root_path)
             template_path = join(
@@ -217,8 +217,6 @@ class RaceSessions(models.Model):
     weather = models.TextField(blank=True, null=True, default=None)
     track = models.ForeignKey("Track", on_delete=models.CASCADE, blank=True, null=True)
 
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-
     def clean(self):
         if self.length < 0 or self.laps < 0:
             raise ValidationError(
@@ -255,7 +253,6 @@ class RaceConditions(models.Model):
 
     description = models.CharField(default="Add description", max_length=200)
     rfm = models.FileField(upload_to=get_conditions_file_root, storage=OverwriteStorage)
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
 
     sessions = models.ManyToManyField(RaceSessions, blank=True)
 
@@ -279,7 +276,7 @@ class RaceConditions(models.Model):
 class Track(models.Model):
     component = models.ForeignKey(Component, on_delete=models.DO_NOTHING)
     layout = models.CharField(default="", blank=False, max_length=200)
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+
     lon = models.FloatField(
         default=None, blank=True, null=True, verbose_name="Longitute"
     )
@@ -310,7 +307,7 @@ class Entry(models.Model):
     component = models.ForeignKey(Component, on_delete=models.DO_NOTHING)
     team_name = models.CharField(default="Example Team", max_length=200)
     vehicle_number = models.CharField(default="1", max_length=3)
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+
     token = models.CharField(
         default=None, null=True, blank=True, max_length=100, unique=True
     )
@@ -374,7 +371,7 @@ class ComponentFileType(models.TextChoices):
 
 class ComponentFile(models.Model):
     file = models.FileField(upload_to=get_component_file_root, max_length=500)
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+
     component = models.ForeignKey(Component, on_delete=models.CASCADE)
     type = models.CharField(
         max_length=50,
@@ -390,7 +387,6 @@ class TrackFile(models.Model):
     file = models.FileField(
         upload_to=track_filename, storage=OverwriteStorage, max_length=500
     )
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
 
     track = models.ForeignKey(
         Component, on_delete=models.CASCADE, blank=False, null=False, default=None
@@ -407,7 +403,7 @@ class EntryFile(models.Model):
     entry = models.ForeignKey(
         Entry, on_delete=models.CASCADE, blank=False, null=False, default=None
     )
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+
     mask_added = models.BooleanField(
         default=False,
         help_text="Will be checked if a set of numberpaltes/ livery masks were added. Uncheck to force update.",
@@ -522,7 +518,7 @@ def auto_delete_file_on_delete(sender, instance, **kwargs):
 
 @receiver(models.signals.post_delete, sender=ComponentFile)
 def auto_delete_file_on_delete(sender, instance, **kwargs):
-    remove_orphan_files(instance.user.pk)
+    remove_orphan_files()
 
 
 @receiver(models.signals.post_save, sender=ComponentFile)
@@ -551,7 +547,7 @@ class ServerPlugin(models.Model):
         default=None,
         null=False,
     )
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+
     name = models.CharField(
         blank=True,
         max_length=500,
@@ -590,7 +586,7 @@ class Event(models.Model):
     start_type = models.CharField(
         max_length=3, choices=EvenStartType.choices, default=EvenStartType.S
     )
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+
     real_weather = models.BooleanField(
         default=False,
         help_text="Decides if real weather should be used. The weather is based on a hourly forecast.",
@@ -747,7 +743,6 @@ class Server(models.Model):
         default=None,
         null=True,
     )
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     update_on_build = models.BooleanField(
         default=False,
         help_text="Decides if APX will call dedicated server update when refreshing the content",
@@ -764,6 +759,12 @@ class Server(models.Model):
         help_text="APX Session Id",
     )
     status = models.TextField(blank=True, null=True, default=None)
+    state = models.TextField(
+        blank=True,
+        null=True,
+        default=None,
+        help_text="The last update info got from the reciever",
+    )
 
     @property
     def logfile(self):
@@ -895,7 +896,6 @@ class Chat(models.Model):
     )
     success = models.BooleanField(default=False)
     date = models.DateTimeField(auto_now_add=True)
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
 
     def __str__(self):
         return "{}@{}: {}".format(
@@ -936,7 +936,6 @@ class ServerCron(models.Model):
         help_text="Runs an activity on the server.",
         verbose_name="Pending action to submit",
     )
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
 
     def __str__(self):
         return "{}: {}@{}".format(self.cron_text, self.action, self.server)
@@ -988,7 +987,6 @@ class TickerMessage(models.Model):
         help_text="Event description",
     )
 
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     type = models.CharField(
         max_length=3,
         choices=TickerMessageType.choices,

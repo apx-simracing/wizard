@@ -30,9 +30,7 @@ class EntrySignupForm(forms.Form):
         if not event_obj:
             raise ValidationError("Invalid Event")
 
-        matching_numbers = Entry.objects.filter(
-            user=event_obj.user, vehicle_number=number
-        )
+        matching_numbers = Entry.objects.filter(vehicle_number=number)
 
         if len(matching_numbers) != 0:
             raise ValidationError("Number already taken")

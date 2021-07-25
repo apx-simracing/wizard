@@ -51,8 +51,7 @@ RECIEVER_COMP_INFO = open(join(BASE_DIR, "release")).read()
 
 def get_update_filename(instance, filename):
     component_name = instance.component_name
-    user_root = get_hash(str(instance.user.pk))
-    full_user_path = join(MEDIA_ROOT, user_root)
+    full_user_path = join(MEDIA_ROOT)
     if not exists(full_user_path):
         mkdir(full_user_path)
 
@@ -64,39 +63,37 @@ def get_update_filename(instance, filename):
     if not exists(component_path):
         mkdir(component_path)
 
-    return join(user_root, "liveries", component_name, filename)
+    return join("liveries", component_name, filename)
 
 
 def get_livery_mask_root(instance, filename):
-    root_path = join(MEDIA_ROOT, get_hash(str(instance.user.pk)), "templates")
+    root_path = join(MEDIA_ROOT, "templates")
     if not exists(root_path):
         mkdir(root_path)
-    return join(join(get_hash(str(instance.user.pk)), "templates"), filename)
+    return join("templates", filename)
 
 
 def get_component_file_root(instance, filename):
-    root_path = join(MEDIA_ROOT, get_hash(str(instance.user.pk)), "templates")
+    root_path = join(MEDIA_ROOT, "templates")
     if not exists(root_path):
         mkdir(root_path)
-    return join(join(get_hash(str(instance.user.pk)), "templates"), filename)
+    return join("templates", filename)
 
 
 def get_conditions_file_root(instance, filename):
-    user_root = get_hash(str(instance.user.pk))
-    full_path = join(MEDIA_ROOT, user_root)
+    full_path = join(MEDIA_ROOT)
     if not exists(full_path):
         mkdir(full_path)
     conditions_path = join(full_path, "conditions")
     if not exists(conditions_path):
         mkdir(conditions_path)
-    return join(user_root, "conditions", filename)
+    return join("conditions", filename)
 
 
 def track_filename(instance, filename):
     component_short_name = instance.track.short_name
     component_name = instance.track.component_name
-    user_root = get_hash(str(instance.user.pk))
-    path = join(MEDIA_ROOT, user_root, "tracks", component_name)
+    path = join(MEDIA_ROOT, "tracks", component_name)
 
     file_path = join(path, filename)
     return file_path
@@ -106,8 +103,7 @@ def livery_filename(instance, filename):
     vehicle_number = instance.entry.vehicle_number
     component_short_name = instance.entry.component.short_name
     component_name = instance.entry.component.component_name
-    user_root = get_hash(str(instance.user.pk))
-    full_user_path = join(MEDIA_ROOT, user_root)
+    full_user_path = join(MEDIA_ROOT)
     if not exists(full_user_path):
         mkdir(full_user_path)
 
@@ -126,7 +122,6 @@ def livery_filename(instance, filename):
     if selected_suffix is None:
         raise ValidationError("We can't identify that file purpose")
     new_file_path = join(
-        user_root,
         "liveries",
         component_name,
         "{}_{}{}".format(component_short_name, vehicle_number, selected_suffix),
@@ -143,13 +138,12 @@ def get_key_root_path(instance, filename):
 
 
 def get_plugin_root_path(instance, filename):
-    hash_code = get_hash(str(instance.user.pk))
-    if not exists(join(join(MEDIA_ROOT, hash_code, "plugins"))):
-        mkdir(join(MEDIA_ROOT, hash_code, "plugins"))
-    full_path = join(MEDIA_ROOT, hash_code, "plugins")
+    if not exists(join(join(MEDIA_ROOT, "plugins"))):
+        mkdir(join(MEDIA_ROOT, "plugins"))
+    full_path = join(MEDIA_ROOT, "plugins")
     if not exists(full_path):
         mkdir(full_path)
-    return join(hash_code, "plugins", filename)
+    return join("plugins", filename)
 
 
 def get_logfile_root_path(instance, filename):
@@ -161,8 +155,8 @@ def get_logfile_root_path(instance, filename):
 
 
 def do_component_file_apply(element):
-    remove_orphan_files(element.user.pk)
-    root_path = join(MEDIA_ROOT, get_hash(str(element.user.pk)), "liveries")
+    remove_orphan_files()
+    root_path = join(MEDIA_ROOT, "liveries")
     existing_files = listdir(root_path)
     file_list = []
     component_files = {}
@@ -207,8 +201,8 @@ def do_component_file_apply(element):
             copyfile(src_path, target_path)
 
 
-def remove_orphan_files(user_id):
-    root_path = join(MEDIA_ROOT, get_hash(str(user_id)), "liveries")
+def remove_orphan_files():
+    root_path = join(MEDIA_ROOT, "liveries")
     files = models.EntryFile.objects.filter(entry__component__do_update=True)
     components = {}
     for file in files:
@@ -441,13 +435,11 @@ def create_virtual_config():
     server_data = {}
     for server in all_servers:
         key = get_server_hash(server.url)
-        if not exists(join(MEDIA_ROOT, get_hash(str(server.user.pk)))):
-            mkdir(join(MEDIA_ROOT, get_hash(str(server.user.pk))))
         # we assume that the liveries folder may already be existing
-        build_path = join(MEDIA_ROOT, get_hash(str(server.user.pk)), "liveries")
-        packs_path = join(PACKS_ROOT, get_hash(str(server.user.pk)))
-        templates_path = join(MEDIA_ROOT, get_hash(str(server.user.pk)), "templates")
-        tracks_path = join(MEDIA_ROOT, get_hash(str(server.user.pk)), "tracks")
+        build_path = join(MEDIA_ROOT, "liveries")
+        packs_path = PACKS_ROOT
+        templates_path = join(MEDIA_ROOT, "templates")
+        tracks_path = join(MEDIA_ROOT, "tracks")
 
         if not exists(packs_path):
             mkdir(packs_path)

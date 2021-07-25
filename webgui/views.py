@@ -75,7 +75,6 @@ def add_penalty(request, secret: str, driver: str, penalty: int, reason: str):
     response["Access-Control-Allow-Headers"] = "X-Requested-With, Content-Type"
     if server is None:
         raise Http404()
-    user = server.user
     message = ""
     description = ""
     if penalty != 19:
@@ -113,7 +112,6 @@ def add_penalty(request, secret: str, driver: str, penalty: int, reason: str):
             chat = Chat()
             chat.server = server
             chat.message = message
-            chat.user = user
             chat.save()
             response.write("ok")
             do_rc_post(description.format(driver))
@@ -125,12 +123,10 @@ def add_penalty(request, secret: str, driver: str, penalty: int, reason: str):
         chat = Chat()
         chat.server = server
         chat.message = "/dq {}".format(driver)
-        chat.user = user
         chat.save()
         chat = Chat()
         chat.server = server
         chat.message = "/undq {}".format(driver)
-        chat.user = user
         chat.save()
         message = "✔️ Driver {} can now resume the race".format(driver)
         do_rc_post(description.format(driver))
@@ -188,7 +184,6 @@ def get_team_signup_form(request, event: int):
 
             token = get_random_string(10)
             new_entry = Entry()
-            new_entry.user = event_obj.user
             new_entry.component = component
             new_entry.team_name = team_name
             new_entry.vehicle_number = int(number)
@@ -285,7 +280,6 @@ def get_files_form(request):
                     full_path = join(temp_extract_path, file)
                     entry_file = EntryFile()
                     entry_file.entry = entry
-                    entry_file.user = entry.user
 
                     needle = "{}_{}".format(
                         entry.component.short_name, entry.vehicle_number
@@ -493,18 +487,27 @@ def add_message(request, secret: str):
     server = Server.objects.filter(public_secret=secret).first()
     if not server:
         raise Http404()
-
     data = request.body.decode("utf-8")
     parsed = loads(data)
-    ticker = TickerMessage()
-    ticker.message = data
-    ticker.type = parsed["type"]
-    ticker.event_time = parsed["event_time"]
-    ticker.session = parsed["session"]
-    ticker.server = server
-    ticker.user = server.user
-    ticker.session_id = server.session_id
-    ticker.save()
+    if "event_time" not in parsed and "event" in parsed:
+        # deploy event
+        state = (
+            "{}: {}".format(parsed["event"], parsed["args"])
+            if parsed["args"]
+            else parsed["event"]
+        )
+        server.state = state
+        server.save()
+    else:
+
+        ticker = TickerMessage()
+        ticker.message = data
+        ticker.type = parsed["type"]
+        ticker.event_time = parsed["event_time"]
+        ticker.session = parsed["session"]
+        ticker.server = server
+        ticker.session_id = server.session_id
+        ticker.save()
     return JsonResponse({})
 
 
