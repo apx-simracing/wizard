@@ -847,14 +847,11 @@ class Server(models.Model):
 
         if not str(self.url).endswith("/"):
             raise ValidationError("The server url must end with a slash!")
-
         if (
             self.action != ""
             or self.server_key is None
             or self.server_unlock_key is not None
         ):
-            if self.action == "D":
-                self.state = "Update scheduled"
             background_thread = Thread(
                 target=background_action_server, args=(self,), daemon=True
             )

@@ -489,7 +489,7 @@ def add_message(request, secret: str):
         raise Http404()
     data = request.body.decode("utf-8")
     parsed = loads(data)
-    if "event_time" not in parsed and "event" in parsed:
+    if parsed["type"] == "SC":
         # deploy event
         state = (
             "{}: {}".format(parsed["event"], parsed["args"])
