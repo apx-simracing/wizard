@@ -126,7 +126,7 @@ PUBLIC_URL = "http://localhost:8000/"
 
 FAILURE_THRESHOLD = 500
 
-MEDIA_URL = "http://localhost:8000/"
+MEDIA_URL = "http://localhost:8181/"
 
 MEDIA_ROOT = join(str(BASE_DIR), "uploads")
 
