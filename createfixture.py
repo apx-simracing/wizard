@@ -20,13 +20,16 @@ for line in lines:
         if "Component" not in component:
             # avoid header
             component_index = component_index + 1
+            comp_version = "latest-even" if not layouts else "latest"
             new_tuple = {
                 "model": "webgui.Component",
                 "pk": component_index,
                 "fields": {
                     "type": "VEH" if not layouts else "LOC",
                     "steam_id": steamid,
-                    "component_version": "latest-even" if not layouts else "latest",
+                    "component_version": comp_version
+                    if component != "HondaCivicBTCC_2013"
+                    else "latest",
                     "component_name": component,
                     "short_name": short_name,
                 },
