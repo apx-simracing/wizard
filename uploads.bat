@@ -1,1 +1,1 @@
-python.exe -m http.server 8181
+python.exe -m http.server 8181 --directory uploads/
