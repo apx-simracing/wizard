@@ -12,7 +12,6 @@ if not exist "db.sqlite3" (
   python.exe -m pip install -r requirements.txt
 	python.exe manage.py migrate
 	python.exe manage.py createsuperuser
-	python.exe manage.py loaddata fixture.json
 ) else (
 	python.exe manage.py runserver
 )
