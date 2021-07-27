@@ -3,3 +3,6 @@ python.exe createfixture.py
 
 REM import it
 python.exe  manage.py loaddata common.json
+
+REM add demo event
+python.exe  manage.py loaddata fixture.json

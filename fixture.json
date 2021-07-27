@@ -1,0 +1,37 @@
+[
+  {
+    "model": "webgui.RaceConditions",
+    "pk": 1,
+    "fields": {
+      "description": "Demo Race conditions",
+      "rfm": "default.rfm"
+    }
+  },
+  {
+    "model": "webgui.event",
+    "pk": 123,
+    "fields": {
+      "overwrites_multiplayer": "{\r\n\"Multiplayer Server Options\": {\r\n          \"Pause While Zero Players\": false,\r\n          \"Join Password\": \"pw\",\r\n          \"Admin Password\": \"apx1\",\r\n          \"Default Game Name\": \"APX\",\r\n          \"Enforce Real Name\": true,\r\n          \"Practice 1 Time\": 180,\r\n          \"Qualifying Time\": 30,\r\n          \"Lessen Restrictions\": true,\r\n          \"Maximum AI\": 109,\r\n          \"Max MP Players\": 109,\r\n          \"Race Rejoin\": 3\r\n        },\r\n        \"Multiplayer General Options\": {\r\n          \"Download Custom Skins\": false,\r\n          \"Net Connection Type\": 6,\r\n          \"Downstream Rated KBPS\": 25000,\r\n          \"Upstream Rated KBPS\": 25000\r\n        }\r\n}",
+      "overwrites_player": "{\r\n        \"Game Options\": {\r\n          \"MULTI Race Finish Criteria\": 2,\r\n          \"MULTI Race Time\": 60,\r\n          \"MULTI Damage Multiplier\": 50,\r\n          \"Record Replays\": 0\r\n        },\r\n        \"Miscellaneous\": {\r\n          \"WebUI port\": 1234\r\n        },\r\n        \"Race Conditions\": {\r\n          \"MULTI Weather\": 5,\r\n          \"GPRIX Weather\": 5\r\n        }\r\n      }",
+      "name": "Demo event",
+      "conditions": 1,
+      "signup_active": false,
+      "start_type": "S",
+      "real_weather": false,
+      "temp_offset": 0,
+      "mod_name": "",
+      "mod_version": null,
+      "event_mod_version": "",
+      "timing_classes": "{}",
+      "welcome_message": "",
+      "entries": [],
+      "tracks": [
+        24
+      ],
+      "signup_components": [
+        45
+      ],
+      "plugins": []
+    }
+  }
+]
