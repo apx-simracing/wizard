@@ -29,7 +29,6 @@ for line in lines:
                     "component_version": "latest-even" if not layouts else "latest",
                     "component_name": component,
                     "short_name": short_name,
-                    "user_id": 1,
                 },
             }
 
@@ -43,7 +42,6 @@ for line in lines:
                         "fields": {
                             "component": component_index,
                             "layout": layout.strip(),
-                            "user_id": 1,
                         },
                     }
                     data.append(new_track)
