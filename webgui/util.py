@@ -379,8 +379,8 @@ def get_event_config(event_id: int):
     result = {
         "server": {
             "overwrites": {
-                "Multiplayer.JSON": loads(server.overwrites_multiplayer),
-                "Player.JSON": loads(server.overwrites_player),
+                "Multiplayer.JSON": loads(server.multiplayer_json),
+                "Player.JSON": loads(server.player_json),
             }
         },
         "conditions": session_list,

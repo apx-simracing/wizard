@@ -7,8 +7,9 @@ from django.dispatch import receiver
 from os.path import isfile, basename
 from shutil import copy
 from os import remove, linesep
+from collections import OrderedDict
 from json import loads
-from django.core.validators import RegexValidator
+from django.core.validators import RegexValidator, MinValueValidator, MaxValueValidator
 from webgui.util import (
     livery_filename,
     track_filename,
@@ -39,6 +40,7 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from datetime import datetime, timedelta
 import pytz
+from json import dumps
 
 USE_WAND = True
 try:
@@ -571,9 +573,14 @@ class ServerPlugin(models.Model):
             raise ValidationError("This JSON is not valid.")
 
 
+class EventRejoinRules(models.TextChoices):
+    N = "0", "No rejoin"
+    F = "1", "yes with fresh vehicle"
+    S = "2", "yes with vehicle in same physical condition"
+    SI = "3", "yes including setup"
+
+
 class Event(models.Model):
-    overwrites_multiplayer = models.TextField(default="{}")
-    overwrites_player = models.TextField(default="{}")
     name = models.CharField(default="", max_length=200)
     conditions = models.ForeignKey(RaceConditions, on_delete=models.DO_NOTHING)
     entries = models.ManyToManyField(Entry, blank=True)
@@ -636,26 +643,121 @@ class Event(models.Model):
         help_text="Welcome message",
     )
 
+    """
+
+    Session options
+
+    """
+
+    damage = models.IntegerField(
+        default=100,
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+        help_text="Damage multiplier",
+    )
+
+    password = models.CharField(
+        default="",
+        blank=True,
+        max_length=50,
+        help_text="Join password. Has max length of 50 chars.",
+    )
+
+    admin_password = models.CharField(
+        default="apx",
+        blank=False,
+        null=False,
+        max_length=50,
+        help_text="Admin password. Has max length of 50 chars. Cannot be empty",
+    )
+
+    rejoin = models.CharField(
+        max_length=50,
+        choices=EventRejoinRules.choices,
+        default=EventRejoinRules.N,
+        blank=False,
+        null=False,
+        help_text="Race rejoin ruling",
+    )
+
+    clients = models.IntegerField(
+        default=20,
+        validators=[MinValueValidator(10), MaxValueValidator(109)],
+        help_text="Allowed clients",
+    )
+
+    ai_clients = models.IntegerField(
+        default=0,
+        validators=[MinValueValidator(0), MaxValueValidator(109)],
+        help_text="Allowed AI clients",
+    )
+
+    real_name = models.BooleanField(
+        default=False,
+        help_text="Decides if the server forces the client to expose the real name",
+    )
+
+    downstream = models.IntegerField(
+        default=0,
+        validators=[MinValueValidator(0), MaxValueValidator(1000000)],
+        help_text="Downstream in KBPS. Calculate with 2000 per client.",
+    )
+
+    upstream = models.IntegerField(
+        default=0,
+        validators=[MinValueValidator(0), MaxValueValidator(1000000)],
+        help_text="Upstream in KBPS. Calculate with 2000 per client.",
+    )
+
+    replays = models.BooleanField(
+        default=False,
+        help_text="Enable or disable replays for this event",
+    )
+
+    webui_port = models.IntegerField(
+        default=1025,
+        validators=[MinValueValidator(1025), MaxValueValidator(65535)],
+        help_text="Port for the webui_port. Must be unique on all managed servers",
+    )
+
+    @property
+    def multiplayer_json(self):
+        blob = OrderedDict()
+        blob["Multiplayer Server Options"] = OrderedDict()
+        blob["Multiplayer Server Options"]["Join Password"] = self.password
+        blob["Multiplayer Server Options"]["Admin Password"] = self.admin_password
+        blob["Multiplayer Server Options"]["Race Rejoin"] = int(self.rejoin)
+        blob["Multiplayer Server Options"]["Max MP Players"] = self.clients
+        blob["Multiplayer Server Options"]["Maximum AI"] = self.ai_clients
+        if self.clients > 50:
+            blob["Multiplayer Server Options"]["Lessen Restrictions"] = True
+        blob["Multiplayer Server Options"]["Enforce Real Name"] = self.real_name
+        blob["Multiplayer Server Options"]["Default Game Name"] = self.name
+
+        blob["Multiplayer General Options"] = OrderedDict()
+        blob["Multiplayer General Options"]["Download Custom Skins"] = False
+        blob["Multiplayer General Options"]["Net Connection Type"] = 6
+        blob["Multiplayer General Options"]["Downstream Rated KBPS"] = self.downstream
+        blob["Multiplayer General Options"]["Upstream Rated KBPS"] = self.upstream
+
+        return dumps(blob)
+
+    @property
+    def player_json(self):
+        blob = OrderedDict()
+        blob["Game Options"] = OrderedDict()
+        blob["Game Options"]["MULTI Damage Multiplier"] = self.damage
+        blob["Game Options"]["Record Replays"] = self.replays
+        blob["Miscellaneous"] = OrderedDict()
+        blob["Miscellaneous"]["WebUI port"] = self.webui_port
+        if self.real_weather:
+            blob["Race Conditions"]["MULTI Weather"] = 5
+            blob["Race Conditions"]["GPRIX Weather"] = 5
+        return dumps(blob)
+
     def __str__(self):
         return "{}".format(self.name)
 
     def clean(self):
-        try:
-            loads(self.overwrites_multiplayer)
-        except:
-            raise ValidationError(
-                "The overwrites for the multiplayer.JSON are not valid"
-            )
-        try:
-            loads(self.overwrites_player)
-        except:
-            raise ValidationError("The overwrites for the player.JSON are not valid")
-
-        try:
-            loads(self.timing_classes)
-        except:
-            raise ValidationError("The overwrites for the timing are not valid")
-
         if self.welcome_message:
             parts = self.welcome_message.split(linesep)
             for part in parts:
