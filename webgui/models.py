@@ -71,7 +71,7 @@ class RaceSessionsType(models.TextChoices):
 
 
 alphanumeric_validator = RegexValidator(
-    r"^[0-9a-zA-Z_]*$", "Only alphanumeric characters and dashes are allowed."
+    r"^[0-9a-zA-Z_-]*$", "Only alphanumeric characters and dashes are allowed."
 )
 
 alphanumeric_validator_dots = RegexValidator(
@@ -797,6 +797,18 @@ class Event(models.Model):
         help_text="Port for the webui_port. Must be unique on all managed servers",
     )
 
+    sim_port = models.IntegerField(
+        default=54297,
+        validators=[MinValueValidator(1025), MaxValueValidator(65535)],
+        help_text="Port for the Simulation. Must be unique on all managed servers",
+    )
+
+    http_port = models.IntegerField(
+        default=64297,
+        validators=[MinValueValidator(1025), MaxValueValidator(65535)],
+        help_text="Port for the HTTP Server. Must be unique on all managed servers",
+    )
+
     """
         Allowed driving aids
     """
@@ -922,6 +934,8 @@ class Event(models.Model):
         blob["Multiplayer General Options"]["Net Connection Type"] = 6
         blob["Multiplayer General Options"]["Downstream Rated KBPS"] = self.downstream
         blob["Multiplayer General Options"]["Upstream Rated KBPS"] = self.upstream
+        blob["Multiplayer General Options"]["HTTP Server Port"] = int(self.http_port)
+        blob["Multiplayer General Options"]["Simulation Port"] = int(self.sim_port)
 
         return dumps(blob)
 

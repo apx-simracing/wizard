@@ -119,17 +119,33 @@ class EventAdmin(admin.ModelAdmin):
         )
         return form
 
+    def ports(self, obj):
+        if not obj:
+            return "-"
+        return "Web:{}/Sim:{}/HTTP:{}".format(
+            obj.webui_port, obj.sim_port, obj.http_port
+        )
+
+    ports.short_description = "Ports"
+
+    def all_clients(self, obj):
+        if not obj:
+            return "0/0"
+        return "{}/{}".format(obj.clients, obj.ai_clients)
+
+    all_clients.short_description = "#/AI"
+
     list_display = (
         "name",
+        "ports",
         "damage",
-        "clients",
+        "all_clients",
         "rejoin",
         "allow_auto_clutch",
         "allow_ai_toggle",
         "allow_traction_control",
         "allow_anti_lock_brakes",
         "allow_stability_control",
-        "ai_clients",
         "real_name",
         "replays",
     )

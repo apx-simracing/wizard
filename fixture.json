@@ -38,6 +38,8 @@
       "upstream": 30000,
       "replays": false,
       "webui_port": 1337,
+      "sim_port": 54321,
+      "http_port": 12345,
       "allow_traction_control": 2,
       "allow_anti_lock_brakes": 2,
       "allow_stability_control": 2,
