@@ -1,0 +1,16 @@
+{% extends 'admin/change_list.html' %}
+
+{% block object-tools %}
+<ul class="object-tools">
+  <li>
+    <a href="wizard/" class="addlink">
+      Create server from scratch
+    </a>
+  </li>
+  <li>
+    <a href="/admin/webgui/server/add/" class="addlink">
+      Add existing server
+    </a>
+  </li>
+</ul>
+{% endblock %}

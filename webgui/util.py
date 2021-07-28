@@ -26,6 +26,10 @@ from django.db.models.signals import post_save
 import socket
 import discord
 from requests import post
+import secrets
+import string
+import socket
+import random
 
 FILE_NAME_SUFFIXES = [
     ".json",
@@ -47,6 +51,7 @@ FILE_NAME_SUFFIXES = [
 
 
 RECIEVER_COMP_INFO = open(join(BASE_DIR, "release")).read()
+RECIEVER_DOWNLOAD_FROM = "https://github.com/apx-simracing/reciever/releases/download/R56/reciever-2021R56.zip"
 
 
 def get_update_filename(instance, filename):
@@ -230,6 +235,52 @@ def get_random_string(length):
     sample_letters = "abcdefghi"
     result_str = "".join((random.choice(sample_letters) for i in range(length)))
     return result_str
+
+
+def get_secret(length=15):
+    alphabet = string.ascii_letters + string.digits
+    secret = "".join(secrets.choice(alphabet) for i in range(length))
+    return secret
+
+
+def get_free_tcp_port(max_tries=10, default_port=8000):
+    port = default_port
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    for i in range(1, max_tries):
+        try:
+            s.connect(("localhost", int(port)))
+            s.shutdown(2)
+            port = randint(port, 65534)
+        except:
+            break
+    return port
+
+
+def bootstrap_reciever(root_path, server_obj, port, secret):
+    reciever_path = join(root_path, "reciever")
+    config = {
+        "auth": secret,
+        "debug": False,
+        "host": "0.0.0.0",
+        "port": port,
+        "redownload_steam": False,
+        "root_path": root_path,
+    }
+    server_obj.state = "Doing reciever bootstrap"
+    server_obj.save()
+    try:
+        got = subprocess.check_output(
+            join(reciever_path, "reciever.bat"), cwd=reciever_path, shell=True
+        ).decode("utf-8")
+        server_obj.state = "Done with bootstrap"
+    except Exception as e:
+        server_obj.state = "Recieved error during reciever bootstrap: {}".format(e)
+    # create server.json
+    server_obj.save()
+    config_path = join(reciever_path, "server.json")
+    with open(config_path, "w") as file:
+        file.write(dumps(config))
+    server_obj.save()
 
 
 def get_hash(input):

@@ -21,15 +21,26 @@ from django.utils.html import mark_safe
 from django.contrib.auth.models import Group
 from django import forms
 from django.contrib import admin
-from webgui.util import do_component_file_apply, get_server_hash, run_apx_command
+from webgui.util import (
+    do_component_file_apply,
+    get_server_hash,
+    run_apx_command,
+    get_random_string,
+    get_secret,
+    RECIEVER_DOWNLOAD_FROM,
+    get_free_tcp_port,
+    bootstrap_reciever,
+)
 from json import loads
 from datetime import datetime, timedelta
 import pytz
 import tarfile
 from os import unlink, mkdir, linesep
 from os.path import join, exists
-from wizard.settings import MEDIA_ROOT
+from wizard.settings import MEDIA_ROOT, BASE_DIR
 from math import floor
+from django.urls import path
+from django.http import HttpResponseRedirect
 
 admin.site.site_url = None
 admin.site.site_title = "APX"
@@ -163,7 +174,60 @@ class RaceConditionsAdmin(admin.ModelAdmin):
 
 @admin.register(Server)
 class ServerAdmin(admin.ModelAdmin):
+    change_list_template = "admin/server_list.html"
     actions = ["reset_status", "get_thumbnails"]
+
+    def get_urls(self):
+        urls = super().get_urls()
+        my_urls = [
+            path("wizard/", self.run_wizard),
+        ]
+        return my_urls + urls
+
+    def run_wizard(self, request):
+        root = BASE_DIR
+        from os.path import exists, join
+        import requests, zipfile, io
+        from json import dumps
+        from threading import Thread
+
+        server_children = join(root, "server_children")
+        if not exists(server_children):
+            mkdir(server_children)
+
+        public_secret = get_random_string(20)
+        secret = get_secret(20)
+        port = get_free_tcp_port(5, 1337)
+
+        server_path = join(server_children, public_secret)
+        if not exists(server_path):
+            mkdir(server_path)
+            # download the release
+            r = requests.get(RECIEVER_DOWNLOAD_FROM)
+            z = zipfile.ZipFile(io.BytesIO(r.content))
+            z.extractall(server_path)
+
+            # create server tuple
+
+            new_server = Server()
+            new_server.public_secret = public_secret
+            new_server.secret = secret
+            new_server.url = "http://localhost:{}/".format(port)
+            new_server.name = "New APX server"
+            new_server.save()
+
+            background_thread = Thread(
+                target=bootstrap_reciever,
+                args=(server_path, new_server, port, secret),
+                daemon=True,
+            )
+            background_thread.start()
+
+        else:
+            self.message_user(
+                request, "The server is already existing", level=messages.WARNING
+            )
+        return HttpResponseRedirect("../")
 
     def reset_status(self, request, queryset):
         for server in queryset:
