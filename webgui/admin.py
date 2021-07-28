@@ -119,13 +119,20 @@ class EventAdmin(admin.ModelAdmin):
         )
         return form
 
-    list_display = ("name", "json_link")
-
-    def json_link(self, obj):
-        return mark_safe("<a target='blank' href='/json/{}/'>JSON</a>".format(obj.pk))
-
-    json_link.allow_tags = True
-    json_link.short_description = "Event configuration"
+    list_display = (
+        "name",
+        "damage",
+        "clients",
+        "rejoin",
+        "allow_auto_clutch",
+        "allow_ai_toggle",
+        "allow_traction_control",
+        "allow_anti_lock_brakes",
+        "allow_stability_control",
+        "ai_clients",
+        "real_name",
+        "replays",
+    )
 
 
 @admin.register(RaceSessions)

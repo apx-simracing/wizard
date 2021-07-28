@@ -9,6 +9,7 @@ from shutil import copy
 from os import remove, linesep
 from collections import OrderedDict
 from json import loads
+from django.contrib import messages
 from django.core.validators import RegexValidator, MinValueValidator, MaxValueValidator
 from webgui.util import (
     livery_filename,
@@ -580,6 +581,26 @@ class EventRejoinRules(models.TextChoices):
     SI = "3", "yes including setup"
 
 
+class EventRejoinRules(models.TextChoices):
+    N = "0", "No rejoin"
+    F = "1", "yes with fresh vehicle"
+    S = "2", "yes with vehicle in same physical condition"
+    SI = "3", "yes including setup"
+
+
+class EventFlagRules(models.TextChoices):
+    N = "0", "None"
+    P = "1", "Penalties only"
+    PFC = "2", "Penalties & full-course yellows"
+    EDQ = "3", "Everything except DQs"
+
+
+class EventFailureRates(models.TextChoices):
+    N = "0", "None"
+    NOR = "1", "Normal"
+    TS = "2", "Timescaled"
+
+
 class Event(models.Model):
     name = models.CharField(default="", max_length=200)
     conditions = models.ForeignKey(RaceConditions, on_delete=models.DO_NOTHING)
@@ -679,6 +700,36 @@ class Event(models.Model):
         help_text="Race rejoin ruling",
     )
 
+    rules = models.CharField(
+        max_length=50,
+        choices=EventFlagRules.choices,
+        default=EventFlagRules.N,
+        blank=False,
+        null=False,
+        help_text="Race rules",
+    )
+
+    fuel_multiplier = models.IntegerField(
+        default=1,
+        validators=[MinValueValidator(0), MaxValueValidator(7)],
+        help_text="Fuel usage multiplier, use 0 to disable completely",
+    )
+
+    tire_multiplier = models.IntegerField(
+        default=1,
+        validators=[MinValueValidator(0), MaxValueValidator(7)],
+        help_text="Tire usage multiplier, use 0 to disable completely",
+    )
+
+    failures = models.CharField(
+        max_length=50,
+        choices=EventFailureRates.choices,
+        default=EventFailureRates.N,
+        blank=False,
+        null=False,
+        help_text="Mechanical failure rates",
+    )
+
     clients = models.IntegerField(
         default=20,
         validators=[MinValueValidator(10), MaxValueValidator(109)],
@@ -719,6 +770,76 @@ class Event(models.Model):
         help_text="Port for the webui_port. Must be unique on all managed servers",
     )
 
+    """
+        Allowed driving aids
+    """
+
+    allow_traction_control = models.IntegerField(
+        default=3,
+        validators=[MinValueValidator(0), MaxValueValidator(3)],
+        help_text="Allow traction control",
+    )
+
+    allow_anti_lock_brakes = models.IntegerField(
+        default=2,
+        validators=[MinValueValidator(0), MaxValueValidator(2)],
+        help_text="Allow Anti-Lock Braking",
+    )
+
+    allow_stability_control = models.IntegerField(
+        default=2,
+        validators=[MinValueValidator(0), MaxValueValidator(2)],
+        help_text="Allow Stability Control",
+    )
+
+    allow_auto_shifting = models.IntegerField(
+        default=2,
+        validators=[MinValueValidator(0), MaxValueValidator(3)],
+        help_text="Allow Stability Control",
+    )
+
+    allow_steering_help = models.IntegerField(
+        default=2,
+        validators=[MinValueValidator(0), MaxValueValidator(3)],
+        help_text="Allow steering help",
+    )
+
+    allow_braking_help = models.IntegerField(
+        default=2,
+        validators=[MinValueValidator(0), MaxValueValidator(2)],
+        help_text="Allow braking help",
+    )
+
+    allow_auto_clutch = models.BooleanField(
+        default=True,
+        help_text="Allow auto clutch",
+    )
+
+    allow_invulnerability = models.BooleanField(
+        default=False,
+        help_text="Allow Invulnerability",
+    )
+
+    allow_auto_pit_stop = models.BooleanField(
+        default=False,
+        help_text="Allow auto pit stop",
+    )
+
+    allow_opposite_lock = models.BooleanField(
+        default=False,
+        help_text="Allow opposite lock",
+    )
+
+    allow_spin_recovery = models.BooleanField(
+        default=False,
+        help_text="Allow spin recovery",
+    )
+
+    allow_ai_toggle = models.BooleanField(
+        default=False,
+        help_text="Allow AI toggle",
+    )
+
     @property
     def multiplayer_json(self):
         blob = OrderedDict()
@@ -732,6 +853,42 @@ class Event(models.Model):
             blob["Multiplayer Server Options"]["Lessen Restrictions"] = True
         blob["Multiplayer Server Options"]["Enforce Real Name"] = self.real_name
         blob["Multiplayer Server Options"]["Default Game Name"] = self.name
+
+        # control aids
+        blob["Multiplayer Server Options"][
+            "Allowed Traction Control"
+        ] = self.allow_traction_control
+        blob["Multiplayer Server Options"][
+            "Allowed Antilock Brakes"
+        ] = self.allow_anti_lock_brakes
+        blob["Multiplayer Server Options"][
+            "Allowed Stability Control"
+        ] = self.allow_stability_control
+        blob["Multiplayer Server Options"][
+            "Allowed Auto Shift"
+        ] = self.allow_auto_shifting
+        blob["Multiplayer Server Options"][
+            "Allowed Steering Help"
+        ] = self.allow_steering_help
+        blob["Multiplayer Server Options"][
+            "Allowed Brake Help"
+        ] = self.allow_braking_help
+        blob["Multiplayer Server Options"][
+            "Allowed Auto Clutch"
+        ] = self.allow_auto_clutch
+        blob["Multiplayer Server Options"][
+            "Allowed Invulnerability"
+        ] = self.allow_invulnerability
+        blob["Multiplayer Server Options"][
+            "Allowed Auto Pit"
+        ] = self.allow_auto_pit_stop
+        blob["Multiplayer Server Options"][
+            "Allowed Opposite Lock"
+        ] = self.allow_opposite_lock
+        blob["Multiplayer Server Options"][
+            "Allowed Spin Recovery"
+        ] = self.allow_spin_recovery
+        blob["Multiplayer Server Options"]["Allow AI Toggle"] = self.allow_ai_toggle
 
         blob["Multiplayer General Options"] = OrderedDict()
         blob["Multiplayer General Options"]["Download Custom Skins"] = False
@@ -747,11 +904,41 @@ class Event(models.Model):
         blob["Game Options"] = OrderedDict()
         blob["Game Options"]["MULTI Damage Multiplier"] = self.damage
         blob["Game Options"]["Record Replays"] = self.replays
+        blob["Game Options"]["CURNT Fuel Consumption Multiplier"] = int(
+            self.fuel_multiplier
+        )
+        blob["Game Options"]["GPRIX Fuel Consumption Multiplier"] = int(
+            self.fuel_multiplier
+        )
+        blob["Game Options"]["MULTI Fuel Consumption Multiplier"] = int(
+            self.fuel_multiplier
+        )
+        blob["Game Options"]["RPLAY Fuel Consumption Multiplier"] = int(
+            self.fuel_multiplier
+        )
+        blob["Game Options"]["CHAMP Fuel Consumption Multiplier"] = int(
+            self.fuel_multiplier
+        )
+
+        blob["Game Options"]["CURNT Tire Wear Multiplier"] = int(self.tire_multiplier)
+        blob["Game Options"]["GPRIX Tire Wear Multiplier"] = int(self.tire_multiplier)
+        blob["Game Options"]["MULTI Tire Wear Multiplier"] = int(self.tire_multiplier)
+        blob["Game Options"]["RPLAY Tire Wear Multiplier"] = int(self.tire_multiplier)
+        blob["Game Options"]["CHAMP Tire Wear Multiplier"] = int(self.tire_multiplier)
+
+        blob["Game Options"]["Record Replays"] = self.replays
+
         blob["Miscellaneous"] = OrderedDict()
         blob["Miscellaneous"]["WebUI port"] = self.webui_port
+        blob["Race Conditions"] = OrderedDict()
         if self.real_weather:
             blob["Race Conditions"]["MULTI Weather"] = 5
             blob["Race Conditions"]["GPRIX Weather"] = 5
+        blob["Race Conditions"]["MULTI Flag Rules"] = int(self.rules)
+        blob["Race Conditions"]["RPLAY Flag Rules"] = int(self.rules)
+        blob["Race Conditions"]["CHAMP Flag Rules"] = int(self.rules)
+        blob["Race Conditions"]["CURNT Flag Rules"] = int(self.rules)
+        blob["Race Conditions"]["GPRIX Flag Rules"] = int(self.rules)
         return dumps(blob)
 
     def __str__(self):
