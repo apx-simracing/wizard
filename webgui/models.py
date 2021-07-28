@@ -601,6 +601,23 @@ class EventFailureRates(models.TextChoices):
     TS = "2", "Timescaled"
 
 
+class EventRaceTimeScale(models.TextChoices):
+    P = "-1", "Race %"
+    N = "0", "None"
+    R = "1", "Normal"
+    F2 = "2", "x2"
+    F3 = "3", "x3"
+    F4 = "4", "x4"
+    F5 = "5", "x5"
+    F10 = "10", "x10"
+    F15 = "15", "x15"
+    F20 = "20", "x20"
+    F25 = "25", "x25"
+    F30 = "30", "x30"
+    F45 = "45", "x45"
+    F60 = "60", "x60"
+
+
 class Event(models.Model):
     name = models.CharField(default="", max_length=200)
     conditions = models.ForeignKey(RaceConditions, on_delete=models.DO_NOTHING)
@@ -707,6 +724,16 @@ class Event(models.Model):
         blank=False,
         null=False,
         help_text="Race rules",
+    )
+
+    race_multiplier = models.CharField(
+        max_length=50,
+        choices=EventRaceTimeScale.choices,
+        default=EventRaceTimeScale.R,
+        blank=False,
+        null=False,
+        help_text="Race time scale",
+        verbose_name="Race time scale",
     )
 
     fuel_multiplier = models.IntegerField(
@@ -939,6 +966,13 @@ class Event(models.Model):
         blob["Race Conditions"]["CHAMP Flag Rules"] = int(self.rules)
         blob["Race Conditions"]["CURNT Flag Rules"] = int(self.rules)
         blob["Race Conditions"]["GPRIX Flag Rules"] = int(self.rules)
+
+        blob["Race Conditions"]["MULTI RaceTimeScale"] = int(self.race_multiplier)
+        blob["Race Conditions"]["RPLAY RaceTimeScale"] = int(self.race_multiplier)
+        blob["Race Conditions"]["CHAMP RaceTimeScale"] = int(self.race_multiplier)
+        blob["Race Conditions"]["CURNT RaceTimeScale"] = int(self.race_multiplier)
+        blob["Race Conditions"]["GPRIX RaceTimeScale"] = int(self.race_multiplier)
+
         return dumps(blob)
 
     def __str__(self):

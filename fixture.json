@@ -27,6 +27,7 @@
       "admin_password": "foobar",
       "rejoin": "2",
       "rules": "1",
+      "race_multiplier": "1",
       "fuel_multiplier": 1,
       "tire_multiplier": 3,
       "failures": "1",

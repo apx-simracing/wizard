@@ -200,9 +200,7 @@ class ServerAdmin(admin.ModelAdmin):
 
     list_display = (
         "name",
-        "server_name",
         "event",
-        "track_name",
         "state",
         "status_info",
     )
@@ -270,24 +268,6 @@ class ServerAdmin(admin.ModelAdmin):
 
     def get_status(self, obj):
         return obj.status
-
-    def server_name(self, obj):
-        status = self.get_status(obj)
-        if not obj or not status:
-            return "-"
-        json = loads(status)
-        return json["name"] if "name" in json else "-"
-
-    server_name.short_description = "Server name"
-
-    def track_name(self, obj):
-        status = self.get_status(obj)
-        if not obj or not status:
-            return "-"
-        json = loads(status)
-        return json["track"] if "track" in status else "-"
-
-    track_name.short_description = "Track"
 
 
 @admin.register(TickerMessage)
