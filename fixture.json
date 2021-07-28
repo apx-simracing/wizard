@@ -9,10 +9,10 @@
   },
   {
     "model": "webgui.event",
-    "pk": 123,
+    "pk": 1,
     "fields": {
       "name": "Demo event",
-      "conditions": 123,
+      "conditions": 1,
       "signup_active": false,
       "start_type": "S",
       "real_weather": false,
