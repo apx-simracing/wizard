@@ -1111,7 +1111,7 @@ class Server(models.Model):
     @property
     def status_info(self):
         status = self.status
-        if self.state:
+        if self.state and not self.status:
             if "failed" in self.state or "Exception" in self.state:
                 return mark_safe(
                     '<img src="{}admin/img/icon-no.svg" alt="Not Running"> {}</br>'.format(
