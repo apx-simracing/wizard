@@ -130,15 +130,6 @@ class EventAdmin(admin.ModelAdmin):
         )
         return form
 
-    def ports(self, obj):
-        if not obj:
-            return "-"
-        return "Web:{}/Sim:{}/HTTP:{}".format(
-            obj.webui_port, obj.sim_port, obj.http_port
-        )
-
-    ports.short_description = "Ports"
-
     def all_clients(self, obj):
         if not obj:
             return "0/0"
@@ -148,7 +139,6 @@ class EventAdmin(admin.ModelAdmin):
 
     list_display = (
         "name",
-        "ports",
         "damage",
         "all_clients",
         "rejoin",
@@ -287,7 +277,10 @@ class ServerAdmin(admin.ModelAdmin):
     list_display = (
         "name",
         "event",
+        "state",
         "status_info",
+        "is_created_by_apx",
+        "ports",
     )
     fieldsets = [
         (
@@ -299,6 +292,9 @@ class ServerAdmin(admin.ModelAdmin):
                     "secret",
                     "public_secret",
                     "session_id",
+                    "sim_port",
+                    "http_port",
+                    "webui_port",
                 ]
             },
         ),
@@ -313,6 +309,7 @@ class ServerAdmin(admin.ModelAdmin):
                     "action",
                     "status_info",
                     "state",
+                    "is_created_by_apx",
                     "update_on_build",
                     "update_weather_on_start",
                 ]
@@ -329,6 +326,7 @@ class ServerAdmin(admin.ModelAdmin):
             return self.readonly_fields + (
                 "event",
                 "status_info",
+                "is_created_by_apx",
                 "state",
                 "public_secret",
                 "logfile",
@@ -336,6 +334,7 @@ class ServerAdmin(admin.ModelAdmin):
         return self.readonly_fields + (
             "is_running",
             "status_info",
+            "is_created_by_apx",
             "state",
             "public_secret",
             "logfile",

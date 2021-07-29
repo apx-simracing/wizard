@@ -13,6 +13,7 @@ from wizard.settings import (
 )
 import hashlib
 import subprocess
+from urllib.parse import urlparse
 from re import match
 from django.dispatch import receiver
 from os.path import join, exists, basename
@@ -52,7 +53,7 @@ FILE_NAME_SUFFIXES = [
 
 
 RECIEVER_COMP_INFO = open(join(BASE_DIR, "release")).read()
-RECIEVER_DOWNLOAD_FROM = "https://github.com/apx-simracing/reciever/releases/download/R56/reciever-2021R56.zip"
+RECIEVER_DOWNLOAD_FROM = "http://localhost:8282/reciever-2021R56.zip"  # DEBUG ONLY
 
 
 def get_update_filename(instance, filename):
@@ -290,6 +291,36 @@ def bootstrap_reciever(root_path, server_obj, port, secret):
     except Exception as e:
         # Exceptions can't really handled at this point, so we are ignoring them
         pass
+
+    # set ports
+    other_servers = models.Server.objects.exclude(pk=server_obj.pk)
+    occupied_ports_tcp = []
+    occupied_ports_udp = []
+
+    server_url_parts = urlparse(server_obj.url)
+    server_parts = server_url_parts.netloc.split(":")
+    server_host = server_parts[0]
+
+    for server in other_servers:
+        # locate host
+        url_parts = urlparse(server.url)
+        parts = url_parts.netloc.split(":")
+        host = parts[0]
+
+        if host == server_host:
+            occupied_ports_tcp.append(server.http_port)
+            occupied_ports_tcp.append(server.webui_port)
+            occupied_ports_udp.append(server.sim_port)
+
+    webui_port = random.randint(1026, 35000)
+    sim_port = random.randint(55001, 65000)
+    http_port = random.randint(35001, 55000)
+
+    # random, I trust you! most likely bad idea, but okay
+
+    server_obj.sim_port = sim_port
+    server_obj.http_port = http_port
+    server_obj.webui_port = webui_port
 
     # create server.json
     server_obj.state = "Done with bootstrap"
@@ -818,6 +849,17 @@ def do_server_interaction(server):
         # save event json
         event_config = get_event_config(server.event.pk)
 
+        # add ports
+        event_config["server"]["overwrites"]["Multiplayer.JSON"][
+            "Multiplayer General Options"
+        ]["HTTP Server Port"] = int(server.http_port)
+        event_config["server"]["overwrites"]["Multiplayer.JSON"][
+            "Multiplayer General Options"
+        ]["Simulation Port"] = int(server.sim_port)
+        event_config["server"]["overwrites"]["Player.JSON"]["Miscellaneous"] = {}
+        event_config["server"]["overwrites"]["Player.JSON"]["Miscellaneous"][
+            "WebUI port"
+        ] = server.webui_port
         event_config["suffix"] = (
             server.event.mod_version
             if server.event and server.event.mod_version

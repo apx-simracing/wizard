@@ -44,6 +44,7 @@ import pytz
 from json import dumps
 
 USE_WAND = True
+ADDPREFIX = True
 try:
     from wand import image
     from wand.drawing import Drawing
@@ -791,24 +792,6 @@ class Event(models.Model):
         help_text="Enable or disable replays for this event",
     )
 
-    webui_port = models.IntegerField(
-        default=1025,
-        validators=[MinValueValidator(1025), MaxValueValidator(65535)],
-        help_text="Port for the webui_port. Must be unique on all managed servers",
-    )
-
-    sim_port = models.IntegerField(
-        default=54297,
-        validators=[MinValueValidator(1025), MaxValueValidator(65535)],
-        help_text="Port for the Simulation. Must be unique on all managed servers",
-    )
-
-    http_port = models.IntegerField(
-        default=64297,
-        validators=[MinValueValidator(1025), MaxValueValidator(65535)],
-        help_text="Port for the HTTP Server. Must be unique on all managed servers",
-    )
-
     """
         Allowed driving aids
     """
@@ -891,7 +874,9 @@ class Event(models.Model):
         if self.clients > 50:
             blob["Multiplayer Server Options"]["Lessen Restrictions"] = True
         blob["Multiplayer Server Options"]["Enforce Real Name"] = self.real_name
-        blob["Multiplayer Server Options"]["Default Game Name"] = self.name
+        blob["Multiplayer Server Options"]["Default Game Name"] = (
+            "[APX] {}".format(self.name[0:20]) if ADDPREFIX else self.name
+        )
 
         # control aids
         blob["Multiplayer Server Options"][
@@ -934,9 +919,6 @@ class Event(models.Model):
         blob["Multiplayer General Options"]["Net Connection Type"] = 6
         blob["Multiplayer General Options"]["Downstream Rated KBPS"] = self.downstream
         blob["Multiplayer General Options"]["Upstream Rated KBPS"] = self.upstream
-        blob["Multiplayer General Options"]["HTTP Server Port"] = int(self.http_port)
-        blob["Multiplayer General Options"]["Simulation Port"] = int(self.sim_port)
-
         return dumps(blob)
 
     @property
@@ -969,8 +951,6 @@ class Event(models.Model):
 
         blob["Game Options"]["Record Replays"] = self.replays
 
-        blob["Miscellaneous"] = OrderedDict()
-        blob["Miscellaneous"]["WebUI port"] = self.webui_port
         blob["Race Conditions"] = OrderedDict()
         if self.real_weather:
             blob["Race Conditions"]["MULTI Weather"] = 5
@@ -1016,6 +996,24 @@ class ServerBranch(models.TextChoices):
 
 
 class Server(models.Model):
+
+    webui_port = models.IntegerField(
+        default=1025,
+        validators=[MinValueValidator(1025), MaxValueValidator(65535)],
+        help_text="Port for the webui_port. Must be unique on all managed servers",
+    )
+
+    sim_port = models.IntegerField(
+        default=54297,
+        validators=[MinValueValidator(1025), MaxValueValidator(65535)],
+        help_text="Port for the Simulation. Must be unique on all managed servers",
+    )
+
+    http_port = models.IntegerField(
+        default=64297,
+        validators=[MinValueValidator(1025), MaxValueValidator(65535)],
+        help_text="Port for the HTTP Server. Must be unique on all managed servers",
+    )
     name = models.CharField(
         blank=True,
         max_length=500,
@@ -1109,6 +1107,21 @@ class Server(models.Model):
         return contents
 
     @property
+    def is_created_by_apx(self):
+        path = join(BASE_DIR, "server_children", self.public_secret)
+        return exists(path)
+
+    @property
+    def ports(self):
+        return "TCP: {}, {}/ UDP: {}, {}, {}".format(
+            self.sim_port,
+            self.http_port,
+            self.sim_port,
+            self.http_port + 1,
+            self.http_port + 2,
+        )
+
+    @property
     def status_info(self):
         status = self.status
         if self.state and not self.status:
@@ -1192,6 +1205,39 @@ class Server(models.Model):
 
         if not str(self.url).endswith("/"):
             raise ValidationError("The server url must end with a slash!")
+
+        other_servers = Server.objects.exclude(pk=self.pk)
+        occupied_ports_tcp = []
+        occupied_ports_udp = []
+
+        from urllib.parse import urlparse
+
+        server_url_parts = urlparse(self.url)
+        server_parts = server_url_parts.netloc.split(":")
+        server_host = server_parts[0]
+
+        for server in other_servers:
+            # locate host
+            url_parts = urlparse(server.url)
+            parts = url_parts.netloc.split(":")
+            host = parts[0]
+
+            if host == server_host:
+                occupied_ports_tcp.append(server.http_port)
+                occupied_ports_tcp.append(server.webui_port)
+                occupied_ports_udp.append(server.sim_port)
+
+        if (
+            self.http_port in occupied_ports_tcp
+            or self.webui_port in occupied_ports_tcp
+            or self.sim_port in occupied_ports_udp
+        ):
+            raise ValidationError(
+                "The ports of this server are already taken. TCP ports taken: {}, UDP ports taken: {}".format(
+                    occupied_ports_tcp, occupied_ports_tcp
+                )
+            )
+
         if (
             self.action != ""
             or self.server_key is None
