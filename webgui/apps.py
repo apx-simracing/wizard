@@ -3,6 +3,7 @@ from django.core import management
 from django.core.management.commands import loaddata
 from threading import Thread
 from sys import argv
+from time import sleep
 
 
 class WebguiConfig(AppConfig):

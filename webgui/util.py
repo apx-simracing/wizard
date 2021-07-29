@@ -25,11 +25,12 @@ from django.core.exceptions import ValidationError
 from django.db.models.signals import post_save
 import socket
 import discord
-from requests import post
+from requests import post, get
 import secrets
 import string
 import socket
 import random
+import zipfile, io
 
 FILE_NAME_SUFFIXES = [
     ".json",
@@ -243,20 +244,33 @@ def get_secret(length=15):
     return secret
 
 
-def get_free_tcp_port(max_tries=10, default_port=8000):
+def get_free_tcp_port(max_tries=10, default_port=8000, not_allowed: list = []):
     port = default_port
+    if port in not_allowed:
+        port = random.randint(port, 65534)
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     for i in range(1, max_tries):
         try:
+            if port in not_allowed:
+                port = random.randint(port, 65534)
             s.connect(("localhost", int(port)))
             s.shutdown(2)
-            port = randint(port, 65534)
+            port = random.randint(port, 65534)
         except:
             break
     return port
 
 
 def bootstrap_reciever(root_path, server_obj, port, secret):
+
+    server_obj.state = "Downloading reciever release"
+    server_obj.save()
+    r = get(RECIEVER_DOWNLOAD_FROM)
+    z = zipfile.ZipFile(io.BytesIO(r.content))
+    z.extractall(root_path)
+    server_obj.state = "Extracted reciever release"
+    server_obj.save()
+
     reciever_path = join(root_path, "reciever")
     config = {
         "auth": secret,
@@ -269,18 +283,30 @@ def bootstrap_reciever(root_path, server_obj, port, secret):
     server_obj.state = "Doing reciever bootstrap"
     server_obj.save()
     try:
+        # TODO: find solution for admin issue
         got = subprocess.check_output(
             join(reciever_path, "reciever.bat"), cwd=reciever_path, shell=True
         ).decode("utf-8")
-        server_obj.state = "Done with bootstrap"
     except Exception as e:
-        server_obj.state = "Recieved error during reciever bootstrap: {}".format(e)
+        # Exceptions can't really handled at this point, so we are ignoring them
+        pass
+
     # create server.json
+    server_obj.state = "Done with bootstrap"
     server_obj.save()
     config_path = join(reciever_path, "server.json")
     with open(config_path, "w") as file:
         file.write(dumps(config))
-    server_obj.save()
+    try:
+        for i in range(0, 5):
+            server_obj.state = "Trying to collect keys. Try {} of 5".format(i)
+            server_obj.save()
+            do_server_interaction(server_obj)
+        server_obj.state = "Ready for deployment"
+        server_obj.save()
+    except:
+        server_obj.state = "Failed to collect keys"
+        server_obj.save()
 
 
 def get_hash(input):

@@ -187,7 +187,6 @@ class ServerAdmin(admin.ModelAdmin):
     def run_wizard(self, request):
         root = BASE_DIR
         from os.path import exists, join
-        import requests, zipfile, io
         from json import dumps
         from threading import Thread
 
@@ -197,23 +196,30 @@ class ServerAdmin(admin.ModelAdmin):
 
         public_secret = get_random_string(20)
         secret = get_secret(20)
-        port = get_free_tcp_port(5, 1337)
+        servers = Server.objects.all()
+        taken_ports = []
+        for server in servers:
+            url = server.url
+            if "localhost" in url:
+                # it's on the same box
+                port = url.replace("http://localhost:", "").replace("/", "")
+                taken_ports.append(int(port))
+        port = get_free_tcp_port(5, 8080, taken_ports)
+        if port in taken_ports:
+            self.message_user(
+                request, "We could not get a free port", level=messages.ERROR
+            )
+            return HttpResponseRedirect("../")
 
         server_path = join(server_children, public_secret)
         if not exists(server_path):
             mkdir(server_path)
-            # download the release
-            r = requests.get(RECIEVER_DOWNLOAD_FROM)
-            z = zipfile.ZipFile(io.BytesIO(r.content))
-            z.extractall(server_path)
-
-            # create server tuple
-
             new_server = Server()
             new_server.public_secret = public_secret
             new_server.secret = secret
             new_server.url = "http://localhost:{}/".format(port)
             new_server.name = "New APX server"
+            new_server.state = "Created server element"
             new_server.save()
 
             background_thread = Thread(
@@ -281,7 +287,6 @@ class ServerAdmin(admin.ModelAdmin):
     list_display = (
         "name",
         "event",
-        "state",
         "status_info",
     )
     fieldsets = [

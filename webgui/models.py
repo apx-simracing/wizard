@@ -5,7 +5,7 @@ from django.conf import settings
 from django import forms
 from django.dispatch import receiver
 from os.path import isfile, basename
-from shutil import copy
+from shutil import copy, rmtree
 from os import remove, linesep
 from collections import OrderedDict
 from json import loads
@@ -31,7 +31,7 @@ from webgui.util import (
     RECIEVER_COMP_INFO,
     get_plugin_root_path,
 )
-from wizard.settings import FAILURE_THRESHOLD, MEDIA_ROOT, STATIC_URL
+from wizard.settings import FAILURE_THRESHOLD, MEDIA_ROOT, STATIC_URL, BASE_DIR
 from webgui.storage import OverwriteStorage
 from django.utils.html import mark_safe
 import re
@@ -1111,6 +1111,14 @@ class Server(models.Model):
     @property
     def status_info(self):
         status = self.status
+        if self.state:
+            if "failed" in self.state or "Exception" in self.state:
+                return mark_safe(
+                    '<img src="{}admin/img/icon-no.svg" alt="Not Running"> {}</br>'.format(
+                        STATIC_URL, self.state
+                    )
+                )
+            return self.state
         # no status to report (e. g. new server)
         response = '<img src="{}admin/img/icon-no.svg" alt="Not Running"> Server is not running</br>'.format(
             STATIC_URL
@@ -1197,6 +1205,23 @@ class Server(models.Model):
 
 def background_action_server(server):
     do_server_interaction(server)
+
+
+@receiver(models.signals.pre_delete, sender=Server)
+def remove_server_children(sender, instance, **kwargs):
+    background_thread = Thread(
+        target=remove_server_children_thread, args=(instance,), daemon=True
+    )
+    background_thread.start()
+
+
+def remove_server_children_thread(instance):
+    id = instance.public_secret
+    server_children = join(BASE_DIR, "server_children", id)
+    # lock the path to prevent the children management module to start stuff again
+    lock_path = join(server_children, "delete.lock")
+    with open(lock_path, "w") as file:
+        file.write("bye")
 
 
 def background_action_chat(chat):
