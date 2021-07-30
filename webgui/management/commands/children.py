@@ -29,20 +29,30 @@ class Command(BaseCommand):
         folders = listdir(root_path)
         for secret in folders:
             print("Processing {} to exit...".format(secret))
+            server_obj = Server.objects.filter(public_secret=secret).first()
+            if server_obj:
+                server_obj.status = None
+                server_obj.save()
+
             expected_path = join(BASE_DIR, "server_children", secret)
             # TODO: SOMETHING IS STILL STRANGE HERE
             something_running = False
             for process in process_iter():
                 try:
                     path = process.exe()
-                    if path.startswith(expected_path):
-                        print("Killing process {} b/c of origin path".format(process))
-                        process.kill()
-                    # find the cmd
-                    cmd_line = process.cwd()
-                    if expected_path in cmd_line:
-                        print("Killing process {} b/c of cwd path".format(process))
-                        process.kill()
+                    if "rFactor2 Dedicated.exe" not in path:
+                        if path.startswith(expected_path):
+                            print(
+                                "Killing process {} b/c of origin path".format(process)
+                            )
+                            process.kill()
+                        # find the cmd
+                        cmd_line = process.cwd()
+                        if expected_path in cmd_line:
+                            print("Killing process {} b/c of cwd path".format(process))
+                            process.kill()
+                    else:
+                        print("There is an server running. This is not our job.")
                 except Exception as e:
                     pass  # there will be a lot of access dened messages
 
