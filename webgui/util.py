@@ -263,14 +263,18 @@ def get_free_tcp_port(max_tries=10, default_port=8000, not_allowed: list = []):
 
 
 def bootstrap_reciever(root_path, server_obj, port, secret):
-
-    server_obj.state = "Downloading reciever release"
-    server_obj.save()
-    r = get(RECIEVER_DOWNLOAD_FROM)
-    z = zipfile.ZipFile(io.BytesIO(r.content))
-    z.extractall(root_path)
-    server_obj.state = "Extracted reciever release"
-    server_obj.save()
+    try:
+        server_obj.state = "Downloading reciever release"
+        server_obj.save()
+        r = get(RECIEVER_DOWNLOAD_FROM)
+        z = zipfile.ZipFile(io.BytesIO(r.content))
+        z.extractall(root_path)
+        server_obj.state = "Extracted reciever release"
+        server_obj.save()
+    except:
+        server_obj.state = "Download for reciever failed"
+        server_obj.save()
+        return False
 
     reciever_path = join(root_path, "reciever")
     config = {
