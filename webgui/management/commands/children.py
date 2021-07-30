@@ -158,6 +158,17 @@ class Command(BaseCommand):
                                     if process_path.startswith(path):
                                         print("killing", process_path)
                                         process.kill()
+                                    cmd_line = process.cwd()
+                                    expected_path = join(
+                                        BASE_DIR, "server_children", secret
+                                    )
+                                    if expected_path in cmd_line:
+                                        print(
+                                            "Killing process {} b/c of cwd path".format(
+                                                process
+                                            )
+                                        )
+                                        process.kill()
                                 except:
                                     pass
                             if exists(path):
