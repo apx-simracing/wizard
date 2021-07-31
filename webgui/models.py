@@ -30,6 +30,7 @@ from webgui.util import (
     do_component_file_apply,
     RECIEVER_COMP_INFO,
     get_plugin_root_path,
+    create_firewall_script,
 )
 from wizard.settings import FAILURE_THRESHOLD, MEDIA_ROOT, STATIC_URL, BASE_DIR
 from webgui.storage import OverwriteStorage
@@ -1116,6 +1117,23 @@ class Server(models.Model):
         return exists(path)
 
     @property
+    def firewall_rules(self):
+        rules = ""
+
+        name = self.public_secret
+        for port in [self.sim_port, self.http_port]:
+            rules = (
+                rules
+                + f'New-NetFirewallRule -DisplayName "APX RULE {name} ({port} TCP)" -Direction Inbound -LocalPort {port} -Protocol TCP -Action Allow\n'
+            )
+        for port in [self.sim_port, self.http_port + 1, self.http_port + 2]:
+            rules = (
+                rules
+                + f'New-NetFirewallRule -DisplayName "APX RULE {name} ({port} UDP)" -Direction Inbound -LocalPort {port} -Protocol UDP -Action Allow\n'
+            )
+        return rules
+
+    @property
     def ports(self):
         return "TCP: {}, {}/ UDP: {}, {}, {}".format(
             self.sim_port,
@@ -1251,6 +1269,8 @@ class Server(models.Model):
                 target=background_action_server, args=(self,), daemon=True
             )
             background_thread.start()
+
+        create_firewall_script(self)
 
 
 def background_action_server(server):

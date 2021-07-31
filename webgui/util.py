@@ -10,6 +10,7 @@ from wizard.settings import (
     OPENWEATHERAPI_KEY,
     BASE_DIR,
     PUBLIC_URL,
+    BASE_DIR,
 )
 import hashlib
 import subprocess
@@ -739,6 +740,31 @@ def update_weather(session):
                 wet_file_content.append(line + "=(" + str(block[line]) + ")")
         session.weather = linesep.join(wet_file_content)
         session.save()
+
+
+def create_firewall_script(server):
+    content = 'Remove-NetFirewallRule -DisplayName "APX RULE {}*"'.format(
+        server.public_secret
+    )
+
+    content = content + "\n" + server.firewall_rules
+    firewall_paths = join(BASE_DIR, "firewall_rules")
+    if not exists(firewall_paths):
+        mkdir(firewall_paths)
+    path = join(BASE_DIR, firewall_paths, "firewall" + server.public_secret + ".ps1")
+    with open(path, "w") as file:
+        file.write(content)
+
+    path = join(
+        BASE_DIR, firewall_paths, "invoke_firewall" + server.public_secret + ".bat"
+    )
+    with open(path, "w") as file:
+        content = (
+            "@echo off\npowershell .\\firewall"
+            + server.public_secret
+            + ".ps1\necho Done adding rules\npause"
+        )
+        file.write(content)
 
 
 def do_server_interaction(server):
