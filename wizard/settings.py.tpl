@@ -118,11 +118,21 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.1/howto/static-files/
 
-STATIC_URL = "/static/"
+WIZARD_PORT = 8000
 
-MEDIA_URL = "http://localhost:8000/"
+LISTEN_IP = "127.0.0.1"
 
-PUBLIC_URL = "http://localhost:8000/"
+STATIC_PORT = 8383
+
+STATIC_ROOT = join(str(BASE_DIR), "static")
+
+STATIC_URL = f"http://localhost:{STATIC_PORT}/"
+
+MEDIA_PORT = 8282
+
+MEDIA_URL = f"http://localhost:{MEDIA_PORT}/"
+
+PUBLIC_URL = f"http://localhost:{WIZARD_PORT}/"
 
 FAILURE_THRESHOLD = 500
 

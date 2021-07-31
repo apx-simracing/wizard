@@ -13,5 +13,5 @@ if not exist "db.sqlite3" (
 	python.exe manage.py migrate
 	python.exe manage.py createsuperuser
 ) else (
-	python.exe manage.py runserver
+	python.exe apx.py
 )
