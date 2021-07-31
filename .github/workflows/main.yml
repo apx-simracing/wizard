@@ -34,9 +34,6 @@ jobs:
       - name: show working directory
         run: ls /home/runner/work/wizard/wizard
 
-      - name: remove settings.py
-        run: rm /home/runner/work/wizard/wizard/wizard/settings.py
-
       - name: Download APX
         run: curl https://codeload.github.com/apx-simracing/cli/zip/main -o /home/runner/work/wizard/apx-build/cli.zip
         
