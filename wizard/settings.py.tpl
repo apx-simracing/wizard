@@ -136,8 +136,6 @@ PUBLIC_URL = f"http://localhost:{WIZARD_PORT}/"
 
 FAILURE_THRESHOLD = 500
 
-MEDIA_URL = "http://localhost:8181/"
-
 MEDIA_ROOT = join(str(BASE_DIR), "uploads")
 
 APX_ROOT = join(str(BASE_DIR), "cli")
