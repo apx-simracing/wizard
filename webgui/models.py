@@ -76,7 +76,7 @@ alphanumeric_validator = RegexValidator(
 )
 
 alphanumeric_validator_dots = RegexValidator(
-    r"^[0-9a-zA-Z.]*$", "Only alphanumeric characters and dots are allowed."
+    r"^[0-9a-zA-Z.\%]*$", "Only alphanumeric characters and dots are allowed."
 )
 
 
@@ -620,7 +620,7 @@ class EventRaceTimeScale(models.TextChoices):
 
 
 class Event(models.Model):
-    name = models.CharField(default="", max_length=200)
+    name = models.CharField(default="", max_length=20)
     conditions = models.ForeignKey(RaceConditions, on_delete=models.DO_NOTHING)
     entries = models.ManyToManyField(Entry, blank=True)
     tracks = models.ManyToManyField(Track)
@@ -993,6 +993,10 @@ class ServerStatus(models.TextChoices):
 class ServerBranch(models.TextChoices):
     RC = "release-candidate", "release-candidate"
     P = "public", "public"
+    PR = "previous-release", "previous-release"
+    V21 = "v1121", "v1121"
+    V22 = "v1122", "v1122"
+    OLD = "old-ui", "old-ui"
 
 
 class Server(models.Model):
