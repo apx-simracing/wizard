@@ -32,7 +32,16 @@ from webgui.util import (
     get_plugin_root_path,
     create_firewall_script,
 )
-from wizard.settings import FAILURE_THRESHOLD, MEDIA_ROOT, STATIC_URL, BASE_DIR
+from wizard.settings import (
+    FAILURE_THRESHOLD,
+    MEDIA_ROOT,
+    STATIC_URL,
+    BASE_DIR,
+    MAX_SERVERS,
+    MAX_UPSTREAM_BANDWITH,
+    MAX_DOWNSTREAM_BANDWITH,
+    MAX_STEAMCMD_BANDWITH,
+)
 from webgui.storage import OverwriteStorage
 from django.utils.html import mark_safe
 import re
@@ -1019,6 +1028,11 @@ class Server(models.Model):
         validators=[MinValueValidator(1025), MaxValueValidator(65535)],
         help_text="Port for the HTTP Server. Must be unique on all managed servers",
     )
+    steamcmd_bandwith = models.IntegerField(
+        default=0,
+        validators=[MinValueValidator(0), MaxValueValidator(1000000)],
+        help_text="Limit the bandwith steamcmd may use. 0 means unlimited download. Value is kbit/s. Maximum is 1000000",
+    )
     name = models.CharField(
         blank=True,
         max_length=500,
@@ -1260,6 +1274,67 @@ class Server(models.Model):
                 )
             )
 
+        if MAX_SERVERS is not None:
+            amount = Server.objects.count()
+            if amount >= MAX_SERVERS:
+                raise ValidationError(
+                    "You exceeded the maximum amount of available servers. You are allowed to use {} server instances. You won't be able to deploy until you not exceed that limit anymore".format(
+                        MAX_SERVERS
+                    )
+                )
+        steamcmd_bandwith = 0
+        other_servers = Server.objects.all()
+        for server in other_servers:
+            if server.event:
+                if self.pk != server.pk:
+                    steamcmd_bandwith = steamcmd_bandwith + server.steamcmd_bandwith
+
+        steamcmd_bandwith = steamcmd_bandwith + self.steamcmd_bandwith
+
+        if MAX_STEAMCMD_BANDWITH is not None:
+            if self.steamcmd_bandwith == 0:
+                raise ValidationError(
+                    "Steamcmd bandwith limits are enforced. Please set a limit for the steamcmd bandith. Available bandwith: {} kbit/s".format(
+                        MAX_STEAMCMD_BANDWITH - steamcmd_bandwith
+                    )
+                )
+            if steamcmd_bandwith > MAX_STEAMCMD_BANDWITH:
+                raise ValidationError(
+                    "Steamcmd bandwith limits are enforced. You exceeded the available bandwith by {} kbit/s".format(
+                        (MAX_STEAMCMD_BANDWITH - steamcmd_bandwith) * -1
+                    )
+                )
+
+        if self.event:
+            upstream_sum = 0
+            downstream_sum = 0
+            other_servers = Server.objects.all()
+            for server in other_servers:
+                if server.event:
+                    if self.pk != server.pk:
+                        upstream_sum = upstream_sum + server.event.upstream
+                        downstream_sum = downstream_sum + server.event.downstream
+
+            upstream_sum = upstream_sum + self.event.upstream
+            downstream_sum = downstream_sum + self.event.downstream
+            if (
+                MAX_DOWNSTREAM_BANDWITH is not None
+                and MAX_DOWNSTREAM_BANDWITH <= downstream_sum
+            ):
+                raise ValidationError(
+                    "You exceeded the maximum downstream bandwith. You are allowed to use {} kbit/s, you requested {} kbit/s".format(
+                        MAX_DOWNSTREAM_BANDWITH, downstream_sum
+                    )
+                )
+            if (
+                MAX_UPSTREAM_BANDWITH is not None
+                and MAX_UPSTREAM_BANDWITH <= upstream_sum
+            ):
+                raise ValidationError(
+                    "You exceeded the maximum upstream bandwith. You are allowed to use {} kbit/s, you requested {} kbit/s".format(
+                        MAX_UPSTREAM_BANDWITH, upstream_sum
+                    )
+                )
         if (
             self.action != ""
             or self.server_key is None

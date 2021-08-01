@@ -11,6 +11,7 @@ from wizard.settings import (
     BASE_DIR,
     PUBLIC_URL,
     BASE_DIR,
+    MAX_STEAMCMD_BANDWITH,
 )
 import hashlib
 import subprocess
@@ -902,6 +903,7 @@ def do_server_interaction(server):
             if PUBLIC_URL
             else None
         )
+        event_config["steamcmd_bandwith"] = server.steamcmd_bandwith
         config_path = join(APX_ROOT, "configs", key + ".json")
         with open(config_path, "w") as file:
             file.write(dumps(event_config))
