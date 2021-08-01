@@ -12,6 +12,9 @@ from wizard.settings import (
     PUBLIC_URL,
     BASE_DIR,
     MAX_STEAMCMD_BANDWITH,
+    WEBUI_PORT_RANGE,
+    HTTP_PORT_RANGE,
+    SIM_PORT_RANGE,
 )
 import hashlib
 import subprocess
@@ -335,9 +338,9 @@ def bootstrap_reciever(root_path, server_obj, port, secret):
             occupied_ports_tcp.append(server.webui_port)
             occupied_ports_udp.append(server.sim_port)
 
-    webui_port = random.randint(1026, 35000)
-    sim_port = random.randint(55001, 65000)
-    http_port = random.randint(35001, 55000)
+    webui_port = random.randint(WEBUI_PORT_RANGE[0], WEBUI_PORT_RANGE[1])
+    sim_port = random.randint(SIM_PORT_RANGE[0], SIM_PORT_RANGE[1])
+    http_port = random.randint(HTTP_PORT_RANGE[0], HTTP_PORT_RANGE[1])
 
     # random, I trust you! most likely bad idea, but okay
 
