@@ -208,8 +208,7 @@
                   [[ getBestLap(vehicle) ]]
                 </td>
                 <td>[[ vehicle.lastLapTime > 0 ? getHourString(vehicle.lastLapTime, true) : '-']]</td>
-                <td>[[ ticker.filter(t => t.vehicle && t.vehicle.slotID ===
-                  vehicle.slotID && t.type ==="PSE").length ]]</td>
+                <td>[[ getStops(vehicle) ]]</td>
 
                 <td v-if="['TESTDAY','QUALIFY'].indexOf(getSession(liveData.status.session)) === -1 && vehicle.lapsBehindNext===0 &&
                   vehicle.position !==1 && classFilters.length===0">
@@ -304,7 +303,9 @@
         openMessages: [],
         serverSecret: null,
         showTrackmap: false,
-        isFetching: false
+        isFetching: false,
+        isFirst: true,
+        waypoints: []
       },
       computed: {
         ticker: function() {
@@ -332,7 +333,7 @@
           }
 
           trackPath = "M"
-          waypoints = this.liveData.status.waypoints.loadingStatus.track.trackmap
+          waypoints = this.waypoints
           var minX = null
           var minZ = null
           var maxX = null
@@ -432,19 +433,21 @@
           }
         },
         getBestLap: function(vehicle) {
-          var result = "-"
-          try {
-            var got = vehicle.messages.filter(t => t.type === "LC").map(t => t.last_lap_time).filter(t => t >
-              0).sort().reverse().shift()
-            if (!got) {
-              result = "-"
-            } else {
-              result = this.getHourString(got)
+          /* todo: identify invalid 08:44 like laps */
+          return this.getHourString(vehicle.bestLapTime, true)
+        },
+        getStops: function(vehicle) {
+          var stops = []
+
+          var seenPit = false;
+          vehicle.messages.forEach(t => {
+            if (t.type == "PS" && t.status === "STOPPED" || t.type == "DS") {
+              if (stops.indexOf(t.laps) === -1) {
+                stops.push(t.laps)
+              }
             }
-          } catch{
-            result = "-"
-          }
-          return result
+          })
+          return stops.length
         },
         getOverallState: (vehicle) => {
           if (vehicle.finishStatus === 'FSTAT_DQ') {
@@ -467,9 +470,17 @@
             return
           }
           self.isFetching = true
-          fetch(window.location.origin + "/live/" + self.serverSecret)
+          fetch(window.location.origin + "/live/" + self.serverSecret + (self.isFirst ? '?full=true' : ''))
             .then(response => response.json())
-            .then(data => {self.liveData = data, self.classMap = self.liveData.status.ticker_classes, self.isFetching = false});
+            .then(data => {
+              self.liveData = data;
+              if (self.isFirst && self.liveData.status.waypoints.loadingStatus) {
+                self.waypoints = self.liveData.status.waypoints.loadingStatus.track.trackmap
+              }
+              self.classMap = self.liveData.status.ticker_classes;
+              self.isFetching = false;
+              self.isFirst = false
+            });
         },
         getGap: function(vehicle) {
           if (!this.liveData) {

@@ -53,6 +53,23 @@ FILE_NAME_SUFFIXES = [
     "-icon-2048x1152.png",
 ]
 
+FILE_NAME_SUFFIXES_MEANINGS = [
+    "JSON file",
+    "Livery main file",
+    "Inner windows file",
+    "Outer windows file",
+    "Livery region",
+    "Helmet livery",
+    "Icon",
+    "SMIcon",
+    "Icon (DDS)",
+    "Helmet livery (PNG)",
+    "Icon 128x72",
+    "Icon 256x144",
+    "Icon 512x288",
+    "Icon 1024x576",
+    "Icon 2048x1152",
+]
 
 RECIEVER_COMP_INFO = open(join(BASE_DIR, "release")).read()
 RECIEVER_DOWNLOAD_FROM = "https://github.com/apx-simracing/reciever/releases/download/R61/reciever-2021R61.zip"

@@ -44,6 +44,8 @@ from .util import (
     do_rc_post,
     get_server_hash,
     run_apx_command,
+    FILE_NAME_SUFFIXES,
+    FILE_NAME_SUFFIXES_MEANINGS,
 )
 from django.views.decorators.csrf import csrf_exempt
 import tarfile
@@ -287,13 +289,19 @@ def get_files_form(request):
 
                     needs_secondary_save = full_path.endswith(
                         needle + ".dds"
-                    ) or full_path.endswith(needle + "_Region.dds")
+                    ) or full_path.lower().endswith(needle + "_region.dds")
+                    file_name = None
+                    suffix_meaning = None
+                    for index, suffix in enumerate(FILE_NAME_SUFFIXES):
+                        if suffix.lower() in file:
+                            file_name = needle + suffix
+                            suffix_meaning = FILE_NAME_SUFFIXES_MEANINGS[index]
 
                     with open(full_path, "rb") as livery_file:
-                        entry_file.file.save(file, File(livery_file), save=True)
+                        entry_file.file.save(file_name, File(livery_file), save=True)
                     entry_file.save()
 
-                    results[file] = basename(entry_file.file.name)
+                    results[file] = suffix_meaning
                     # A secondary safe just triggers save() again to add numberplates, if needed.
                     # For files not required to have numberplate element, it's just a seconds save() call
                     if needs_secondary_save:
