@@ -2,7 +2,7 @@ from django.core.management.base import BaseCommand, CommandError
 from webgui.models import Server
 from os.path import join, exists
 from shutil import rmtree
-from os import mkdir, listdir
+from os import mkdir, listdir, unlink
 from wizard.settings import (
     APX_ROOT,
     MEDIA_ROOT,
@@ -16,9 +16,11 @@ from wizard.settings import (
     BASE_DIR,
 )
 import subprocess
+from webgui.util import RECIEVER_DOWNLOAD_FROM
 from time import sleep
-
+import zipfile, io
 from psutil import process_iter
+from requests import get
 
 
 class Command(BaseCommand):
@@ -83,11 +85,17 @@ class Command(BaseCommand):
                             secret,
                             "delete.lock",
                         )
+                        update_lock = join(
+                            BASE_DIR,
+                            "server_children",
+                            secret,
+                            "update.lock",
+                        )
                         if not exists(delete_lock):
                             for process in process_iter():
                                 try:
-                                    path = process.exe()
-                                    if expected_path == path:
+                                    process_path = process.exe()
+                                    if expected_path == process_path:
                                         something_running = True
                                         break
                                 except:
@@ -129,6 +137,7 @@ class Command(BaseCommand):
                                     exists(path)
                                     and exists(keys)
                                     and exists(server_json)
+                                    and not exists(update_lock)
                                 ):
                                     # check if there is already something running within the directory
                                     print("Server {} needs start".format(secret))
@@ -149,6 +158,79 @@ class Command(BaseCommand):
                                             secret
                                         )
                                     )
+                        if exists(update_lock):
+                            download_lock = join(
+                                BASE_DIR,
+                                "server_children",
+                                secret,
+                                "download.lock",
+                            )
+                            if not exists(download_lock):
+                                with open(download_lock, "w") as file:
+                                    file.write("locking download")
+                                try:
+                                    print(
+                                        "Server {} has a update lock, trying to kill reciever. Full path: {}".format(
+                                            secret, path
+                                        )
+                                    )
+                                    for process in process_iter():
+                                        try:
+                                            process_path = process.exe()
+                                            if process_path.startswith(path):
+                                                print("killing", process_path)
+                                                process.kill()
+                                            cmd_line = process.cwd()
+                                            expected_path = join(
+                                                BASE_DIR, "server_children", secret
+                                            )
+                                            if expected_path in cmd_line:
+                                                print(
+                                                    "Killing process {} b/c of cwd path".format(
+                                                        process
+                                                    )
+                                                )
+                                                process.kill()
+
+                                        except:
+                                            pass
+                                    # attempt update
+                                    try:
+                                        server_obj.state = "Downloading {}".format(
+                                            RECIEVER_DOWNLOAD_FROM
+                                        )
+                                        server_obj.save()
+                                        r = get(RECIEVER_DOWNLOAD_FROM)
+                                        z = zipfile.ZipFile(io.BytesIO(r.content))
+                                        server_obj.state = (
+                                            f"Extracting contents to {path}"
+                                        )
+                                        print(f"Extracting contents to {path}")
+                                        server_obj.save()
+                                        z.extractall(path)
+                                        server_obj.state = "Extracted reciever release"
+                                        server_obj.save()
+                                        unlink(update_lock)
+                                        unlink(download_lock)
+                                        server_obj.state = "Done updating reciever"
+                                        server_obj.save()
+                                    except Exception as e:
+                                        server_obj.state = (
+                                            "Download for reciever failed: {}".format(e)
+                                        )
+                                        server_obj.save()
+                                except Exception as e:
+                                    print(
+                                        "Server {} has a update lock, but I failed".format(
+                                            secret
+                                        )
+                                    )
+                                    server_obj.state = (
+                                        "Something went wrong
+                                        
+                                        : {}".format(e)
+                                    )
+                                    server_obj.save()
                         if exists(delete_lock):
                             try:
                                 print(

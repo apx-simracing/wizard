@@ -165,7 +165,7 @@ class RaceConditionsAdmin(admin.ModelAdmin):
 @admin.register(Server)
 class ServerAdmin(admin.ModelAdmin):
     change_list_template = "admin/server_list.html"
-    actions = ["reset_status", "get_thumbnails"]
+    actions = ["reset_status", "get_thumbnails", "apply_reciever_update"]
 
     def get_urls(self):
         urls = super().get_urls()
@@ -230,6 +230,36 @@ class ServerAdmin(admin.ModelAdmin):
             server.status = None
             server.save()
         messages.success(request, "Status are resetted.")
+
+    reset_status.short_description = "Reset status (if stuck)"
+
+    def apply_reciever_update(self, request, queryset):
+        for server in queryset:
+            if server.is_created_by_apx:
+                if "Server is running" in server.status_info:
+                    messages.error(
+                        request,
+                        "The server {} is running. Stop it first.".format(server.name),
+                    )
+                else:
+                    path = join(
+                        BASE_DIR, "server_children", server.public_secret, "update.lock"
+                    )
+                    with open(path, "w") as file:
+                        file.write("update")
+                    server.state = "Waiting for reciever update"
+                    server.save()
+                    messages.success(
+                        request,
+                        "Reciever of server {} marked for update.".format(server.name),
+                    )
+            else:
+                messages.warning(
+                    request,
+                    "The server {} is not created by APX, so you have to update the reciever by yourself.".format(
+                        server.name
+                    ),
+                )
 
     reset_status.short_description = "Reset status (if stuck)"
 
