@@ -11,7 +11,7 @@ from wizard.settings import (
     BASE_DIR,
     PUBLIC_URL,
     BASE_DIR,
-    MAX_STEAMCMD_BANDWITH,
+    MAX_STEAMCMD_BANDWIDTH,
     WEBUI_PORT_RANGE,
     HTTP_PORT_RANGE,
     SIM_PORT_RANGE,
@@ -923,7 +923,7 @@ def do_server_interaction(server):
             if PUBLIC_URL
             else None
         )
-        event_config["steamcmd_bandwith"] = server.steamcmd_bandwith
+        event_config["steamcmd_bandwidth"] = server.steamcmd_bandwidth
         config_path = join(APX_ROOT, "configs", key + ".json")
         with open(config_path, "w") as file:
             file.write(dumps(event_config))

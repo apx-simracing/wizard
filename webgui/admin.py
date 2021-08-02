@@ -295,7 +295,7 @@ class ServerAdmin(admin.ModelAdmin):
                     "sim_port",
                     "http_port",
                     "webui_port",
-                    "steamcmd_bandwith",
+                    "steamcmd_bandwidth",
                 ]
             },
         ),

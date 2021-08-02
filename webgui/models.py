@@ -38,9 +38,9 @@ from wizard.settings import (
     STATIC_URL,
     BASE_DIR,
     MAX_SERVERS,
-    MAX_UPSTREAM_BANDWITH,
-    MAX_DOWNSTREAM_BANDWITH,
-    MAX_STEAMCMD_BANDWITH,
+    MAX_UPSTREAM_BANDWIDTH,
+    MAX_DOWNSTREAM_BANDWIDTH,
+    MAX_STEAMCMD_BANDWIDTH,
 )
 from webgui.storage import OverwriteStorage
 from django.utils.html import mark_safe
@@ -1028,10 +1028,10 @@ class Server(models.Model):
         validators=[MinValueValidator(1025), MaxValueValidator(65535)],
         help_text="Port for the HTTP Server. Must be unique on all managed servers",
     )
-    steamcmd_bandwith = models.IntegerField(
+    steamcmd_bandwidth = models.IntegerField(
         default=0,
         validators=[MinValueValidator(0), MaxValueValidator(1000000)],
-        help_text="Limit the bandwith steamcmd may use. 0 means unlimited download. Value is kbit/s. Maximum is 1000000",
+        help_text="Limit the bandwidth steamcmd may use. 0 means unlimited download. Value is kbit/s. Maximum is 1000000",
     )
     name = models.CharField(
         blank=True,
@@ -1282,26 +1282,26 @@ class Server(models.Model):
                         MAX_SERVERS
                     )
                 )
-        steamcmd_bandwith = 0
+        steamcmd_bandwidth = 0
         other_servers = Server.objects.all()
         for server in other_servers:
             if server.event:
                 if self.pk != server.pk:
-                    steamcmd_bandwith = steamcmd_bandwith + server.steamcmd_bandwith
+                    steamcmd_bandwidth = steamcmd_bandwidth + server.steamcmd_bandwidth
 
-        steamcmd_bandwith = steamcmd_bandwith + self.steamcmd_bandwith
+        steamcmd_bandwidth = steamcmd_bandwidth + self.steamcmd_bandwidth
 
-        if MAX_STEAMCMD_BANDWITH is not None:
-            if self.steamcmd_bandwith == 0:
+        if MAX_STEAMCMD_BANDWIDTH is not None:
+            if self.steamcmd_bandwidth == 0:
                 raise ValidationError(
-                    "Steamcmd bandwith limits are enforced. Please set a limit for the steamcmd bandith. Available bandwith: {} kbit/s".format(
-                        MAX_STEAMCMD_BANDWITH - steamcmd_bandwith
+                    "Steamcmd bandwidth limits are enforced. Please set a limit for the steamcmd bandith. Available bandwidth: {} kbit/s".format(
+                        MAX_STEAMCMD_BANDWIDTH - steamcmd_bandwidth
                     )
                 )
-            if steamcmd_bandwith > MAX_STEAMCMD_BANDWITH:
+            if steamcmd_bandwidth > MAX_STEAMCMD_BANDWIDTH:
                 raise ValidationError(
-                    "Steamcmd bandwith limits are enforced. You exceeded the available bandwith by {} kbit/s".format(
-                        (MAX_STEAMCMD_BANDWITH - steamcmd_bandwith) * -1
+                    "Steamcmd bandwidth limits are enforced. You exceeded the available bandwidth by {} kbit/s".format(
+                        (MAX_STEAMCMD_BANDWIDTH - steamcmd_bandwidth) * -1
                     )
                 )
 
@@ -1318,21 +1318,21 @@ class Server(models.Model):
             upstream_sum = upstream_sum + self.event.upstream
             downstream_sum = downstream_sum + self.event.downstream
             if (
-                MAX_DOWNSTREAM_BANDWITH is not None
-                and MAX_DOWNSTREAM_BANDWITH <= downstream_sum
+                MAX_DOWNSTREAM_BANDWIDTH is not None
+                and MAX_DOWNSTREAM_BANDWIDTH <= downstream_sum
             ):
                 raise ValidationError(
-                    "You exceeded the maximum downstream bandwith. You are allowed to use {} kbit/s, you requested {} kbit/s".format(
-                        MAX_DOWNSTREAM_BANDWITH, downstream_sum
+                    "You exceeded the maximum downstream bandwidth. You are allowed to use {} kbit/s, you requested {} kbit/s".format(
+                        MAX_DOWNSTREAM_BANDWIDTH, downstream_sum
                     )
                 )
             if (
-                MAX_UPSTREAM_BANDWITH is not None
-                and MAX_UPSTREAM_BANDWITH <= upstream_sum
+                MAX_UPSTREAM_BANDWIDTH is not None
+                and MAX_UPSTREAM_BANDWIDTH <= upstream_sum
             ):
                 raise ValidationError(
-                    "You exceeded the maximum upstream bandwith. You are allowed to use {} kbit/s, you requested {} kbit/s".format(
-                        MAX_UPSTREAM_BANDWITH, upstream_sum
+                    "You exceeded the maximum upstream bandwidth. You are allowed to use {} kbit/s, you requested {} kbit/s".format(
+                        MAX_UPSTREAM_BANDWIDTH, upstream_sum
                     )
                 )
         if (
