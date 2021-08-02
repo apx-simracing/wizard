@@ -313,6 +313,7 @@ class ServerAdmin(admin.ModelAdmin):
                     "is_created_by_apx",
                     "update_on_build",
                     "update_weather_on_start",
+                    "collect_results_replays",
                 ]
             },
         ),

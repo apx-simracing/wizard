@@ -75,7 +75,7 @@ FILE_NAME_SUFFIXES_MEANINGS = [
 ]
 
 RECIEVER_COMP_INFO = open(join(BASE_DIR, "release")).read()
-RECIEVER_DOWNLOAD_FROM = "https://github.com/apx-simracing/reciever/releases/download/R61/reciever-2021R61.zip"
+RECIEVER_DOWNLOAD_FROM = "https://github.com/apx-simracing/reciever/releases/download/R65/reciever-2021R65.zip"
 
 
 def get_update_filename(instance, filename):
@@ -924,6 +924,7 @@ def do_server_interaction(server):
             else None
         )
         event_config["steamcmd_bandwidth"] = server.steamcmd_bandwidth
+        event_config["collect_results_replays"] = server.collect_results_replays
         config_path = join(APX_ROOT, "configs", key + ".json")
         with open(config_path, "w") as file:
             file.write(dumps(event_config))

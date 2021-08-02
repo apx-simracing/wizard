@@ -1100,6 +1100,10 @@ class Server(models.Model):
         default=False,
         help_text="Decides if APX will update the weather data on start if real weather is enabled",
     )
+    collect_results_replays = models.BooleanField(
+        default=False,
+        help_text="Decides if APX will allow the server to persist the result and replay files",
+    )
     session_id = models.CharField(
         max_length=255,
         blank=True,
