@@ -226,9 +226,7 @@ class Command(BaseCommand):
                                         )
                                     )
                                     server_obj.state = (
-                                        "Something went wrong
-                                        
-                                        : {}".format(e)
+                                        "Something went wrong: {}".format(e)
                                     )
                                     server_obj.save()
                         if exists(delete_lock):
