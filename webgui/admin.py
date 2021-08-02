@@ -41,6 +41,7 @@ from wizard.settings import MEDIA_ROOT, BASE_DIR
 from math import floor
 from django.urls import path
 from django.http import HttpResponseRedirect
+from pydng import generate_name
 
 admin.site.site_url = None
 admin.site.site_title = "APX"
@@ -208,7 +209,7 @@ class ServerAdmin(admin.ModelAdmin):
             new_server.public_secret = public_secret
             new_server.secret = secret
             new_server.url = "http://localhost:{}/".format(port)
-            new_server.name = "New APX server"
+            new_server.name = generate_name()
             new_server.state = "Created server element"
             new_server.save()
 
@@ -228,6 +229,7 @@ class ServerAdmin(admin.ModelAdmin):
     def reset_status(self, request, queryset):
         for server in queryset:
             server.status = None
+            server.state = None
             server.save()
         messages.success(request, "Status are resetted.")
 
@@ -312,46 +314,59 @@ class ServerAdmin(admin.ModelAdmin):
         "is_created_by_apx",
         "ports",
     )
-    fieldsets = [
-        (
-            "APX Settings",
-            {
-                "fields": [
-                    "name",
-                    "url",
-                    "secret",
-                    "public_secret",
-                    "session_id",
-                    "sim_port",
-                    "http_port",
-                    "webui_port",
-                    "steamcmd_bandwidth",
-                ]
-            },
-        ),
-        (
-            "Dedicated server settings",
-            {"fields": ["event", "branch"]},
-        ),
-        (
-            "Actions and status",
-            {
-                "fields": [
-                    "action",
-                    "status_info",
-                    "state",
-                    "is_created_by_apx",
-                    "update_on_build",
-                    "update_weather_on_start",
-                    "collect_results_replays",
-                ]
-            },
-        ),
-        (
-            "Keys",
-            {"fields": ["server_key", "server_unlock_key", "logfile"]},
-        ),
-    ]
+
+    def get_fieldsets(self, request, obj):
+        fieldsets = [
+            (
+                "APX Settings",
+                {
+                    "fields": [
+                        "name",
+                        "url",
+                        "secret",
+                        "public_secret",
+                        "session_id",
+                        "sim_port",
+                        "http_port",
+                        "webui_port",
+                        "steamcmd_bandwidth",
+                    ]
+                },
+            ),
+            (
+                "Dedicated server settings",
+                {"fields": ["event", "branch"]},
+            ),
+            (
+                "Actions and status",
+                {
+                    "fields": [
+                        "action",
+                        "status_info",
+                        "state",
+                        "is_created_by_apx",
+                        "update_on_build",
+                        "update_weather_on_start",
+                        "collect_results_replays",
+                    ]
+                },
+            ),
+            (
+                "Keys",
+                {"fields": ["server_key", "server_unlock_key", "logfile"]},
+            ),
+        ]
+        if obj.is_created_by_apx:
+            fieldsets[0][1]["fields"] = [
+                "name",
+                "public_secret",
+                "session_id",
+                "sim_port",
+                "http_port",
+                "webui_port",
+                "steamcmd_bandwidth",
+            ]
+        return fieldsets
 
     def get_readonly_fields(self, request, obj):
         if self.is_running(obj):

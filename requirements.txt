@@ -6,3 +6,4 @@ Wand==0.6.5
 discord.py==1.6.0
 croniter==1.0.10
 psutil==5.8.0
+pydng==1.1.2
