@@ -533,6 +533,10 @@ def add_log(request, secret: str):
         absolute_path = join(MEDIA_ROOT, "logs", key)
         if not exists(absolute_path):
             mkdir(absolute_path)
+
+        absolute_log_path = join(MEDIA_ROOT, "logs", key, "reciever.log")
+        if exists(absolute_log_path):
+            unlink(absolute_log_path)
         path = join("logs", key, "reciever.log")
         default_storage.save(path, ContentFile(file.read()))
         return HttpResponse()
