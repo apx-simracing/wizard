@@ -352,6 +352,24 @@ def bootstrap_reciever(root_path, server_obj, port, secret):
     server_obj.state = "Done with bootstrap"
     server_obj.save()
     config_path = join(reciever_path, "server.json")
+
+    # try to inject keypair
+    key_file = join(BASE_DIR, "uploads", "keys")
+
+    if exists(join(key_file, "ServerKeys.bin")) and exists(
+        join(key_file, "ServerUnlock.bin")
+    ):
+        server_obj.state = "Injecting global keys"
+        server_obj.save()
+        copyfile(
+            join(key_file, "ServerKeys.bin"),
+            join(root_path, "server", "UserData", "ServerKeys.bin"),
+        )
+        copyfile(
+            join(key_file, "ServerUnlock.bin"),
+            join(root_path, "server", "UserData", "ServerUnlock.bin"),
+        )
+
     with open(config_path, "w") as file:
         file.write(dumps(config))
     try:
