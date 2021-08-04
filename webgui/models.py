@@ -107,6 +107,10 @@ class Component(models.Model):
     do_update = models.BooleanField(
         default=False, help_text="If you plan to add liveries on a car, check this."
     )
+    is_official = models.BooleanField(
+        default=False,
+        help_text="Is official content (APX will select versions for you)",
+    )
     short_name = models.CharField(
         default="",
         max_length=200,

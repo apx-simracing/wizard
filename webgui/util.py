@@ -422,6 +422,7 @@ def get_event_config(event_id: int):
         name = component.component_name
         do_update = component.do_update
         short_name = component.short_name
+        is_official = component.is_official
 
         if steam_id not in vehicle_groups:
             vehicle_groups[steam_id] = {
@@ -431,6 +432,7 @@ def get_event_config(event_id: int):
                     "version": version,
                     "name": name,
                     "update": do_update,
+                    "official": is_official,
                     "short": short_name,
                     "numberplates": [],
                 },
@@ -459,6 +461,7 @@ def get_event_config(event_id: int):
             name = component.component_name
             do_update = component.do_update
             short_name = component.short_name
+            official = component.is_official
 
             if steam_id not in vehicle_groups:
                 vehicle_groups[steam_id] = {
@@ -469,6 +472,7 @@ def get_event_config(event_id: int):
                         "name": name,
                         "update": do_update,
                         "short": short_name,
+                        "official": official,
                         "numberplates": [],
                     },
                 }
@@ -485,6 +489,7 @@ def get_event_config(event_id: int):
                 "version": track_component.component_version,
                 "name": track_component.component_name,
                 "update": track_component.do_update,
+                "official": track_component.is_official,
             },
         }
         break  # mutliple tracks are still not supported
