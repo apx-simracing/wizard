@@ -418,7 +418,7 @@ def get_event_config(event_id: int):
     for vehicle in ungrouped_vehicles:
         component = vehicle.component
         steam_id = component.steam_id
-        version = component.component_version
+        version = "latest"
         name = component.component_name
         do_update = component.do_update
         short_name = component.short_name
@@ -457,7 +457,7 @@ def get_event_config(event_id: int):
         # use signup components for the event.json
         for component in signup_components:
             steam_id = component.steam_id
-            version = component.component_version
+            version = "latest"
             name = component.component_name
             do_update = component.do_update
             short_name = component.short_name
@@ -486,7 +486,7 @@ def get_event_config(event_id: int):
         track_groups[track_component.steam_id] = {
             "layout": track.layout,
             "component": {
-                "version": track_component.component_version,
+                "version": "latest",
                 "name": track_component.component_name,
                 "update": track_component.do_update,
                 "official": track_component.is_official,

@@ -96,11 +96,6 @@ class Component(models.Model):
         max_length=3, choices=ComponentType.choices, default=ComponentType.VEHICLE
     )
     steam_id = models.BigIntegerField(default=0, blank=True)
-    component_version = models.CharField(
-        default="1.0",
-        max_length=20,
-        help_text="The version to use. You can use 'latest' or 'latest-even' to either get the latest or the latest even version.",
-    )
     component_name = models.CharField(
         default="Example_Mod", max_length=200, validators=[alphanumeric_validator]
     )
@@ -109,7 +104,7 @@ class Component(models.Model):
     )
     is_official = models.BooleanField(
         default=False,
-        help_text="Is official content (APX will select versions for you)",
+        help_text="Is official content which follows the even version and uneven version scheme (APX will select versions for you). If not checked, we will use the version you've selected.",
     )
     short_name = models.CharField(
         default="",
@@ -205,10 +200,7 @@ class Component(models.Model):
         super(Component, self).save(*args, **kwargs)
 
     def __str__(self):
-        if self.component_version == "latest-even":
-            return self.component_name
-
-        return "{} ({})".format(self.component_name, self.component_version)
+        return self.component_name
 
 
 class RaceSessions(models.Model):
