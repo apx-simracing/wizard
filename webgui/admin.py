@@ -94,9 +94,6 @@ class ServerCronAdmin(admin.ModelAdmin):
 class EntryFileAdmin(admin.ModelAdmin):
     def get_form(self, request, obj=None, **kwargs):
         form = super(EntryFileAdmin, self).get_form(request, obj=None, **kwargs)
-        form.base_fields["entry"].queryset = Entry.objects.filter(
-            component__do_update=True
-        )
         return form
 
     list_display = (
@@ -415,5 +412,5 @@ class ServerPluginAdmin(admin.ModelAdmin):
 class TrackFileAdmin(admin.ModelAdmin):
     def get_form(self, request, obj=None, **kwargs):
         form = super(TrackFileAdmin, self).get_form(request, obj=None, **kwargs)
-        form.base_fields["track"].queryset = Component.objects.filter(type="LOC")
+        form.base_fields["track"].queryset = Track.objects.filter(component__type="LOC")
         return form

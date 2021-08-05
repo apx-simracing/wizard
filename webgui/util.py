@@ -217,22 +217,21 @@ def do_component_file_apply(element):
 
     src_path = join(template_root, str(element.file))
     entries = models.Entry.objects.filter(component=element.component)
-    if element.component.do_update:
-        for entry in entries:
-            target_path = join(
-                root_path,
-                element.component.component_name,
-                element.component.short_name
-                + "_"
-                + str(entry.vehicle_number)
-                + element.type,
-            )
-            copyfile(src_path, target_path)
+    for entry in entries:
+        target_path = join(
+            root_path,
+            element.component.component_name,
+            element.component.short_name
+            + "_"
+            + str(entry.vehicle_number)
+            + element.type,
+        )
+        copyfile(src_path, target_path)
 
 
 def remove_orphan_files():
     root_path = join(MEDIA_ROOT, "liveries")
-    files = models.EntryFile.objects.filter(entry__component__do_update=True)
+    files = models.EntryFile.objects.all()
     components = {}
     for file in files:
         component = file.entry.component.component_name
@@ -420,7 +419,6 @@ def get_event_config(event_id: int):
         steam_id = component.steam_id
         version = "latest"
         name = component.component_name
-        do_update = component.do_update
         short_name = component.short_name
         is_official = component.is_official
 
@@ -431,7 +429,7 @@ def get_event_config(event_id: int):
                 "component": {
                     "version": version,
                     "name": name,
-                    "update": do_update,
+                    "update": True,
                     "official": is_official,
                     "short": short_name,
                     "numberplates": [],
@@ -459,7 +457,6 @@ def get_event_config(event_id: int):
             steam_id = component.steam_id
             version = "latest"
             name = component.component_name
-            do_update = component.do_update
             short_name = component.short_name
             official = component.is_official
 
@@ -470,7 +467,7 @@ def get_event_config(event_id: int):
                     "component": {
                         "version": version,
                         "name": name,
-                        "update": do_update,
+                        "update": False,
                         "short": short_name,
                         "official": official,
                         "numberplates": [],
@@ -483,12 +480,13 @@ def get_event_config(event_id: int):
     track_groups = {}
     for track in tracks:
         track_component = track.component
+        requires_update = models.TrackFile.objects.filter(track=track).count() > 0
         track_groups[track_component.steam_id] = {
             "layout": track.layout,
             "component": {
                 "version": "latest",
                 "name": track_component.component_name,
-                "update": track_component.do_update,
+                "update": requires_update,
                 "official": track_component.is_official,
             },
         }
@@ -957,12 +955,13 @@ def do_server_interaction(server):
         try:
             # check if track needs update
             for track in server.event.tracks.all():
-                if track.component.do_update:
-                    files = models.TrackFile.objects.filter(track=track.component)
-                    files_to_attach = []
-                    for file in files:
-                        file_name = basename(str(file.file))
-                        files_to_attach.append(file_name)
+                files = models.TrackFile.objects.filter(track=track)
+                files_to_attach = []
+                for file in files:
+                    file_name = basename(str(file.file))
+                    files_to_attach.append(file_name)
+                # only add skin files if needed
+                if len(files_to_attach) > 0:
                     command_line = "--cmd build_track --args {} {}".format(
                         track.component.component_name, " ".join(files_to_attach)
                     )

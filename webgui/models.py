@@ -99,9 +99,6 @@ class Component(models.Model):
     component_name = models.CharField(
         default="Example_Mod", max_length=200, validators=[alphanumeric_validator]
     )
-    do_update = models.BooleanField(
-        default=False, help_text="If you plan to add liveries on a car, check this."
-    )
     is_official = models.BooleanField(
         default=False,
         help_text="Is official content which follows the even version and uneven version scheme (APX will select versions for you). If not checked, we will use the version you've selected.",
@@ -152,13 +149,10 @@ class Component(models.Model):
         if self.type != ComponentType.VEHICLE and self.update:
             raise ValidationError("Only vehicle components can get an Update.ini file")
 
-        if self.type == ComponentType.VEHICLE and self.do_update and not self.template:
-            raise ValidationError("You will need the VEH template when doing an update")
-
     def save(self, *args, **kwargs):
         needles = ["number", "name", "description"]
 
-        if self.type == ComponentType.VEHICLE and self.do_update and self.template:
+        if self.type == ComponentType.VEHICLE and self.template:
 
             replacementMap = {
                 "DefaultLivery": self.short_name + "_{number}.dds",
@@ -342,11 +336,6 @@ class Entry(models.Model):
         return ", ".join(events)
 
     def clean(self):
-        if not self.component.do_update:
-            raise ValidationError(
-                "Enable the overwrite on the component first. Otherwise added entries might cause inconsistencies."
-            )
-
         # validate additional overwrites, if needed
         # we assume the \r\n as the wizard
         if self.additional_overwrites:
@@ -399,7 +388,7 @@ class TrackFile(models.Model):
     )
 
     track = models.ForeignKey(
-        Component, on_delete=models.CASCADE, blank=False, null=False, default=None
+        Track, on_delete=models.CASCADE, blank=False, null=False, default=None
     )
 
     def __str__(self):
@@ -979,6 +968,10 @@ class Event(models.Model):
         return "{}".format(self.name)
 
     def clean(self):
+        for entry in self.entries.all():
+            component = entry.component
+            if not component.template:
+                raise ValidationError(f"There is no VEH template for {component}")
         if self.welcome_message:
             parts = self.welcome_message.split(linesep)
             for part in parts:
