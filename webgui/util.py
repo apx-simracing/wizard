@@ -976,14 +976,13 @@ def do_server_interaction(server):
             command_line = "--cmd deploy --args {} {}".format(config_path, rfm_path)
             run_apx_command(key, command_line)
             # push plugins, if needed
-            if server.event.plugins.count() > 0:
-                files = ""
-                for plugin in server.event.plugins.all():
-                    files = files + " " + join(MEDIA_ROOT, str(plugin.plugin_file))
-                command_line = "--cmd plugins --args {}".format(files)
+            for plugin in server.event.plugins.all():
+                plugin_path = plugin.plugin_file.path
+                command_line = f"--cmd plugins --args {plugin_path}"
                 run_apx_command(key, command_line)
         except Exception as e:
-            print(e)
+            server.state = str(e)
+            server.save()
         finally:
             server.action = ""
             server.save()
