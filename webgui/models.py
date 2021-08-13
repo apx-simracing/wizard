@@ -278,7 +278,7 @@ class RaceConditions(models.Model):
 
 
 class Track(models.Model):
-    component = models.ForeignKey(Component, on_delete=models.DO_NOTHING)
+    component = models.ForeignKey(Component, on_delete=models.CASCADE)
     layout = models.CharField(default="", blank=False, max_length=200)
 
     lon = models.FloatField(
@@ -308,7 +308,7 @@ class Entry(models.Model):
     class Meta:
         verbose_name_plural = "Entries"
 
-    component = models.ForeignKey(Component, on_delete=models.DO_NOTHING)
+    component = models.ForeignKey(Component, on_delete=models.CASCADE)
     team_name = models.CharField(default="Example Team", max_length=200)
     vehicle_number = models.CharField(default="1", max_length=3)
 
@@ -336,6 +336,11 @@ class Entry(models.Model):
         return ", ".join(events)
 
     def clean(self):
+        if not self.component.template:
+            raise ValidationError(
+                "Please add a template for the component {}".format(self.component)
+            )
+
         # validate additional overwrites, if needed
         # we assume the \r\n as the wizard
         if self.additional_overwrites:
@@ -616,7 +621,7 @@ class EventRaceTimeScale(models.TextChoices):
 
 class Event(models.Model):
     name = models.CharField(default="", max_length=20)
-    conditions = models.ForeignKey(RaceConditions, on_delete=models.DO_NOTHING)
+    conditions = models.ForeignKey(RaceConditions, on_delete=models.CASCADE)
     entries = models.ManyToManyField(Entry, blank=True)
     tracks = models.ManyToManyField(Track)
     signup_active = models.BooleanField(default=False)
@@ -967,11 +972,7 @@ class Event(models.Model):
     def __str__(self):
         return "{}".format(self.name)
 
-    def clean(self):
-        for entry in self.entries.all():
-            component = entry.component
-            if not component.template:
-                raise ValidationError(f"There is no VEH template for {component}")
+    def clean(self, *args, **kwargs):
         if self.welcome_message:
             parts = self.welcome_message.split(linesep)
             for part in parts:
@@ -1046,7 +1047,7 @@ class Server(models.Model):
     )
     event = models.ForeignKey(
         Event,
-        on_delete=models.DO_NOTHING,
+        on_delete=models.CASCADE,
         blank=True,
         null=True,
         help_text="The event to deploy. Note: You can only change this if the server is not running.",
@@ -1379,7 +1380,7 @@ def my_handler(sender, instance, **kwargs):
 
 
 class Chat(models.Model):
-    server = models.ForeignKey(Server, on_delete=models.DO_NOTHING)
+    server = models.ForeignKey(Server, on_delete=models.CASCADE)
     message = models.TextField(
         blank=True,
         null=True,

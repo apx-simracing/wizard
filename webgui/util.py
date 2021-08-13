@@ -355,15 +355,9 @@ def bootstrap_reciever(root_path, server_obj, port, secret):
     # try to inject keypair
     key_file = join(BASE_DIR, "uploads", "keys")
 
-    if exists(join(key_file, "ServerKeys.bin")) and exists(
-        join(key_file, "ServerUnlock.bin")
-    ):
+    if exists(join(key_file, "ServerUnlock.bin")):
         server_obj.state = "Injecting global keys"
         server_obj.save()
-        copyfile(
-            join(key_file, "ServerKeys.bin"),
-            join(root_path, "server", "UserData", "ServerKeys.bin"),
-        )
         copyfile(
             join(key_file, "ServerUnlock.bin"),
             join(root_path, "server", "UserData", "ServerUnlock.bin"),
