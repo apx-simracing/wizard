@@ -75,7 +75,7 @@ FILE_NAME_SUFFIXES_MEANINGS = [
 ]
 
 RECIEVER_COMP_INFO = open(join(BASE_DIR, "release")).read()
-RECIEVER_DOWNLOAD_FROM = "https://github.com/apx-simracing/reciever/releases/download/R66/reciever-2021R66.zip"
+RECIEVER_DOWNLOAD_FROM = "https://github.com/apx-simracing/reciever/releases/download/R67/reciever-2021R67.zip"
 
 
 def get_update_filename(instance, filename):
