@@ -120,8 +120,8 @@ def get_conditions_file_root(instance, filename):
 
 
 def track_filename(instance, filename):
-    component_short_name = instance.track.short_name
-    component_name = instance.track.component_name
+    component_short_name = instance.track.component.short_name
+    component_name = instance.track.component.component_name
     path = join(MEDIA_ROOT, "tracks", component_name)
 
     file_path = join(path, filename)
@@ -181,52 +181,6 @@ def get_logfile_root_path(instance, filename):
     if not exists(full_path):
         mkdir(full_path)
     return join("keys", hash_code, filename)
-
-
-def do_component_file_apply(element):
-    remove_orphan_files()
-    root_path = join(MEDIA_ROOT, "liveries")
-    existing_files = listdir(root_path)
-    file_list = []
-    component_files = {}
-    component = element.component
-    # group livery files per component
-    if component.component_name not in component_files:
-        component_files[component.component_name] = []
-    if element.type not in component_files[component.component_name]:
-        component_files[component.component_name].append(element.type)
-
-    files = models.EntryFile.objects.filter(entry__component=component)
-    for file in files:
-        if file.file not in file_list:
-            file_list.append(str(file.file))
-
-    # remove existing component file additions
-    for component, files in component_files.items():
-        for file in files:
-            comp_path = join(root_path, component)
-            if exists(comp_path):
-                component_files_existing = listdir(comp_path)
-                for component_file in component_files_existing:
-                    if component_file.endswith(file):
-                        full_path = join(root_path, component, component_file)
-                        unlink(full_path)
-
-    # add component files
-    template_root = join(MEDIA_ROOT)
-
-    src_path = join(template_root, str(element.file))
-    entries = models.Entry.objects.filter(component=element.component)
-    for entry in entries:
-        target_path = join(
-            root_path,
-            element.component.component_name,
-            element.component.short_name
-            + "_"
-            + str(entry.vehicle_number)
-            + element.type,
-        )
-        copyfile(src_path, target_path)
 
 
 def remove_orphan_files():
@@ -504,6 +458,7 @@ def get_event_config(event_id: int):
                     "laps": session.laps,
                     "start": str(session.start) if session.start is not None else None,
                     "weather": session.weather,
+                    "grip_needle": session.grip_needle,
                 }
             )
     else:

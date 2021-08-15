@@ -26,8 +26,6 @@ from webgui.util import (
     create_virtual_config,
     do_server_interaction,
     get_component_file_root,
-    remove_orphan_files,
-    do_component_file_apply,
     RECIEVER_COMP_INFO,
     get_plugin_root_path,
     create_firewall_script,
@@ -88,6 +86,14 @@ alphanumeric_validator = RegexValidator(
 alphanumeric_validator_dots = RegexValidator(
     r"^[0-9a-zA-Z.\%]*$", "Only alphanumeric characters and dots are allowed."
 )
+
+
+def event_name_validator(value):
+    max_length = 26 if not ADDPREFIX else 21
+    if len(value) > max_length:
+        raise ValidationError(
+            f"The event name is too long. You have {max_length} chars to use."
+        )
 
 
 class Component(models.Model):
@@ -208,6 +214,13 @@ class RaceSessions(models.Model):
     grip = models.FileField(
         upload_to=get_conditions_file_root, blank=True, null=True, default=None
     )
+    grip_needle = models.CharField(
+        default=None,
+        null=True,
+        blank=True,
+        max_length=100,
+        help_text="If you want to use the mod provided grip, add a filename/ and or part of the rrbin filename. If found, the uploaded grip file will be ignored.",
+    )
     start = models.TimeField(
         blank=True,
         default=None,
@@ -234,6 +247,11 @@ class RaceSessions(models.Model):
         if "WU" in str(self.type) and self.laps > 0:
             raise ValidationError("A warmup can only have a time lenght")
 
+        if self.grip_needle and self.grip:
+            raise ValidationError(
+                "Grip and grip needle cannot be used at the same time"
+            )
+
     def __str__(self):
         str = "[{}] {}, {} minutes, {} laps".format(
             self.type, self.description, self.length, self.laps
@@ -244,7 +262,8 @@ class RaceSessions(models.Model):
 
         if self.grip:
             str = str + ", gripfile: {}".format(basename(self.grip.name))
-
+        if self.grip_needle:
+            str = str + ", preset grip: {}".format(self.grip_needle)
         if self.start:
             return str + ", start: {}".format(self.start)
         else:
@@ -364,27 +383,6 @@ class Entry(models.Model):
             return "{}#{} ({})".format(
                 self.team_name, self.vehicle_number, self.component
             )
-
-
-class ComponentFileType(models.TextChoices):
-    WINDOW = "window.dds", "Window skin (GT3)"
-    WINDOWS = "windows.dds", "Window skin"
-    WINDOWSIN = "windowsin.dds", "Windows (inside)"
-    WINDOWSOUT = "windowsout.dds", "Windows (outside)"
-
-
-class ComponentFile(models.Model):
-    file = models.FileField(upload_to=get_component_file_root, max_length=500)
-
-    component = models.ForeignKey(Component, on_delete=models.CASCADE)
-    type = models.CharField(
-        max_length=50,
-        choices=ComponentFileType.choices,
-        default=ComponentFileType.WINDOW,
-    )
-
-    def __str__(self):
-        return "{} {}: {}".format(self.component, self.type, self.file)
 
 
 class TrackFile(models.Model):
@@ -520,16 +518,6 @@ def auto_delete_file_on_delete(sender, instance, **kwargs):
             remove(instance.file.path)
 
 
-@receiver(models.signals.post_delete, sender=ComponentFile)
-def auto_delete_file_on_delete(sender, instance, **kwargs):
-    remove_orphan_files()
-
-
-@receiver(models.signals.post_save, sender=ComponentFile)
-def auto_apply_comp_file(sender, instance, **kwargs):
-    do_component_file_apply(instance)
-
-
 # 0 Standing
 # 1 formation lap & standing start
 # 2 lap behind safety car & rolling start
@@ -620,7 +608,12 @@ class EventRaceTimeScale(models.TextChoices):
 
 
 class Event(models.Model):
-    name = models.CharField(default="", max_length=20)
+    name = models.CharField(
+        default="",
+        max_length=26,
+        help_text="The Name of the event. Will be used as Race name in the server.",
+        validators=[event_name_validator],
+    )
     conditions = models.ForeignKey(RaceConditions, on_delete=models.CASCADE)
     entries = models.ManyToManyField(Entry, blank=True)
     tracks = models.ManyToManyField(Track)

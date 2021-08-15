@@ -4,7 +4,6 @@ from webgui.models import (
     Track,
     Entry,
     EntryFile,
-    ComponentFile,
     Event,
     RaceConditions,
     Server,
@@ -18,11 +17,10 @@ from webgui.models import (
 from wizard.settings import OPENWEATHERAPI_KEY
 from django.contrib import messages
 from django.utils.html import mark_safe
-from django.contrib.auth.models import Group
+from django.contrib.auth.models import Group, User
 from django import forms
 from django.contrib import admin
 from webgui.util import (
-    do_component_file_apply,
     get_server_hash,
     run_apx_command,
     get_random_string,
@@ -77,11 +75,6 @@ class ChatAdmin(admin.ModelAdmin):
         "success",
         "date",
     )
-
-
-@admin.register(ComponentFile)
-class ComponentFileAdmin(admin.ModelAdmin):
-    pass
 
 
 @admin.register(ServerCron)
@@ -414,3 +407,7 @@ class TrackFileAdmin(admin.ModelAdmin):
         form = super(TrackFileAdmin, self).get_form(request, obj=None, **kwargs)
         form.base_fields["track"].queryset = Track.objects.filter(component__type="LOC")
         return form
+
+
+admin.site.unregister(Group)
+admin.site.unregister(User)
