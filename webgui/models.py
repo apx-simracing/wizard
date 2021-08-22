@@ -622,6 +622,8 @@ class Event(models.Model):
         Component,
         help_text="Components allowed to be registered. If no entries are existing, all available entries from the mod will be used.",
     )
+
+    include_stock_skins = models.BooleanField(default=False)
     start_type = models.CharField(
         max_length=3, choices=EvenStartType.choices, default=EvenStartType.S
     )

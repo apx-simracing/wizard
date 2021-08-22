@@ -487,6 +487,7 @@ def get_event_config(event_id: int):
                 "Player.JSON": loads(server.player_json),
             }
         },
+        "include_stock_skins": server.include_stock_skins,
         "conditions": session_list,
         "sessions": session_setting_list,
         "cars": vehicle_groups,
