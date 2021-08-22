@@ -1,2 +1,3 @@
 @echo off
-python manage.py migrate
+python.exe -m pip install -r requirements.txt
+python.exe manage.py migrate
