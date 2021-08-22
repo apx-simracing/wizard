@@ -1,7 +1,7 @@
 from django.core.management.base import BaseCommand, CommandError
-from webgui.models import Server, ServerCron
+from webgui.models import Server, ServerCron, Chat, background_action_chat
 from os.path import join, exists
-from os import mkdir
+from os import mkdir, linesep
 from wizard.settings import (
     APX_ROOT,
     MEDIA_ROOT,
@@ -48,25 +48,43 @@ class Command(BaseCommand):
                     if delta.total_seconds() < CRON_THREAD_KILL_TIMEOUT:
                         event = cron_job.event
                         server = cron_job.server
-                        action = cron_job.action
-                        utc_now = datetime.now(pytz.timezone("utc"))
-                        cronjob_last_execution_utc = cron_job.last_execution
-                        diff = (
-                            utc_now - cronjob_last_execution_utc
-                            if cronjob_last_execution_utc
-                            else None
-                        )
+                        only_when_practice = cron_job.apply_only_if_practice
                         if (
-                            cronjob_last_execution_utc is None
-                            or diff.total_seconds() > CRON_THREAD_KILL_TIMEOUT
+                            not only_when_practice
+                            or only_when_practice
+                            and server.status is not None
+                            and '"session": "PRACTICE1"' in server.status
                         ):
-                            cron_job.last_execution = local_date.utcnow()
-                            cron_job.save()
-                            server.action = action
-                            if event is not None:
-                                server.event = event
-                            server.clean()
-                            server.save()
+                            action = cron_job.action
+                            utc_now = datetime.now(pytz.timezone("utc"))
+                            cronjob_last_execution_utc = cron_job.last_execution
+                            diff = (
+                                utc_now - cronjob_last_execution_utc
+                                if cronjob_last_execution_utc
+                                else None
+                            )
+                            if (
+                                cronjob_last_execution_utc is None
+                                or diff.total_seconds() > CRON_THREAD_KILL_TIMEOUT
+                            ):
+                                cron_job.last_execution = local_date.utcnow()
+                                cron_job.save()
+                                server.action = action
+                                if event is not None:
+                                    server.event = event
+                                server.clean()
+                                server.save()
+                                if (
+                                    cron_job.message is not None
+                                    and cron_job.message != ""
+                                ):
+                                    parts = cron_job.message.split(linesep)
+                                    for part in parts:
+                                        message = Chat()
+                                        message.server = server
+                                        message.message = part
+                                        message.save()
+                                        background_action_chat(message)
                 except:
                     pass
 

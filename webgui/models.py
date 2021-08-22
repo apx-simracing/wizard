@@ -968,6 +968,10 @@ class Event(models.Model):
         return "{}".format(self.name)
 
     def clean(self, *args, **kwargs):
+        if len(self.entries) == 0 and self.include_stock_skins:
+            raise ValidationError(
+                "You don't have any entries. Uncheck include stock skins."
+            )
         if self.welcome_message:
             parts = self.welcome_message.split(linesep)
             for part in parts:
@@ -1425,6 +1429,14 @@ class ServerCron(models.Model):
         help_text="Runs an activity on the server.",
         verbose_name="Pending action to submit",
     )
+    message = models.TextField(
+        default=None,
+        null=True,
+        blank=True,
+        help_text="Message to send",
+    )
+
+    apply_only_if_practice = models.BooleanField(default=False)
 
     def __str__(self):
         return "{}: {}@{}".format(self.cron_text, self.action, self.server)
@@ -1436,6 +1448,13 @@ class ServerCron(models.Model):
             raise ValidationError("Select a server first")
         if self.action == "D" and not self.event:
             raise ValidationError("You have to add an event before deploying")
+        if self.message:
+            parts = self.message.split(linesep)
+            for part in parts:
+                if len(part) > 50:
+                    raise ValidationError(
+                        "Limit the line length of each line of the text to 50!"
+                    )
 
 
 class TickerMessageType(models.TextChoices):
