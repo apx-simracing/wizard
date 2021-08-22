@@ -968,10 +968,6 @@ class Event(models.Model):
         return "{}".format(self.name)
 
     def clean(self, *args, **kwargs):
-        if len(self.entries) == 0 and self.include_stock_skins:
-            raise ValidationError(
-                "You don't have any entries. Uncheck include stock skins."
-            )
         if self.welcome_message:
             parts = self.welcome_message.split(linesep)
             for part in parts:
