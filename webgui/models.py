@@ -968,6 +968,10 @@ class Event(models.Model):
         return "{}".format(self.name)
 
     def clean(self, *args, **kwargs):
+        if self.downstream == 0:
+            raise ValidationError("The downstream cannot be 0.")
+        if self.upstream == 0:
+            raise ValidationError("The upstream cannot be 0.")
         if self.welcome_message:
             parts = self.welcome_message.split(linesep)
             for part in parts:
