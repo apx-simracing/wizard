@@ -1,5 +1,5 @@
 from django.http import HttpResponse, Http404, JsonResponse, HttpResponseBadRequest
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.core.exceptions import ValidationError
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
@@ -561,6 +561,10 @@ def add_status(request, secret: str):
     server.status = got
     server.save()
     return HttpResponse("OK")
+
+
+def index_view(request):
+    return redirect("/admin")
 
 
 @csrf_exempt

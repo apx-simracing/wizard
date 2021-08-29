@@ -30,11 +30,13 @@ from webgui.views import (
     add_log,
     get_weather,
     live,
+    index_view,
 )
 from wizard.settings import ENTRY_SIGNUP_ENABLED
 
 if ENTRY_SIGNUP_ENABLED:
     urlpatterns = [
+        path("", index_view),
         path("admin/", admin.site.urls),
         path("signup/", get_signup_form),
         path("rules/", get_rules_page),
@@ -55,6 +57,7 @@ if ENTRY_SIGNUP_ENABLED:
     ]
 else:
     urlpatterns = [
+        path("", index_view),
         path("admin/", admin.site.urls),
         path("signup/", get_signup_form),
         path("rules/", get_rules_page),
