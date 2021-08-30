@@ -370,6 +370,9 @@ def get_event_config(event_id: int):
         short_name = component.short_name
         is_official = component.is_official
 
+        if steam_id in vehicle_groups:
+            steam_id = str(steam_id) + ":" + name
+
         if steam_id not in vehicle_groups:
             vehicle_groups[steam_id] = {
                 "entries": [],
@@ -407,6 +410,9 @@ def get_event_config(event_id: int):
             name = component.component_name
             short_name = component.short_name
             official = component.is_official
+
+            if steam_id in vehicle_groups:
+                steam_id = str(steam_id) + ":" + name
 
             if steam_id not in vehicle_groups:
                 vehicle_groups[steam_id] = {
@@ -870,7 +876,6 @@ def do_server_interaction(server):
     if server.action == "D":
         # save event json
         event_config = get_event_config(server.event.pk)
-
         # add ports
         event_config["server"]["overwrites"]["Multiplayer.JSON"][
             "Multiplayer General Options"
