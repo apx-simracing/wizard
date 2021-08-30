@@ -584,6 +584,23 @@ class EventFlagRules(models.TextChoices):
     EDQ = "3", "Everything except DQs"
 
 
+class QualyMode(models.TextChoices):
+    A = "0", "all cars qualify visibly on track together"
+    O = "1", "only one car is visible at a time"
+    R = "2", "use default from RFM, season, or track entry"
+
+
+class BlueFlags(models.TextChoices):
+    N = "0", "None"
+    S = "1", "show but never penalize"
+    P_0_3 = "2", "show and penalize if following within 0.3 seconds"
+    P_0_5 = "3", "show and penalize if following within 0.5 seconds"
+    P_0_7 = "4", "show and penalize if following within 0.7 seconds"
+    P_0_9 = "5", "show and penalize if following within 0.7 seconds"
+    P_1_1 = "6", "show and penalize if following within 1.1 seconds"
+    R = "7", "Use rFm value"
+
+
 class EventFailureRates(models.TextChoices):
     N = "0", "None"
     NOR = "1", "Normal"
@@ -860,6 +877,30 @@ class Event(models.Model):
         help_text="Allow AI toggle",
     )
 
+    cuts_allowed = models.IntegerField(
+        default=2,
+        validators=[MinValueValidator(0), MaxValueValidator(999999)],
+        help_text="Track cuts allowed before a penalty is given",
+    )
+
+    qualy_mode = models.CharField(
+        max_length=50,
+        choices=QualyMode.choices,
+        default=QualyMode.R,
+        blank=False,
+        null=False,
+        help_text="Qualy mode",
+    )
+
+    blue_flag_mode = models.CharField(
+        max_length=50,
+        choices=BlueFlags.choices,
+        default=BlueFlags.S,
+        blank=False,
+        null=False,
+        help_text="Blue flag mode",
+    )
+
     @property
     def multiplayer_json(self):
         blob = OrderedDict()
@@ -964,6 +1005,24 @@ class Event(models.Model):
         blob["Race Conditions"]["CHAMP RaceTimeScale"] = int(self.race_multiplier)
         blob["Race Conditions"]["CURNT RaceTimeScale"] = int(self.race_multiplier)
         blob["Race Conditions"]["GPRIX RaceTimeScale"] = int(self.race_multiplier)
+
+        blob["Race Conditions"]["MULTI Track Cuts Allowed"] = int(self.cuts_allowed)
+        blob["Race Conditions"]["RPLAY Track Cuts Allowed"] = int(self.cuts_allowed)
+        blob["Race Conditions"]["CHAMP Track Cuts Allowed"] = int(self.cuts_allowed)
+        blob["Race Conditions"]["CURNT Track Cuts Allowed"] = int(self.cuts_allowed)
+        blob["Race Conditions"]["GPRIX Track Cuts Allowed"] = int(self.cuts_allowed)
+
+        blob["Race Conditions"]["MULTI PrivateQualifying"] = int(self.qualy_mode)
+        blob["Race Conditions"]["RPLAY PrivateQualifying"] = int(self.qualy_mode)
+        blob["Race Conditions"]["CHAMP PrivateQualifying"] = int(self.qualy_mode)
+        blob["Race Conditions"]["CURNT PrivateQualifying"] = int(self.qualy_mode)
+        blob["Race Conditions"]["GPRIX PrivateQualifying"] = int(self.qualy_mode)
+
+        blob["Race Conditions"]["MULTI BlueFlags"] = int(self.blue_flag_mode)
+        blob["Race Conditions"]["RPLAY BlueFlags"] = int(self.blue_flag_mode)
+        blob["Race Conditions"]["CHAMP BlueFlags"] = int(self.blue_flag_mode)
+        blob["Race Conditions"]["CURNT BlueFlags"] = int(self.blue_flag_mode)
+        blob["Race Conditions"]["GPRIX BlueFlags"] = int(self.blue_flag_mode)
 
         return dumps(blob)
 
