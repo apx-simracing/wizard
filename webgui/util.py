@@ -220,18 +220,20 @@ def get_secret(length=15):
     return secret
 
 
-def get_free_tcp_port(max_tries=10, default_port=8000, not_allowed: list = []):
+def get_free_tcp_port(
+    max_tries=10, default_port=8000, not_allowed: list = [], maximum=65534
+):
     port = default_port
     if port in not_allowed:
-        port = random.randint(port, 65534)
+        port = random.randint(port, maximum)
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     for i in range(1, max_tries):
         try:
             if port in not_allowed:
-                port = random.randint(port, 65534)
+                port = random.randint(port, maximum)
             s.connect(("localhost", int(port)))
             s.shutdown(2)
-            port = random.randint(port, 65534)
+            port = random.randint(port, maximum)
         except:
             break
     return port

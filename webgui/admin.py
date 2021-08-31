@@ -14,7 +14,7 @@ from webgui.models import (
     ServerPlugin,
     TrackFile,
 )
-from wizard.settings import OPENWEATHERAPI_KEY
+from wizard.settings import OPENWEATHERAPI_KEY, RECIEVER_PORT_RANGE
 from django.contrib import messages
 from django.utils.html import mark_safe
 from django.contrib.auth.models import Group, User
@@ -308,7 +308,9 @@ class ServerAdmin(admin.ModelAdmin):
                 # it's on the same box
                 port = url.replace("http://localhost:", "").replace("/", "")
                 taken_ports.append(int(port))
-        port = get_free_tcp_port(5, 8080, taken_ports)
+        port = get_free_tcp_port(
+            5, RECIEVER_PORT_RANGE[0], taken_ports, RECIEVER_PORT_RANGE[1]
+        )
         if port in taken_ports:
             self.message_user(
                 request, "We could not get a free port", level=messages.ERROR
