@@ -40,6 +40,7 @@ from math import floor
 from django.urls import path
 from django.http import HttpResponseRedirect
 from pydng import generate_name
+from django.forms.widgets import CheckboxSelectMultiple
 
 admin.site.site_url = None
 admin.site.site_title = "APX"
@@ -60,6 +61,8 @@ class TrackAdmin(admin.ModelAdmin):
 
 @admin.register(Entry)
 class EntryAdmin(admin.ModelAdmin):
+    ordering = ("component__component_name",)
+
     def get_form(self, request, obj=None, **kwargs):
         form = super(EntryAdmin, self).get_form(request, obj=None, **kwargs)
         form.base_fields["component"].queryset = Component.objects.filter(type="VEH")
@@ -108,8 +111,21 @@ class EntryFileAdmin(admin.ModelAdmin):
 
 @admin.register(Event)
 class EventAdmin(admin.ModelAdmin):
+    actions = ["copy"]
+
+    def copy(self, request, queryset):
+        for element in queryset:
+            element.pk = None
+            element.name = element.name + " Copy"
+            element.save()
+        pass
+
+    copy.short_description = "Copy event"
+
     def get_form(self, request, obj=None, **kwargs):
         form = super(EventAdmin, self).get_form(request, obj=None, **kwargs)
+        form.base_fields["entries"].widget = CheckboxSelectMultiple()
+        form.base_fields["signup_components"].widget = CheckboxSelectMultiple()
         form.base_fields["entries"].queryset = Entry.objects.filter(
             component__type="VEH"
         ).order_by("team_name")
@@ -220,7 +236,10 @@ class RaceSessionsAdmin(admin.ModelAdmin):
 
 @admin.register(RaceConditions)
 class RaceConditionsAdmin(admin.ModelAdmin):
-    pass
+    def get_form(self, request, obj=None, **kwargs):
+        form = super(RaceConditionsAdmin, self).get_form(request, obj=None, **kwargs)
+        form.base_fields["sessions"].widget = CheckboxSelectMultiple()
+        return form
 
 
 @admin.register(Server)

@@ -375,14 +375,7 @@ class Entry(models.Model):
                     )
 
     def __str__(self):
-        if self.events:
-            return "{}#{} ({}) for {}".format(
-                self.team_name, self.vehicle_number, self.component, self.events
-            )
-        else:
-            return "{}#{} ({})".format(
-                self.team_name, self.vehicle_number, self.component
-            )
+        return "[{}] {}#{}".format(self.component, self.team_name, self.vehicle_number)
 
 
 class TrackFile(models.Model):
