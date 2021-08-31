@@ -607,6 +607,12 @@ class EventFailureRates(models.TextChoices):
     TS = "2", "Timescaled"
 
 
+class QualyJoinMode(models.TextChoices):
+    O = "0", "Open to all"
+    P = "1", "Open but drivers will be pending an open session"
+    C = "2", "closed"
+
+
 class EventRaceTimeScale(models.TextChoices):
     P = "-1", "Race %"
     N = "0", "None"
@@ -631,7 +637,11 @@ class Event(models.Model):
         help_text="The Name of the event. Will be used as Race name in the server.",
         validators=[event_name_validator],
     )
-    conditions = models.ForeignKey(RaceConditions, on_delete=models.CASCADE)
+    conditions = models.ForeignKey(
+        RaceConditions,
+        on_delete=models.CASCADE,
+        help_text="Conditions is a bundle of session definitions, containing session lengths and grip information.",
+    )
     entries = models.ManyToManyField(Entry, blank=True)
     tracks = models.ManyToManyField(Track)
     signup_active = models.BooleanField(default=False)
@@ -901,6 +911,48 @@ class Event(models.Model):
         help_text="Blue flag mode",
     )
 
+    pause_while_zero_players = models.BooleanField(
+        default=False,
+        help_text="Pause while zero players",
+    )
+
+    pit_speed_override = models.IntegerField(
+        default=0,
+        validators=[MinValueValidator(0)],
+        help_text="pitlane speed limit override in meters/sec (0=disabled)",
+    )
+
+    must_be_stopped = models.BooleanField(
+        default=False,
+        help_text="Whether drivers must come to a complete stop before exiting back to the monitor",
+    )
+
+    qualy_join_mode = models.CharField(
+        max_length=50,
+        choices=QualyJoinMode.choices,
+        default=QualyJoinMode.O,
+        blank=False,
+        null=False,
+        help_text="Closed Qualify Sessions",
+    )
+
+    after_race_delay = models.IntegerField(
+        default=90,
+        validators=[MinValueValidator(0)],
+        help_text="Dedicated server additional delay (added to delay between sessions before loading next track",
+    )
+
+    delay_between_sessions = models.IntegerField(
+        default=30,
+        validators=[MinValueValidator(0)],
+        help_text="Dedicated server delay before switching sessions automatically (after hotlaps are completed, if option is enabled), previously hardcoded to 45",
+    )
+
+    collision_fade_threshold = models.FloatField(
+        default=0.7,
+        help_text="Collision impacts are reduced to zero at this latency",
+    )
+
     @property
     def multiplayer_json(self):
         blob = OrderedDict()
@@ -958,6 +1010,23 @@ class Event(models.Model):
         blob["Multiplayer General Options"]["Net Connection Type"] = 6
         blob["Multiplayer General Options"]["Downstream Rated KBPS"] = self.downstream
         blob["Multiplayer General Options"]["Upstream Rated KBPS"] = self.upstream
+
+        blob["Multiplayer Server Options"][
+            "Pause While Zero Players"
+        ] = self.pause_while_zero_players
+
+        blob["Multiplayer Server Options"]["Must Be Stopped"] = self.must_be_stopped
+        blob["Multiplayer Server Options"][
+            "Closed Qualify Sessions"
+        ] = self.qualy_join_mode
+        blob["Multiplayer Server Options"]["Delay After Race"] = self.after_race_delay
+        blob["Multiplayer Server Options"][
+            "Delay Between Sessions"
+        ] = self.delay_between_sessions
+        blob["Multiplayer Server Options"][
+            "Collision Fade Thresh"
+        ] = self.collision_fade_threshold
+
         return dumps(blob)
 
     @property
@@ -1030,6 +1099,8 @@ class Event(models.Model):
         return "{}".format(self.name)
 
     def clean(self, *args, **kwargs):
+        if self.admin_password == "apx":
+            raise ValidationError("Please set the admin password.")
         if self.downstream == 0:
             raise ValidationError("The downstream cannot be 0.")
         if self.upstream == 0:

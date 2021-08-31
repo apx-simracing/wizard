@@ -112,13 +112,13 @@ class EventAdmin(admin.ModelAdmin):
         form = super(EventAdmin, self).get_form(request, obj=None, **kwargs)
         form.base_fields["entries"].queryset = Entry.objects.filter(
             component__type="VEH"
-        )
+        ).order_by("team_name")
         form.base_fields["tracks"].queryset = Track.objects.filter(
             component__type="LOC"
-        )
+        ).order_by("component__component_name", "layout")
         form.base_fields["signup_components"].queryset = Component.objects.filter(
             type="VEH"
-        )
+        ).order_by("component_name")
         return form
 
     def all_clients(self, obj):
@@ -140,6 +140,75 @@ class EventAdmin(admin.ModelAdmin):
         "allow_stability_control",
         "real_name",
         "replays",
+    )
+
+    fieldsets = (
+        (
+            "Event structure",
+            {
+                "fields": (
+                    "name",
+                    "entries",
+                    "tracks",
+                    "signup_components",
+                ),
+            },
+        ),
+        (
+            "Driving aids",
+            {
+                "fields": (
+                    "allow_traction_control",
+                    "allow_anti_lock_brakes",
+                    "allow_stability_control",
+                    "allow_auto_shifting",
+                    "allow_steering_help",
+                    "allow_braking_help",
+                    "allow_auto_clutch",
+                    "allow_invulnerability",
+                    "allow_auto_pit_stop",
+                    "allow_opposite_lock",
+                    "allow_spin_recovery",
+                    "allow_ai_toggle",
+                ),
+            },
+        ),
+        (
+            "Network and connectivity settings",
+            {
+                "fields": (
+                    "password",
+                    "admin_password",
+                    "clients",
+                    "ai_clients",
+                    "real_name",
+                    "downstream",
+                    "upstream",
+                    "pause_while_zero_players",
+                    "qualy_join_mode",
+                    "rejoin",
+                    "collision_fade_threshold",
+                ),
+            },
+        ),
+        (
+            "Session settings",
+            {
+                "fields": (
+                    "after_race_delay",
+                    "delay_between_sessions",
+                    "blue_flag_mode",
+                    "rules",
+                    "cuts_allowed",
+                    "fuel_multiplier",
+                    "race_multiplier",
+                    "tire_multiplier",
+                    "damage",
+                    "conditions",
+                    "replays",  # weather is disabled atm
+                ),
+            },
+        ),
     )
 
 
