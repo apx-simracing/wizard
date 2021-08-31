@@ -518,10 +518,10 @@ def auto_delete_file_on_delete(sender, instance, **kwargs):
 
 
 class EvenStartType(models.TextChoices):
-    S = "S", "Standing start"
-    FLS = "FLS", "Formation Lap and standing start"
-    SCR = "SCR", "Lap behind safety car & rolling start"
-    FR = "FR", "Fast rolling start"
+    S = "0", "Standing start"
+    FLS = "1", "Formation Lap and standing start"
+    SCR = "2", "Lap behind safety car & rolling start"
+    FR = "4", "Fast rolling start"
 
 
 class ServerPlugin(models.Model):
@@ -604,6 +604,16 @@ class QualyJoinMode(models.TextChoices):
     O = "0", "Open to all"
     P = "1", "Open but drivers will be pending an open session"
     C = "2", "closed"
+
+
+class ParcFermeMode(models.TextChoices):
+    O = "0", "Off"
+    P = (
+        "1",
+        "no setup changes allowed between qual and race except for 'Free Settings')",
+    )
+    R = "2", "same unless rain"
+    D = "3", "use RFM default"
 
 
 class EventRaceTimeScale(models.TextChoices):
@@ -946,6 +956,32 @@ class Event(models.Model):
         help_text="Collision impacts are reduced to zero at this latency",
     )
 
+    reconaissance_laps = models.IntegerField(
+        default=0,
+        validators=[MinValueValidator(0), MaxValueValidator(1000000)],
+        help_text="Reconnaissance laps",
+    )
+
+    parc_ferme = models.CharField(
+        max_length=50,
+        choices=ParcFermeMode.choices,
+        default=ParcFermeMode.D,
+        blank=False,
+        null=False,
+        help_text="Parc Ferme ruling. If enforced, add values for the Free Settings field aswell",
+    )
+
+    free_settings = models.IntegerField(
+        default=-1,
+        validators=[MinValueValidator(-1), MaxValueValidator(1000000)],
+        help_text="Use only if Parc Ferme is used: -1=use RFM/season/GDB default, or add to allow minor changes with fixed\/parc ferme setups: 1=steering lock, 2=brake pressure, 4=starting fuel, 8=fuel strategy 16=tire compound, 32=brake bias, 64=front wing, 128=engine settings",
+    )
+
+    enable_auto_downloads = models.BooleanField(
+        default=True,
+        help_text="Whether to allow clients to autodownload files that they are missing.",
+    )
+
     @property
     def multiplayer_json(self):
         blob = OrderedDict()
@@ -1019,6 +1055,12 @@ class Event(models.Model):
         blob["Multiplayer Server Options"][
             "Collision Fade Thresh"
         ] = self.collision_fade_threshold
+        blob["Multiplayer Server Options"][
+            "Pit Speed Override"
+        ] = self.pit_speed_override
+        blob["Multiplayer Server Options"][
+            "Enable Autodownloads"
+        ] = self.enable_auto_downloads
 
         return dumps(blob)
 
@@ -1085,6 +1127,30 @@ class Event(models.Model):
         blob["Race Conditions"]["CHAMP BlueFlags"] = int(self.blue_flag_mode)
         blob["Race Conditions"]["CURNT BlueFlags"] = int(self.blue_flag_mode)
         blob["Race Conditions"]["GPRIX BlueFlags"] = int(self.blue_flag_mode)
+
+        blob["Race Conditions"]["MULTI Reconnaissance"] = int(self.reconaissance_laps)
+        blob["Race Conditions"]["RPLAY Reconnaissance"] = int(self.reconaissance_laps)
+        blob["Race Conditions"]["CHAMP Reconnaissance"] = int(self.reconaissance_laps)
+        blob["Race Conditions"]["CURNT Reconnaissance"] = int(self.reconaissance_laps)
+        blob["Race Conditions"]["GPRIX Reconnaissance"] = int(self.reconaissance_laps)
+
+        blob["Race Conditions"]["MULTI ParcFerme"] = int(self.parc_ferme)
+        blob["Race Conditions"]["RPLAY ParcFerme"] = int(self.parc_ferme)
+        blob["Race Conditions"]["CHAMP ParcFerme"] = int(self.parc_ferme)
+        blob["Race Conditions"]["CURNT ParcFerme"] = int(self.parc_ferme)
+        blob["Race Conditions"]["GPRIX ParcFerme"] = int(self.parc_ferme)
+
+        blob["Race Conditions"]["MULTI FreeSettings"] = int(self.free_settings)
+        blob["Race Conditions"]["RPLAY FreeSettings"] = int(self.free_settings)
+        blob["Race Conditions"]["CHAMP FreeSettings"] = int(self.free_settings)
+        blob["Race Conditions"]["CURNT FreeSettings"] = int(self.free_settings)
+        blob["Race Conditions"]["GPRIX FreeSettings"] = int(self.free_settings)
+
+        blob["Race Conditions"]["MULTI Formation Lap"] = int(self.start_type)
+        blob["Race Conditions"]["RPLAY Formation Lap"] = int(self.start_type)
+        blob["Race Conditions"]["CHAMP Formation Lap"] = int(self.start_type)
+        blob["Race Conditions"]["CURNT Formation Lap"] = int(self.start_type)
+        blob["Race Conditions"]["GPRIX Formation Lap"] = int(self.start_type)
 
         return dumps(blob)
 

@@ -171,6 +171,21 @@ class EventAdmin(admin.ModelAdmin):
             },
         ),
         (
+            "Session join options",
+            {
+                "fields": (
+                    "admin_password",
+                    "password",
+                    "clients",
+                    "ai_clients",
+                    "pause_while_zero_players",
+                    "qualy_join_mode",
+                    "rejoin",
+                    "real_name",
+                ),
+            },
+        ),
+        (
             "Driving aids",
             {
                 "fields": (
@@ -193,18 +208,22 @@ class EventAdmin(admin.ModelAdmin):
             "Network and connectivity settings",
             {
                 "fields": (
-                    "password",
-                    "admin_password",
-                    "clients",
-                    "ai_clients",
-                    "real_name",
                     "downstream",
                     "upstream",
-                    "pause_while_zero_players",
-                    "qualy_join_mode",
-                    "rejoin",
                     "collision_fade_threshold",
+                    "enable_auto_downloads",
                 ),
+            },
+        ),
+        (
+            "Simulator multipliers",
+            {
+                "fields": (
+                    "fuel_multiplier",
+                    "race_multiplier",
+                    "tire_multiplier",
+                    "damage",
+                )
             },
         ),
         (
@@ -214,16 +233,31 @@ class EventAdmin(admin.ModelAdmin):
                     "qualy_mode",
                     "after_race_delay",
                     "delay_between_sessions",
-                    "blue_flag_mode",
-                    "rules",
-                    "cuts_allowed",
-                    "fuel_multiplier",
-                    "race_multiplier",
-                    "tire_multiplier",
-                    "damage",
                     "conditions",
                     "replays",  # weather is disabled atm
+                    "reconaissance_laps",
+                    "start_type",
+                    "pit_speed_override",
                 ),
+            },
+        ),
+        (
+            "Penalties",
+            {
+                "fields": (
+                    "cuts_allowed",
+                    "rules",
+                    "blue_flag_mode",
+                )
+            },
+        ),
+        (
+            "Parc Ferme",
+            {
+                "fields": (
+                    "parc_ferme",
+                    "free_settings",
+                )
             },
         ),
     )
