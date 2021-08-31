@@ -195,6 +195,7 @@ class EventAdmin(admin.ModelAdmin):
             "Session settings",
             {
                 "fields": (
+                    "qualy_mode",
                     "after_race_delay",
                     "delay_between_sessions",
                     "blue_flag_mode",
