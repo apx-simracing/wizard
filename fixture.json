@@ -14,7 +14,7 @@
       "name": "Demo event",
       "conditions": 1,
       "signup_active": false,
-      "start_type": "S",
+      "start_type": "0",
       "real_weather": false,
       "temp_offset": 0,
       "mod_name": "",
