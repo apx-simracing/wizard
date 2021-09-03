@@ -144,16 +144,25 @@ class EventAdmin(admin.ModelAdmin):
 
     all_clients.short_description = "#/AI"
 
+    def all_aids(self, obj):
+        if not obj:
+            return "-"
+        return "{}/{}/{}/{}/{}".format(
+            obj.allow_auto_clutch,
+            obj.allow_ai_toggle,
+            obj.allow_traction_control,
+            obj.allow_anti_lock_brakes,
+            obj.allow_stability_control,
+        )
+
+    all_aids.short_description = "Auto clutch/ AI toggle/ TC/ ABS/ Stability Control"
+
     list_display = (
         "name",
         "damage",
         "all_clients",
+        "all_aids",
         "rejoin",
-        "allow_auto_clutch",
-        "allow_ai_toggle",
-        "allow_traction_control",
-        "allow_anti_lock_brakes",
-        "allow_stability_control",
         "real_name",
         "replays",
     )
