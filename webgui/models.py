@@ -258,7 +258,7 @@ class RaceSessions(models.Model):
         null=True,
         blank=True,
         max_length=100,
-        help_text="If you want to use the mod provided grip, add a filename/ and or part of the rrbin filename. You can also add 'autosave' to use the autosave file, which must be existing (also keep settings folder in the server options). If found, the uploaded grip file will be ignored.",
+        help_text="If you want to use the mod provided grip, add a filename/ and or part of the rrbin filename. You can also add 'autosave' to use the autosave file, which must be existing (also keep settings folder in the server options). If found, the uploaded grip file will be ignored. You can also use the constants 'natural' or 'green' to define grip levels",
     )
     start = models.TimeField(
         blank=True,
