@@ -1329,6 +1329,11 @@ class Server(models.Model):
         help_text="Decides if APX will remove the content of the folders CBash and shaders. Use with caution.",
         verbose_name="remove Cbash and Shaders folder",
     )
+    remove_settings = models.BooleanField(
+        default=False,
+        help_text="Decides if APX will remove the content of the settings folder. If you plan to rely on autosave grip files, do not check this option",
+        verbose_name="remove settings folder",
+    )
     session_id = models.CharField(
         max_length=255,
         blank=True,
