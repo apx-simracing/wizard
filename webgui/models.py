@@ -1285,6 +1285,11 @@ class Server(models.Model):
         default=False,
         help_text="Decides if APX will allow the server to persist the result and replay files",
     )
+    remove_cbash_shaders = models.BooleanField(
+        default=False,
+        help_text="Decides if APX will remove the content of the folders CBash and shaders. Use with caution.",
+        verbose_name="remove Cbash and Shaders folder",
+    )
     session_id = models.CharField(
         max_length=255,
         blank=True,
