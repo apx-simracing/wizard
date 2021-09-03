@@ -191,6 +191,7 @@ class EventAdmin(admin.ModelAdmin):
                     "qualy_join_mode",
                     "rejoin",
                     "real_name",
+                    "deny_votings",
                 ),
             },
         ),

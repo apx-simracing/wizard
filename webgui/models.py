@@ -738,6 +738,22 @@ class Event(models.Model):
         validators=[alphanumeric_validator_dots],
     )
 
+    deny_votings = models.BooleanField(
+        default=False, help_text="Deny all admin functionalities for non-admins"
+    )
+
+    deny_session_voting = models.BooleanField(
+        default=False, help_text="Disable any voting to switch sessions"
+    )
+
+    deny_ai_voting = models.BooleanField(
+        default=False, help_text="Disable any voting to add AI cars"
+    )
+
+    deny_other_voting = models.BooleanField(
+        default=False, help_text="Disable any other voting"
+    )
+
     plugins = models.ManyToManyField(ServerPlugin, blank=True)
 
     timing_classes = models.TextField(
@@ -1104,6 +1120,14 @@ class Event(models.Model):
             "Enable Autodownloads"
         ] = self.enable_auto_downloads
 
+        if self.deny_votings:
+            blob["Multiplayer Server Options"]["Admin Functionality"] = 0
+        if self.deny_ai_voting:
+            blob["Multiplayer Server Options"]["Vote Percentage Add AI"] = 100
+        if self.deny_other_voting:
+            blob["Multiplayer Server Options"]["Vote Percentage Other"] = 100
+        if self.deny_session_voting:
+            blob["Multiplayer Server Options"]["Vote Percentage Next Session"] = 100
         return dumps(blob)
 
     @property
