@@ -79,6 +79,39 @@ class RaceSessionsType(models.TextChoices):
     R1 = "R1", "Race 1"
 
 
+class RaceSessionGripScale(models.TextChoices):
+    SL = "-1", "scaled with session length"
+    S = (
+        "0",
+        "static",
+    )
+    S_0_1 = "0.1", "0.1x"
+    S_0_2 = "0.2", "0.2x"
+    S_0_3 = "0.3", "0.3x"
+    S_0_4 = "0.4", "0.4x"
+    S_0_5 = "0.5", "0.5x"
+    S_0_6 = "0.6", "0.6x"
+    S_0_7 = "0.7", "0.7x"
+    S_0_8 = "0.8", "0.8x"
+    S_0_9 = "0.9", "0.9x"
+    N = "1", "normal"
+    F_1_5 = "1.5", "1.5x"
+    F_2 = "2", "2x"
+    F_3 = "3", "3x"
+    F_4 = "4", "4x"
+    F_5 = "5", "5x"
+    F_6 = "6", "6x"
+    F_7 = "7", "7x"
+    F_8 = "8", "8x"
+    F_9 = "9", "9x"
+    F_10 = "10", "10x"
+    F_11 = "11", "11x"
+    F_12 = "12", "12x"
+    F_13 = "13", "13x"
+    F_14 = "14", "14x"
+    F_15 = "15", "15x"
+
+
 alphanumeric_validator = RegexValidator(
     r"^[0-9a-zA-Z_-]*$", "Only alphanumeric characters and dashes are allowed."
 )
@@ -211,6 +244,12 @@ class RaceSessions(models.Model):
     type = models.CharField(
         max_length=2, choices=RaceSessionsType.choices, default=RaceSessionsType.TD
     )
+    real_road_time_scale = models.CharField(
+        max_length=10,
+        choices=RaceSessionGripScale.choices,
+        default=RaceSessionGripScale.N,
+    )
+
     grip = models.FileField(
         upload_to=get_conditions_file_root, blank=True, null=True, default=None
     )

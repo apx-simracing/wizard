@@ -459,6 +459,11 @@ def get_event_config(event_id: int):
     if len(sessions) > 0:
         for session in sessions:
             session_list[session.type] = session.grip.path if session.grip else None
+            grip_scale = 1
+            if "." not in str(session.real_road_time_scale):
+                grip_scale = int(session.real_road_time_scale)
+            else:
+                grip_scale = float(session.real_road_time_scale)
             session_setting_list.append(
                 {
                     "type": str(session.type),
@@ -467,6 +472,7 @@ def get_event_config(event_id: int):
                     "start": str(session.start) if session.start is not None else None,
                     "weather": session.weather,
                     "grip_needle": session.grip_needle,
+                    "grip_scale": grip_scale,
                 }
             )
     else:
