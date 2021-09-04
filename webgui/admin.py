@@ -222,6 +222,7 @@ class EventAdmin(admin.ModelAdmin):
                     "upstream",
                     "collision_fade_threshold",
                     "enable_auto_downloads",
+                    "plugins",
                 ),
             },
         ),
