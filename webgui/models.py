@@ -1373,6 +1373,11 @@ class Server(models.Model):
         help_text="Decides if APX will remove the content of the settings folder. If you plan to rely on autosave grip files, do not check this option",
         verbose_name="remove settings folder",
     )
+    remove_unused_mods = models.BooleanField(
+        default=False,
+        help_text="Decides if APX will remove workshop items downloaded within steamcmd, but not used for the deployment. ",
+        verbose_name="remove unused workshop items",
+    )
     session_id = models.CharField(
         max_length=255,
         blank=True,

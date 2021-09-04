@@ -911,6 +911,7 @@ def do_server_interaction(server):
         event_config["collect_results_replays"] = server.collect_results_replays
         event_config["remove_cbash_shaders"] = server.remove_cbash_shaders
         event_config["remove_settings"] = server.remove_settings
+        event_config["remove_unused_mods"] = server.remove_unused_mods
 
         config_path = join(APX_ROOT, "configs", key + ".json")
         with open(config_path, "w") as file:
