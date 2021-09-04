@@ -125,6 +125,7 @@ class EventAdmin(admin.ModelAdmin):
     def get_form(self, request, obj=None, **kwargs):
         form = super(EventAdmin, self).get_form(request, obj=None, **kwargs)
         form.base_fields["entries"].widget = CheckboxSelectMultiple()
+        form.base_fields["plugins"].widget = CheckboxSelectMultiple()
         form.base_fields["signup_components"].widget = CheckboxSelectMultiple()
         form.base_fields["entries"].queryset = Entry.objects.filter(
             component__type="VEH"
