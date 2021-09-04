@@ -780,6 +780,12 @@ class Event(models.Model):
         help_text="Damage multiplier",
     )
 
+    ai_strength = models.IntegerField(
+        default=100,
+        validators=[MinValueValidator(0), MaxValueValidator(120)],
+        help_text="AI Driver Strength",
+    )
+
     password = models.CharField(
         default="",
         blank=True,
@@ -1217,6 +1223,12 @@ class Event(models.Model):
         blob["Race Conditions"]["CHAMP Formation Lap"] = int(self.start_type)
         blob["Race Conditions"]["CURNT Formation Lap"] = int(self.start_type)
         blob["Race Conditions"]["GPRIX Formation Lap"] = int(self.start_type)
+
+        blob["Game Options"]["CURNT AI Driver Strength"] = int(self.ai_strength)
+        blob["Game Options"]["GPRIX AI Driver Strength"] = int(self.ai_strength)
+        blob["Game Options"]["MULTI AI Driver Strength"] = int(self.ai_strength)
+        blob["Game Options"]["RPLAY AI Driver Strength"] = int(self.ai_strength)
+        blob["Game Options"]["CHAMP AI Driver Strength"] = int(self.ai_strength)
 
         return dumps(blob)
 

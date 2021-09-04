@@ -187,6 +187,7 @@ class EventAdmin(admin.ModelAdmin):
                     "password",
                     "clients",
                     "ai_clients",
+                    "ai_strength",
                     "pause_while_zero_players",
                     "qualy_join_mode",
                     "rejoin",
