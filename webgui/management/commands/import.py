@@ -40,6 +40,8 @@ class Command(BaseCommand):
                 selected_suffix = suffix
         if selected_suffix is None:
             raise ValidationError("We can't identify that file purpose")
+        if "#" in vehicle_number:
+            vehicle_number = vehicle_number.split("#")[1]
         if not full_path:
             return "{}_{}{}".format(short_name, vehicle_number, selected_suffix)
         new_file_path = join(
