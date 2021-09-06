@@ -194,6 +194,7 @@ class EventAdmin(admin.ModelAdmin):
                     "rejoin",
                     "real_name",
                     "deny_votings",
+                    "welcome_message",
                 ),
             },
         ),
