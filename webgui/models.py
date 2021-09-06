@@ -763,7 +763,7 @@ class Event(models.Model):
         default=None,
         null=True,
         blank=True,
-        help_text="Welcome message",
+        help_text="Welcome message. You can insert the driver name with the placeholder {driver_name}",
     )
 
     """
