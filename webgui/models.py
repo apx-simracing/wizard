@@ -135,9 +135,7 @@ class Component(models.Model):
         max_length=3, choices=ComponentType.choices, default=ComponentType.VEHICLE
     )
     steam_id = models.BigIntegerField(default=0, blank=True)
-    component_name = models.CharField(
-        default="Example_Mod", max_length=200, validators=[alphanumeric_validator]
-    )
+    component_name = models.CharField(default="Example_Mod", max_length=200)
     is_official = models.BooleanField(
         default=False,
         help_text="Is official content which follows the even version and uneven version scheme (APX will select versions for you). If not checked, we will use the version you've selected.",
