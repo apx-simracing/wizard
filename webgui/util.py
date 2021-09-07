@@ -41,6 +41,7 @@ import zipfile, io
 FILE_NAME_SUFFIXES = [
     ".json",
     ".dds",
+    "windshieldout.dds",
     "WINDOWSIN.dds",
     "WINDOWSOUT.dds",
     "_Region.dds",
@@ -59,6 +60,7 @@ FILE_NAME_SUFFIXES = [
 FILE_NAME_SUFFIXES_MEANINGS = [
     "JSON file",
     "Livery main file",
+    "Outer windshield file",
     "Inner windows file",
     "Outer windows file",
     "Livery region",
