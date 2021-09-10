@@ -944,10 +944,12 @@ def do_server_interaction(server):
             command_line = "--cmd deploy --args {} {}".format(config_path, rfm_path)
             run_apx_command(key, command_line)
             # push plugins, if needed
+            plugin_args = ""
             for plugin in server.event.plugins.all():
                 plugin_path = plugin.plugin_file.path
-                command_line = f"--cmd plugins --args {plugin_path}"
-                run_apx_command(key, command_line)
+                plugin_args = plugin_args + " " + plugin_path
+            if len(plugin_args) > 0:
+                run_apx_command(key, "--cmd plugins --args " + plugin_args)
         except Exception as e:
             server.state = str(e)
             server.save()
