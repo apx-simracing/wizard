@@ -48,7 +48,7 @@ admin.site.site_title = "APX"
 
 @admin.register(Component)
 class ComponentAdmin(admin.ModelAdmin):
-    pass
+    ordering = ["component_name"]
 
 
 @admin.register(Track)
