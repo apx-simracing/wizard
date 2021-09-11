@@ -506,6 +506,7 @@ def get_event_config(event_id: int):
             }
         },
         "include_stock_skins": server.include_stock_skins,
+        "skip_all_session_unless_configured": server.skip_all_session_unless_configured,
         "conditions": session_list,
         "sessions": session_setting_list,
         "cars": vehicle_groups,
@@ -780,6 +781,9 @@ def create_firewall_script(server):
 def do_server_interaction(server):
     secret = server.secret
     url = server.url
+    server.state = None
+    server.status = None
+    server.save()
     key = get_server_hash(url)
     if server.action == "W":
         try:
@@ -886,6 +890,8 @@ def do_server_interaction(server):
             server.save()
 
     if server.action == "D":
+        server.state = "Attempting to create event configuration"
+        server.save()
         # save event json
         event_config = get_event_config(server.event.pk)
         # add ports
@@ -933,16 +939,23 @@ def do_server_interaction(server):
                     files_to_attach.append(file_name)
                 # only add skin files if needed
                 if len(files_to_attach) > 0:
+                    server.state = "Pushing track update to the server"
+                    server.save()
                     command_line = "--cmd build_track --args {} {}".format(
                         track.component.component_name, " ".join(files_to_attach)
                     )
                     run_apx_command(key, command_line)
                 break  # more than one at the moment not supported
 
+            server.state = "Pushing skins (if any) to the server"
+            server.save()
             command_line = "--cmd build_skins --args {} {}".format(
                 config_path, rfm_path
             )
             run_apx_command(key, command_line)
+
+            server.state = "Request deployment"
+            server.save()
             command_line = "--cmd deploy --args {} {}".format(config_path, rfm_path)
             run_apx_command(key, command_line)
             # push plugins, if needed
@@ -951,11 +964,14 @@ def do_server_interaction(server):
                 plugin_path = plugin.plugin_file.path
                 plugin_args = plugin_args + " " + plugin_path
             if len(plugin_args) > 0:
+                server.state = "Pushing plugins to the server"
+                server.save()
                 run_apx_command(key, "--cmd plugins --args " + plugin_args)
         except Exception as e:
             server.state = str(e)
             server.save()
         finally:
+            server.state = None
             server.action = ""
             server.save()
 
