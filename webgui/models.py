@@ -65,6 +65,12 @@ from threading import Thread
 from croniter import croniter
 from re import match
 
+MOD_WARNINGS = {
+    "1737056846": "The Nordschleife DLC is more than 2.8 Gigabytes large. Due to steamcmd, downloads of these sizes tend to abort. Consider uploading this mod by hand to the server and use it as a file based item: https://wiki.apx.chmr.eu/doku.php?id=file_based_content",
+    "2141682966": "The Portland DLC is more than 1.2 Gigabytes large. Due to steamcmd, downloads of these sizes tend to abort. Consider uploading this mod by hand to the server and use it as a file based item: https://wiki.apx.chmr.eu/doku.php?id=file_based_content",
+    "2121171862": "The GDB files of this mod are flawed with the issue that slashes for comments and quotes are included within names. Some layouts might not work which affects the addition of grip settings.",
+}
+
 
 class ComponentType(models.TextChoices):
     VEHICLE = "VEH", "Vehicle"
@@ -181,8 +187,20 @@ class Component(models.Model):
     mask_positions = models.TextField(null=True, blank=True, default=None)
 
     template = models.TextField(default="", null=True, blank=True)
+    ignore_warnings = models.BooleanField(
+        default=False,
+        help_text="Ignore warnings at validation",
+    )
 
     def clean(self):
+        if str(self.steam_id) in MOD_WARNINGS and not self.ignore_warnings:
+            text = MOD_WARNINGS[str(self.steam_id)]
+
+            text = (
+                text
+                + ' To ignore this warning, check the option "ignore warnings" at the bottom of this form.'
+            )
+            raise ValidationError(text)
         if self.type != ComponentType.VEHICLE and self.update:
             raise ValidationError("Only vehicle components can get an Update.ini file")
 
