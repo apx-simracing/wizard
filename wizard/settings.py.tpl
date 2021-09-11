@@ -185,3 +185,23 @@ WEBUI_PORT_RANGE = [10001, 35000]
 HTTP_PORT_RANGE = [35001, 55000]
 
 SIM_PORT_RANGE = [55001, 65000]
+
+MSG_RESTART_WEEKEND_OK = "🚀 Restart weekend looks good {}!"  # Server name
+
+MSG_RESTART_WEEKEND_FAIL = (
+    "😱 Failed to restart weekend {}: {}"  # server name, exception text
+)
+
+MSG_START_OK = "🚀 Starting looks complete for {}!"  # server name
+
+MSG_START_FAIL = "😱 Failed starting server {}: {}"  # server name, exception text
+
+MSG_STOP_OK = "🛑 Stopping looks complete for {}!"  # server name
+
+MSG_STOP_FAIL = "😱 Failed to stop server {}: {}"  # server name, exception text
+
+MSG_DEPLOY_START = "🤹‍♀️ Updating {}!"  # server name
+
+MSG_DEPLOY_FAIL = "😱 Updating failed for server {}: {}"  # server name, exception text
+
+MSG_DEPLOY_FINISH = "🤹‍♀️ Update finished"  # server name

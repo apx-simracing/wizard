@@ -6,7 +6,6 @@ from wizard.settings import (
     DISCORD_WEBHOOK_NAME,
     DISCORD_RACE_CONTROL_WEBHOOK,
     DISCORD_RACE_CONTROL_WEBHOOK_NAME,
-    INSTANCE_NAME,
     OPENWEATHERAPI_KEY,
     BASE_DIR,
     PUBLIC_URL,
@@ -15,6 +14,15 @@ from wizard.settings import (
     WEBUI_PORT_RANGE,
     HTTP_PORT_RANGE,
     SIM_PORT_RANGE,
+    MSG_RESTART_WEEKEND_OK,
+    MSG_RESTART_WEEKEND_FAIL,
+    MSG_START_OK,
+    MSG_START_FAIL,
+    MSG_STOP_OK,
+    MSG_STOP_FAIL,
+    MSG_DEPLOY_START,
+    MSG_DEPLOY_FAIL,
+    MSG_DEPLOY_FINISH,
 )
 import hashlib
 import subprocess
@@ -526,6 +534,8 @@ def get_event_config(event_id: int):
 
 
 def do_post(message):
+    if not message or len(message) == 0:
+        return
     if DISCORD_WEBHOOK is not None and DISCORD_WEBHOOK_NAME is not None:
         got = post(
             DISCORD_WEBHOOK,
@@ -788,18 +798,10 @@ def do_server_interaction(server):
     if server.action == "W":
         try:
             run_apx_command(key, "--cmd new_weekend")
-            do_post(
-                "[{}]: 🚀 Restart weekend looks good {}!".format(
-                    INSTANCE_NAME, server.name
-                )
-            )
+            do_post(MSG_RESTART_WEEKEND_OK.format(server.name))
         except Exception as e:
             print(e)
-            do_post(
-                "[{}]: 😱 Failed to restart weekend {}: {}".format(
-                    INSTANCE_NAME, server.name, str(e)
-                )
-            )
+            do_post(MSG_RESTART_WEEKEND_FAIL.format(server.name, str(e)))
         finally:
             server.action = ""
             server.save()
@@ -828,18 +830,10 @@ def do_server_interaction(server):
 
                     run_apx_command(key, command_line)
             run_apx_command(key, "--cmd start")
-            do_post(
-                "[{}]: 🚀 Starting looks complete for {}!".format(
-                    INSTANCE_NAME, server.name
-                )
-            )
+            do_post(MSG_START_OK.format(server.name))
         except Exception as e:
             print(e)
-            do_post(
-                "[{}]: 😱 Failed starting server {}: {}".format(
-                    INSTANCE_NAME, server.name, str(e)
-                )
-            )
+            do_post(MSG_START_FAIL.format(server.name, str(e)))
         finally:
             server.action = ""
             server.save()
@@ -862,11 +856,6 @@ def do_server_interaction(server):
 
         except Exception as e:
             print(e)
-            do_post(
-                "[{}]: 😱 Failed starting server {}: {}".format(
-                    INSTANCE_NAME, server.name, str(e)
-                )
-            )
         finally:
             server.action = ""
             server.save()
@@ -874,22 +863,15 @@ def do_server_interaction(server):
 
         try:
             run_apx_command(key, "--cmd stop")
-            do_post(
-                "[{}]: 🛑 Stopping looks complete for {}!".format(
-                    INSTANCE_NAME, server.name
-                )
-            )
+            do_post(MSG_STOP_OK.format(server.name))
         except Exception as e:
-            do_post(
-                "[{}]: 😱 Failed to stop server {}: {}".format(
-                    INSTANCE_NAME, server.name, str(e)
-                )
-            )
+            do_post(MSG_STOP_FAIL.format(server.name, str(e)))
         finally:
             server.action = ""
             server.save()
 
     if server.action == "D":
+        do_post(MSG_DEPLOY_START.format(server.name))
         server.state = "Attempting to create event configuration"
         server.save()
         # save event json
@@ -968,10 +950,13 @@ def do_server_interaction(server):
                 server.save()
                 run_apx_command(key, "--cmd plugins --args " + plugin_args)
         except Exception as e:
-            server.state = str(e)
+            do_post(MSG_DEPLOY_FAIL.format(server.name, str(e)))
+            server.state = "Error: " + str(e)
             server.save()
         finally:
-            server.state = None
+            do_post(MSG_DEPLOY_FINISH.format(server.name))
+            if state is not None and "Error" not in server.state:
+                server.state = None
             server.action = ""
             server.save()
 
@@ -991,11 +976,6 @@ def do_server_interaction(server):
                 server.save()
         except:
             print("{} does not offer a key".format(server.pk))
-            do_post(
-                "[{}]: Server {} - {} does not offer a key".format(
-                    INSTANCE_NAME, server.pk, server.name
-                )
-            )
 
     # if an unlock key is present - attempt unlock!
     if server.server_unlock_key:
@@ -1009,14 +989,7 @@ def do_server_interaction(server):
             )
             server.server_unlock_key = None
         except Exception as e:
-
             print("{} unlock failed".format(server.pk))
-
-            do_post(
-                "[{}]: Server {} - {} unlock failed: {}".format(
-                    INSTANCE_NAME, server.pk, server.name, e
-                )
-            )
 
         finally:
             server.save()
