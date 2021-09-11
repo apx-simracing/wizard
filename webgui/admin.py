@@ -252,6 +252,7 @@ class EventAdmin(admin.ModelAdmin):
                     "replays",  # weather is disabled atm
                     "reconaissance_laps",
                     "start_type",
+                    "must_be_stopped",
                     "pit_speed_override",
                 ),
             },
