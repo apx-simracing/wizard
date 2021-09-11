@@ -69,6 +69,7 @@ MOD_WARNINGS = {
     "1737056846": "The Nordschleife DLC is more than 2.8 Gigabytes large. Due to steamcmd, downloads of these sizes tend to abort. Consider uploading this mod by hand to the server and use it as a file based item: https://wiki.apx.chmr.eu/doku.php?id=file_based_content",
     "2141682966": "The Portland DLC is more than 1.2 Gigabytes large. Due to steamcmd, downloads of these sizes tend to abort. Consider uploading this mod by hand to the server and use it as a file based item: https://wiki.apx.chmr.eu/doku.php?id=file_based_content",
     "2121171862": "The GDB files of this mod are flawed with the issue that slashes for comments and quotes are included within names. Some layouts might not work which affects the addition of grip settings.",
+    "788866138": "This mod is quite large (apparently 5 gigabytes). Steamcmd won't be able to download this reliable. Consider uploading this mod by hand to the server and use it as a file based item: https://wiki.apx.chmr.eu/doku.php?id=file_based_content",
 }
 
 
