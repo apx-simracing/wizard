@@ -248,6 +248,7 @@ class EventAdmin(admin.ModelAdmin):
                     "after_race_delay",
                     "delay_between_sessions",
                     "conditions",
+                    "skip_all_session_unless_configured",
                     "replays",  # weather is disabled atm
                     "reconaissance_laps",
                     "start_type",

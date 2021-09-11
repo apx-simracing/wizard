@@ -1024,6 +1024,11 @@ class Event(models.Model):
         help_text="Reconnaissance laps",
     )
 
+    skip_all_session_unless_configured = models.BooleanField(
+        default=False,
+        help_text="Instead of using default values from the player.JSON/ multiplayer.JSON, skip all sessions unless the ones configured with the conditions pack in APX.",
+    )
+
     parc_ferme = models.CharField(
         max_length=50,
         choices=ParcFermeMode.choices,
