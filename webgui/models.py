@@ -119,6 +119,15 @@ class RaceSessionGripScale(models.TextChoices):
     F_15 = "15", "15x"
 
 
+class RaceSessionFinishType(models.TextChoices):
+    PL = "-2", "%laps"
+    PT = "-1", "%time"
+    PLT = "0", "%laps&time"
+    CL = "1", "laps"
+    CT = "2", "time"
+    CLT = "3", "laps&time"
+
+
 alphanumeric_validator = RegexValidator(
     r"^[0-9a-zA-Z_-]*$", "Only alphanumeric characters and dashes are allowed."
 )
@@ -261,6 +270,7 @@ class RaceSessions(models.Model):
     type = models.CharField(
         max_length=2, choices=RaceSessionsType.choices, default=RaceSessionsType.TD
     )
+    laps = models.IntegerField(default=0, help_text="Target laps of the session")
     real_road_time_scale = models.CharField(
         max_length=10,
         choices=RaceSessionGripScale.choices,
@@ -281,27 +291,37 @@ class RaceSessions(models.Model):
         blank=True,
         default=None,
         null=True,
-        help_text="Target laps fro this session. This is in-game time. If empty, the defaults will be used.",
+        help_text="Target laps for this session. This is in-game time. If empty, the defaults will be used.",
     )
-    laps = models.IntegerField(default=0, help_text="Target laps of the session")
     length = models.IntegerField(
         default=0, help_text="Target length of the session in minutes"
     )
     weather = models.TextField(blank=True, null=True, default=None)
     track = models.ForeignKey("Track", on_delete=models.CASCADE, blank=True, null=True)
+    race_finish_criteria = models.CharField(
+        max_length=3,
+        choices=RaceSessionFinishType.choices,
+        default=None,
+        blank=True,
+        null=True,
+    )
 
     def clean(self):
+        if "R" not in str(self.type) and self.race_finish_criteria:
+            raise ValidationError("This is only needed for a race session")
         if self.length < 0 or self.laps < 0:
             raise ValidationError(
                 "Either length or laps is negative. Set to 0 to ignore."
             )
-        if "Q" not in str(self.type):
-            if self.length > 0 and self.laps > 0:
-                raise ValidationError(
-                    "You cannot set laps and length of the session in one session"
-                )
+        if "P" in str(self.type) and self.laps > 0:
+            raise ValidationError(
+                "A practice can only have a time lenght. Set to 0 to ignore."
+            )
+
         if "WU" in str(self.type) and self.laps > 0:
-            raise ValidationError("A warmup can only have a time lenght")
+            raise ValidationError(
+                "A warmup can only have a time lenght. Set to 0 to ignore."
+            )
 
         if self.grip_needle and self.grip:
             raise ValidationError(
