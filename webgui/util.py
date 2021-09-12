@@ -468,6 +468,7 @@ def get_event_config(event_id: int):
     sessions = conditions.sessions.all()
     session_list = {}
     session_setting_list = []
+    race_finish_criteria = None
     if len(sessions) > 0:
         for session in sessions:
             session_list[session.type] = session.grip.path if session.grip else None
@@ -476,6 +477,9 @@ def get_event_config(event_id: int):
                 grip_scale = int(session.real_road_time_scale)
             else:
                 grip_scale = float(session.real_road_time_scale)
+            if str(session.type) == "R1" and session.race_finish_criteria:
+                race_finish_criteria = int(session.race_finish_criteria)
+
             session_setting_list.append(
                 {
                     "type": str(session.type),
@@ -524,6 +528,7 @@ def get_event_config(event_id: int):
         "temp_offset": server.temp_offset,
         "comp": RECIEVER_COMP_INFO,
         "plugins": plugins,
+        "race_finish_criteria": race_finish_criteria,
         "welcome_message": server.welcome_message,
         "mod": {
             "name": mod_name,
