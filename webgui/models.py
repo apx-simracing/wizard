@@ -351,7 +351,7 @@ class RaceSessions(models.Model):
 
 class RaceConditions(models.Model):
     class Meta:
-        verbose_name_plural = "Race conditions"
+        verbose_name = "Race weekend"
 
     description = models.CharField(default="Add description", max_length=200)
     rfm = models.FileField(upload_to=get_conditions_file_root, storage=OverwriteStorage)
@@ -712,6 +712,15 @@ class EventRaceTimeScale(models.TextChoices):
     F60 = "60", "x60"
 
 
+# 0=no restrictions on driving view, 1=cockpit\/tv cockpit\/nosecam only, 2=cockpit\/nosecam only, 3=cockpit only, 4=tracksides, 5=tracksides group 1",
+class ForcedDrivingViewMode(models.TextChoices):
+    N = "0", "no restrictions on driving view"
+    C = "1", "cockpit/tv cockpit/nosecam only"
+    CO = "3", "cockpit only"
+    TO = "4", "tracksides"
+    TOG1 = "5", "tracksides group 1"
+
+
 class Event(models.Model):
     name = models.CharField(
         default="",
@@ -722,6 +731,7 @@ class Event(models.Model):
     conditions = models.ForeignKey(
         RaceConditions,
         on_delete=models.CASCADE,
+        verbose_name="race weekend",
         help_text="Conditions is a bundle of session definitions, containing session lengths and grip information.",
     )
     entries = models.ManyToManyField(Entry, blank=True)
@@ -845,6 +855,15 @@ class Event(models.Model):
         blank=False,
         null=False,
         help_text="Race rejoin ruling",
+    )
+
+    forced_driving_view = models.CharField(
+        max_length=50,
+        choices=ForcedDrivingViewMode.choices,
+        default=ForcedDrivingViewMode.N,
+        blank=False,
+        null=False,
+        help_text="Enforce a certain view for clients",
     )
 
     rules = models.CharField(
@@ -1176,6 +1195,11 @@ class Event(models.Model):
             blob["Multiplayer Server Options"]["Vote Percentage Other"] = 100
         if self.deny_session_voting:
             blob["Multiplayer Server Options"]["Vote Percentage Next Session"] = 100
+
+        blob["Multiplayer Server Options"]["Force Driving View"] = int(
+            self.forced_driving_view
+        )
+
         return dumps(blob)
 
     @property

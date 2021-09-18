@@ -53,6 +53,8 @@ class ComponentAdmin(admin.ModelAdmin):
 
 @admin.register(Track)
 class TrackAdmin(admin.ModelAdmin):
+    ordering = ["layout"]
+
     def get_form(self, request, obj=None, **kwargs):
         form = super(TrackAdmin, self).get_form(request, obj=None, **kwargs)
         form.base_fields["component"].queryset = Component.objects.filter(type="LOC")
@@ -214,6 +216,7 @@ class EventAdmin(admin.ModelAdmin):
                     "allow_opposite_lock",
                     "allow_spin_recovery",
                     "allow_ai_toggle",
+                    "forced_driving_view",
                 ),
             },
         ),
@@ -281,7 +284,38 @@ class EventAdmin(admin.ModelAdmin):
 
 @admin.register(RaceSessions)
 class RaceSessionsAdmin(admin.ModelAdmin):
-    pass
+    fieldsets = (
+        (
+            "Session",
+            {
+                "fields": (
+                    "description",
+                    "type",
+                ),
+            },
+        ),
+        (
+            "Length",
+            {
+                "fields": (
+                    "start",
+                    "laps",
+                    "length",
+                    "race_finish_criteria",
+                ),
+            },
+        ),
+        (
+            "Grip",
+            {
+                "fields": (
+                    "real_road_time_scale",
+                    "grip",
+                    "grip_needle",
+                ),
+            },
+        ),
+    )
 
 
 @admin.register(RaceConditions)
