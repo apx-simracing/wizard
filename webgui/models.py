@@ -749,7 +749,8 @@ class Event(models.Model):
     signup_active = models.BooleanField(default=False)
     signup_components = models.ManyToManyField(
         Component,
-        help_text="Components allowed to be registered. If no entries are existing, all available entries from the mod will be used.",
+        verbose_name="Cars",
+        help_text="Cars allowed to be used. If no entries are existing, all available entries from the mod will be used.",
     )
 
     include_stock_skins = models.BooleanField(

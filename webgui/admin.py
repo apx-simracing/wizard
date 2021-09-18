@@ -457,7 +457,9 @@ class RaceConditionsAdmin(admin.ModelAdmin):
 
 @admin.register(Server)
 class ServerAdmin(admin.ModelAdmin):
-    change_list_template = "admin/server_list.html"
+    change_list_template = (
+        "admin/server_list.html" if not EASY_MODE else "admin/server_list_easy.html"
+    )
     actions = [
         "reset_status",
         "get_thumbnails",
