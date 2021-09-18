@@ -329,7 +329,12 @@ class RaceConditionsAdmin(admin.ModelAdmin):
 @admin.register(Server)
 class ServerAdmin(admin.ModelAdmin):
     change_list_template = "admin/server_list.html"
-    actions = ["reset_status", "get_thumbnails", "apply_reciever_update"]
+    actions = [
+        "reset_status",
+        "get_thumbnails",
+        "apply_reciever_update",
+        "delete_chats_and_messages",
+    ]
 
     def get_urls(self):
         urls = super().get_urls()
@@ -399,6 +404,16 @@ class ServerAdmin(admin.ModelAdmin):
         messages.success(request, "Status are resetted.")
 
     reset_status.short_description = "Reset status (if stuck)"
+
+    def delete_chats_and_messages(self, request, queryset):
+        for server in queryset:
+            TickerMessage.objects.filter(server=server).delete()
+            Chat.objects.filter(server=server).delete()
+            messages.success(
+                request, f"messages and chats are deleted for server {server}"
+            )
+
+    delete_chats_and_messages.short_description = "Delete all chat and messages"
 
     def apply_reciever_update(self, request, queryset):
         for server in queryset:
