@@ -230,6 +230,11 @@ def get_random_string(length):
     return result_str
 
 
+def get_random_short_name():
+    # put your letters in the following string
+    return get_secret(5)
+
+
 def get_secret(length=15):
     alphabet = string.ascii_letters + string.digits
     secret = "".join(secrets.choice(alphabet) for i in range(length))

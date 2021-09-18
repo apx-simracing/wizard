@@ -15,7 +15,7 @@ from webgui.models import (
     TrackFile,
     background_action_server,
 )
-from wizard.settings import OPENWEATHERAPI_KEY, RECIEVER_PORT_RANGE
+from wizard.settings import OPENWEATHERAPI_KEY, RECIEVER_PORT_RANGE, EASY_MODE
 from django.contrib import messages
 from django.utils.html import mark_safe
 from django.contrib.auth.models import Group, User
@@ -52,6 +52,54 @@ admin.site.site_title = "APX"
 class ComponentAdmin(admin.ModelAdmin):
     ordering = ["component_name"]
 
+    def get_fieldsets(self, request, obj):
+        fieldsets = (
+            (
+                "Mod properties",
+                {
+                    "fields": (
+                        "type",
+                        "steam_id",
+                        "component_name",
+                        "short_name",
+                        "is_official",
+                    ),
+                },
+            ),
+            (
+                "Update settings",
+                {
+                    "fields": (
+                        "update",
+                        "numberplate_template_l",
+                        "numberplate_template_mask_l",
+                        "numberplate_template_r",
+                        "numberplate_template_mask_r",
+                        "mask_positions",
+                        "template",
+                    ),
+                },
+            ),
+            (
+                "Warnings",
+                {
+                    "fields": ("ignore_warnings",),
+                },
+            ),
+        )
+        if EASY_MODE:
+            fieldsets[0][1]["fields"] = (
+                "type",
+                "steam_id",
+                "component_name",
+                "is_official",
+            )
+            fieldsets[1][1]["fields"] = (
+                "update",
+                "template",
+            )
+        return fieldsets
+
 
 @admin.register(Track)
 class TrackAdmin(admin.ModelAdmin):
@@ -62,6 +110,35 @@ class TrackAdmin(admin.ModelAdmin):
         form.base_fields["component"].queryset = Component.objects.filter(type="LOC")
         return form
 
+    def get_fieldsets(self, request, obj):
+        fieldsets = (
+            (
+                "Track",
+                {
+                    "fields": ("component",),
+                },
+            ),
+            (
+                "Layout",
+                {
+                    "fields": ("layout",),
+                },
+            ),
+            (
+                "Other",
+                {
+                    "fields": (
+                        "section_list",
+                        "lon",
+                        "lat",
+                    ),
+                },
+            ),
+        )
+        if EASY_MODE:
+            fieldsets[2][1]["fields"] = ()
+        return fieldsets
+
 
 @admin.register(Entry)
 class EntryAdmin(admin.ModelAdmin):
@@ -71,6 +148,34 @@ class EntryAdmin(admin.ModelAdmin):
         form = super(EntryAdmin, self).get_form(request, obj=None, **kwargs)
         form.base_fields["component"].queryset = Component.objects.filter(type="VEH")
         return form
+
+    def get_fieldsets(self, request, obj):
+        fieldsets = (
+            (
+                "Vehicle",
+                {
+                    "fields": ("component",),
+                },
+            ),
+            (
+                "Team",
+                {
+                    "fields": (
+                        "team_name",
+                        "vehicle_number",
+                        "token",
+                        "pit_group",
+                        "additional_overwrites",
+                    ),
+                },
+            ),
+        )
+        if EASY_MODE:
+            fieldsets[1][1]["fields"] = (
+                "team_name",
+                "vehicle_number",
+            )
+        return fieldsets
 
 
 @admin.register(Chat)
@@ -111,6 +216,28 @@ class EntryFileAdmin(admin.ModelAdmin):
 
     is_grouped.short_description = "Processed by Wizard"
     computed_name.short_description = "Vehicle and filename"
+
+    def get_fieldsets(self, request, obj):
+        fieldsets = (
+            (
+                "Vehicle",
+                {
+                    "fields": ("entry",),
+                },
+            ),
+            (
+                "File",
+                {
+                    "fields": (
+                        "file",
+                        "mask_added",
+                    ),
+                },
+            ),
+        )
+        if EASY_MODE:
+            fieldsets[1][1]["fields"] = ("file",)
+        return fieldsets
 
 
 @admin.register(Event)
@@ -577,6 +704,20 @@ class ServerAdmin(admin.ModelAdmin):
                 "steamcmd_bandwidth",
                 "remove_unused_mods",
             ]
+        if EASY_MODE:
+            fieldsets[0][1]["fields"].remove("remove_unused_mods")
+            fieldsets[0][1]["fields"].remove("steamcmd_bandwidth")
+            fieldsets[0][1]["fields"].remove("session_id")
+            fieldsets[0][1]["fields"].remove("public_secret")
+            fieldsets[0][1]["fields"].remove("webui_port")
+            fieldsets[2][1]["fields"] = [
+                "action",
+                "status_info",
+                "state",
+                "is_created_by_apx",
+                "update_on_build",
+                "collect_results_replays",
+            ]
         return fieldsets
 
     def get_readonly_fields(self, request, obj):
@@ -632,3 +773,7 @@ class TrackFileAdmin(admin.ModelAdmin):
 
 admin.site.unregister(Group)
 admin.site.unregister(User)
+
+if EASY_MODE:
+    admin.site.unregister(Component)
+    admin.site.unregister(TickerMessage)

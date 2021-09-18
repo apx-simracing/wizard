@@ -207,3 +207,5 @@ MSG_DEPLOY_FAIL = "😱 Updating failed for server {}: {}"  # server name, excep
 MSG_DEPLOY_FINISH = "🤹‍♀️ Update finished"  # server name
 
 USE_GLOBAL_STEAMCMD = False
+
+EASY_MODE = True

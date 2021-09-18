@@ -29,6 +29,7 @@ from webgui.util import (
     RECIEVER_COMP_INFO,
     get_plugin_root_path,
     create_firewall_script,
+    get_random_short_name,
 )
 from wizard.settings import (
     FAILURE_THRESHOLD,
@@ -158,7 +159,7 @@ class Component(models.Model):
         help_text="Is official content which follows the even version and uneven version scheme (APX will select versions for you). If not checked, we will use the version you've selected.",
     )
     short_name = models.CharField(
-        default="",
+        default=get_random_short_name,
         max_length=200,
         help_text="The short name is required to idenitfy (livery) filenames belonging to this component. You only need this when 'Do update' is checked.",
         validators=[alphanumeric_validator],
