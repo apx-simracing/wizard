@@ -13,6 +13,7 @@ from webgui.models import (
     TickerMessage,
     ServerPlugin,
     TrackFile,
+    background_action_server,
 )
 from wizard.settings import OPENWEATHERAPI_KEY, RECIEVER_PORT_RANGE
 from django.contrib import messages
@@ -41,6 +42,7 @@ from django.urls import path
 from django.http import HttpResponseRedirect
 from pydng import generate_name
 from django.forms.widgets import CheckboxSelectMultiple
+from threading import Thread
 
 admin.site.site_url = None
 admin.site.site_title = "APX"
@@ -334,6 +336,8 @@ class ServerAdmin(admin.ModelAdmin):
         "get_thumbnails",
         "apply_reciever_update",
         "delete_chats_and_messages",
+        "start_server",
+        "stop_server",
     ]
 
     def get_urls(self):
@@ -347,7 +351,6 @@ class ServerAdmin(admin.ModelAdmin):
         root = BASE_DIR
         from os.path import exists, join
         from json import dumps
-        from threading import Thread
 
         server_children = join(root, "server_children")
         if not exists(server_children):
@@ -414,6 +417,30 @@ class ServerAdmin(admin.ModelAdmin):
             )
 
     delete_chats_and_messages.short_description = "Delete all chat and messages"
+
+    def start_server(self, request, queryset):
+        for server in queryset:
+            server.action = "S+"
+            server.save()
+            background_thread = Thread(
+                target=background_action_server, args=(server,), daemon=True
+            )
+            background_thread.start()
+            messages.success(request, f"Requested start for {server}")
+
+    start_server.short_description = "Start selected servers"
+
+    def stop_server(self, request, queryset):
+        for server in queryset:
+            server.action = "R-"
+            server.save()
+            background_thread = Thread(
+                target=background_action_server, args=(server,), daemon=True
+            )
+            background_thread.start()
+            messages.success(request, f"Requested stop for {server}")
+
+    stop_server.short_description = "Stop selected servers"
 
     def apply_reciever_update(self, request, queryset):
         for server in queryset:
