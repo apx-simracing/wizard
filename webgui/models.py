@@ -72,7 +72,7 @@ MOD_WARNINGS = {
     "2141682966": "The Portland DLC is more than 1.2 Gigabytes large. Due to steamcmd, downloads of these sizes tend to abort. Consider uploading this mod by hand to the server and use it as a file based item: https://wiki.apx.chmr.eu/doku.php?id=file_based_content",
     "2121171862": "The GDB files of this mod are flawed with the issue that slashes for comments and quotes are included within names. Some layouts might not work which affects the addition of grip settings.",
     "788866138": "This mod is quite large (apparently 5 gigabytes). Steamcmd won't be able to download this reliable. Consider uploading this mod by hand to the server and use it as a file based item: https://wiki.apx.chmr.eu/doku.php?id=file_based_content",
-    "2188673436": "This mod has 4.2 Gigabyte download. Due to steamcmd, downloads of these sizes tend to abort. Consider uploading this mod by hand to the server and use it as a file based item: https://wiki.apx.chmr.eu/doku.php?id=file_based_content"
+    "2188673436": "This mod has 4.2 Gigabyte download. Due to steamcmd, downloads of these sizes tend to abort. Consider uploading this mod by hand to the server and use it as a file based item: https://wiki.apx.chmr.eu/doku.php?id=file_based_content",
 }
 
 
@@ -154,7 +154,11 @@ class Component(models.Model):
         max_length=3, choices=ComponentType.choices, default=ComponentType.VEHICLE
     )
     steam_id = models.BigIntegerField(default=0, blank=True)
-    component_name = models.CharField(default="Example_Mod", max_length=200)
+    component_name = models.CharField(
+        default="Example_Mod",
+        max_length=200,
+        help_text="This is the folder name inside Installed/Vehicles/ or Installed/Locations/",
+    )
     is_official = models.BooleanField(
         default=False,
         help_text="Is official content which follows the even version and uneven version scheme (APX will select versions for you). If not checked, we will use the version you've selected.",
