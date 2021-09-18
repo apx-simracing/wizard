@@ -39,6 +39,7 @@ from wizard.settings import (
     MAX_UPSTREAM_BANDWIDTH,
     MAX_DOWNSTREAM_BANDWIDTH,
     MAX_STEAMCMD_BANDWIDTH,
+    USE_GLOBAL_STEAMCMD,
 )
 from webgui.storage import OverwriteStorage
 from django.utils.html import mark_safe
@@ -354,7 +355,15 @@ class RaceConditions(models.Model):
         verbose_name = "Race weekend"
 
     description = models.CharField(default="Add description", max_length=200)
-    rfm = models.FileField(upload_to=get_conditions_file_root, storage=OverwriteStorage)
+    rfm = models.FileField(
+        upload_to=get_conditions_file_root,
+        storage=OverwriteStorage,
+        blank=True,
+        null=True,
+        default=None,
+        verbose_name="Alternative rFm file",
+        help_text="An rFm file to overwrite standards, speeds, pit boxes etc.",
+    )
 
     sessions = models.ManyToManyField(RaceSessions, blank=True)
 
@@ -1196,7 +1205,7 @@ class Event(models.Model):
         if self.deny_session_voting:
             blob["Multiplayer Server Options"]["Vote Percentage Next Session"] = 100
 
-        blob["Multiplayer Server Options"]["Force Driving View"] = int(
+        blob["Multiplayer Server Options"]["Forced Driving View"] = int(
             self.forced_driving_view
         )
 
@@ -1585,6 +1594,11 @@ class Server(models.Model):
 
         if not str(self.url).endswith("/"):
             raise ValidationError("The server url must end with a slash!")
+
+        if self.remove_unused_mods and USE_GLOBAL_STEAMCMD:
+            raise ValidationError(
+                "You use a global steamcmd installation. Enabling this option will cause servers to remove the content for other servers."
+            )
 
         other_servers = Server.objects.exclude(pk=self.pk)
         occupied_ports_tcp = []

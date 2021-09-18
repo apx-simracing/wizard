@@ -23,6 +23,7 @@ from wizard.settings import (
     MSG_DEPLOY_START,
     MSG_DEPLOY_FAIL,
     MSG_DEPLOY_FINISH,
+    USE_GLOBAL_STEAMCMD,
 )
 import hashlib
 import subprocess
@@ -90,7 +91,7 @@ FILE_NAME_SUFFIXES_MEANINGS = [
 ]
 
 RECIEVER_COMP_INFO = open(join(BASE_DIR, "release")).read()
-RECIEVER_DOWNLOAD_FROM = "https://github.com/apx-simracing/reciever/releases/download/R72/reciever-2021R72.zip"
+RECIEVER_DOWNLOAD_FROM = "https://github.com/apx-simracing/reciever/releases/download/R78/reciever-2021R78.zip"
 
 
 def get_update_filename(instance, filename):
@@ -912,6 +913,9 @@ def do_server_interaction(server):
         event_config["remove_cbash_shaders"] = server.remove_cbash_shaders
         event_config["remove_settings"] = server.remove_settings
         event_config["remove_unused_mods"] = server.remove_unused_mods
+
+        if USE_GLOBAL_STEAMCMD:
+            event_config["global_steam_path"] = join(BASE_DIR, "steamcmd")
 
         config_path = join(APX_ROOT, "configs", key + ".json")
         with open(config_path, "w") as file:

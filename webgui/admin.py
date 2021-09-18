@@ -575,6 +575,7 @@ class ServerAdmin(admin.ModelAdmin):
                 "http_port",
                 "webui_port",
                 "steamcmd_bandwidth",
+                "remove_unused_mods",
             ]
         return fieldsets
 
