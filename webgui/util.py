@@ -44,7 +44,10 @@ import secrets
 import string
 import socket
 import random
+import logging
 import zipfile, io
+
+logger = logging.getLogger(__name__)
 
 FILE_NAME_SUFFIXES = [
     ".json",
@@ -914,8 +917,12 @@ def do_server_interaction(server):
         with open(config_path, "w") as file:
             file.write(dumps(event_config))
         # save rfm
-        rfm_path = join(MEDIA_ROOT, server.event.conditions.rfm.name)
+        if not server.event.conditions.rfm:
+            rfm_path = join(BASE_DIR, "default.rfm")
+        else:
+            rfm_path = join(MEDIA_ROOT, server.event.conditions.rfm.name)
 
+        logger.info(f"Using {rfm_path} for this deployment")
         try:
             # check if track needs update
             for track in server.event.tracks.all():
