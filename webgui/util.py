@@ -425,6 +425,17 @@ def get_event_config(event_id: int):
             vehicle_groups[steam_id]["entries_overwrites"][
                 vehicle.vehicle_number
             ] = props
+        if vehicle.base_class:
+            if (
+                vehicle.vehicle_number
+                not in vehicle_groups[steam_id]["entries_overwrites"]
+            ):
+                vehicle_groups[steam_id]["entries_overwrites"][
+                    vehicle.vehicle_number
+                ] = []
+            vehicle_groups[steam_id]["entries_overwrites"][vehicle.vehicle_number][
+                "BaseClass"
+            ] = vehicle.base_class
     if len(ungrouped_vehicles) == 0:
         # use signup components for the event.json
         for component in signup_components:

@@ -163,6 +163,7 @@ class EntryAdmin(admin.ModelAdmin):
                     "fields": (
                         "team_name",
                         "vehicle_number",
+                        "base_class",
                         "token",
                         "pit_group",
                         "additional_overwrites",
@@ -171,10 +172,7 @@ class EntryAdmin(admin.ModelAdmin):
             ),
         )
         if EASY_MODE:
-            fieldsets[1][1]["fields"] = (
-                "team_name",
-                "vehicle_number",
-            )
+            fieldsets[1][1]["fields"] = ("team_name", "vehicle_number", "base_class")
         return fieldsets
 
 

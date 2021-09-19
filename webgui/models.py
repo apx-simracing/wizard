@@ -424,6 +424,13 @@ class Entry(models.Model):
     component = models.ForeignKey(Component, on_delete=models.CASCADE)
     team_name = models.CharField(default="Example Team", max_length=200)
     vehicle_number = models.CharField(default="1", max_length=3)
+    base_class = models.CharField(
+        default=None,
+        null=True,
+        blank=True,
+        max_length=200,
+        help_text="If you are not using a certain template, name the class name or one of it's parts to define which car the vehicle should be based on. Otherwise the first car from the mod will be used as a template.",
+    )
 
     token = models.CharField(
         default=None, null=True, blank=True, max_length=100, unique=True
@@ -449,10 +456,6 @@ class Entry(models.Model):
         return ", ".join(events)
 
     def clean(self):
-        if not self.component.template:
-            raise ValidationError(
-                "Please add a template for the component {}".format(self.component)
-            )
 
         # validate additional overwrites, if needed
         # we assume the \r\n as the wizard
