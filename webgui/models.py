@@ -41,6 +41,7 @@ from wizard.settings import (
     MAX_DOWNSTREAM_BANDWIDTH,
     MAX_STEAMCMD_BANDWIDTH,
     USE_GLOBAL_STEAMCMD,
+    EASY_MODE,
 )
 from webgui.storage import OverwriteStorage
 from django.utils.html import mark_safe
@@ -429,7 +430,9 @@ class Entry(models.Model):
         null=True,
         blank=True,
         max_length=200,
-        help_text="If you are not using a certain template, name the class name or one of it's parts to define which car the vehicle should be based on. Otherwise the first car from the mod will be used as a template.",
+        help_text="On which class is the car based? If empty, APX will pick the first car as a basis. If the mod does not have multiple classes, you don't need this."
+        if EASY_MODE
+        else "If no component template is used, name the class of the car suitable to be used as a base. Otherwise the first veh file will be used.",
     )
 
     token = models.CharField(
