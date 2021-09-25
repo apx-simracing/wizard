@@ -11,7 +11,9 @@ if not exist "db.sqlite3" (
   python.exe get-pip.py
   python.exe -m pip install -r requirements.txt
 	python.exe manage.py migrate
-	python.exe manage.py createsuperuser
-) else (
+	addcommon.bat
+	python.exe setup.py
 	python.exe apx.py
 )
+
+python.exe apx.py
