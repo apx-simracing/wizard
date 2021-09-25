@@ -36,6 +36,13 @@ questions = [
         "values": ["yes", "no"],
         "is_hidden": False,
     },
+    {
+        "text": "Do you want to support the project with adding the prefix '[APX]' to the server names?",
+        "default": "yes",
+        "key": "add_prefix",
+        "values": ["yes", "no"],
+        "is_hidden": False,
+    },
 ]
 answers = {}
 
@@ -99,6 +106,7 @@ with open(settings_path, "r", encoding="utf-8") as file:
     content = file.readlines()
     easy_mode = answers["easy_mode"] == "yes"
     global_steam = answers["global_steam"] == "yes"
+    add_prefix = answers["add_prefix"] == "yes"
     for line in content:
         if "SECRET_KEY" in line:
             random_key = "".join(
@@ -119,6 +127,8 @@ with open(settings_path, "r", encoding="utf-8") as file:
             line = f"EASY_MODE = {easy_mode}\n"
         if "USE_GLOBAL_STEAMCMD" in line:
             line = f"USE_GLOBAL_STEAMCMD = {global_steam}\n"
+        if "ADD_PREFIX" in line:
+            line = f"ADD_PREFIX = {add_prefix}\n"
         new_content.append(line)
 
 

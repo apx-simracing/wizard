@@ -42,6 +42,7 @@ from wizard.settings import (
     MAX_STEAMCMD_BANDWIDTH,
     USE_GLOBAL_STEAMCMD,
     EASY_MODE,
+    ADD_PREFIX,
 )
 from webgui.storage import OverwriteStorage
 from django.utils.html import mark_safe
@@ -55,7 +56,6 @@ import pytz
 from json import dumps
 
 USE_WAND = True
-ADDPREFIX = True
 try:
     from wand import image
     from wand.drawing import Drawing
@@ -142,7 +142,7 @@ alphanumeric_validator_dots = RegexValidator(
 
 
 def event_name_validator(value):
-    max_length = 26 if not ADDPREFIX else 21
+    max_length = 26 if not ADD_PREFIX else 21
     if len(value) > max_length:
         raise ValidationError(
             f"The event name is too long. You have {max_length} chars to use."
@@ -761,6 +761,7 @@ class Event(models.Model):
     signup_components = models.ManyToManyField(
         Component,
         verbose_name="Cars",
+        blank=True,
         help_text="Cars allowed to be used. If no entries are existing, all available entries from the mod will be used.",
     )
 
@@ -1142,7 +1143,7 @@ class Event(models.Model):
             blob["Multiplayer Server Options"]["Lessen Restrictions"] = True
         blob["Multiplayer Server Options"]["Enforce Real Name"] = self.real_name
         blob["Multiplayer Server Options"]["Default Game Name"] = (
-            "[APX] {}".format(self.name[0:20]) if ADDPREFIX else self.name
+            "[APX] {}".format(self.name[0:20]) if ADD_PREFIX else self.name
         )
 
         # control aids

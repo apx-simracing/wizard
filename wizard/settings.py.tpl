@@ -209,3 +209,5 @@ MSG_DEPLOY_FINISH = "🤹‍♀️ Update finished"  # server name
 USE_GLOBAL_STEAMCMD = False
 
 EASY_MODE = True
+
+ADD_PREFIX = True
