@@ -371,7 +371,7 @@ def run_apx_command(hashed_url, commandline):
     local_python_path = join(BASE_DIR, "python.exe")
     if exists(local_python_path):
         python_path = local_python_path
-    command_line = "{} {} --server {} {}".format(
+    command_line = '"{}" "{}" --server {} {}'.format(
         python_path, apx_path, hashed_url, commandline
     )
     got = subprocess.check_output(command_line, cwd=APX_ROOT, shell=True).decode(
