@@ -455,6 +455,7 @@ class RaceConditionsAdmin(admin.ModelAdmin):
 
 @admin.register(Server)
 class ServerAdmin(admin.ModelAdmin):
+    ordering = ["name"]
     change_list_template = (
         "admin/server_list.html" if not EASY_MODE else "admin/server_list_easy.html"
     )
