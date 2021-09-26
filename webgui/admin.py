@@ -338,6 +338,9 @@ class EventAdmin(admin.ModelAdmin):
             {
                 "fields": (
                     "name",
+                    "mod_name",
+                    "mod_version",
+                    "event_mod_version",
                     "entries",
                     "tracks",
                     "signup_components",
