@@ -297,9 +297,6 @@ class EventAdmin(admin.ModelAdmin):
         form.base_fields["entries"].queryset = Entry.objects.filter(
             component__type="VEH"
         ).order_by("team_name")
-        form.base_fields["tracks"].queryset = Track.objects.filter(
-            component__type="LOC"
-        ).order_by("layout")
         form.base_fields["signup_components"].queryset = Component.objects.filter(
             type="VEH"
         ).order_by("component_name")

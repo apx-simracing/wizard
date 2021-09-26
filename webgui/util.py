@@ -47,6 +47,7 @@ import socket
 import random
 import logging
 import zipfile, io
+from collections import OrderedDict
 
 logger = logging.getLogger(__name__)
 
@@ -461,11 +462,13 @@ def get_event_config(event_id: int):
                         "numberplates": [],
                     },
                 }
-    tracks = server.tracks.all()
+    tracks = server.tracks.all().order_by("-id")
+
+    print(tracks)
 
     conditions = server.conditions
 
-    track_groups = {}
+    track_groups = OrderedDict()
     for track in tracks:
         track_component = track.component
         requires_update = models.TrackFile.objects.filter(track=track).count() > 0
@@ -478,7 +481,6 @@ def get_event_config(event_id: int):
                 "official": track_component.is_official,
             },
         }
-        break  # mutliple tracks are still not supported
     if not server.mod_name or len(server.mod_name) == 0:
         mod_name = "apx_{}".format(get_server_hash(server.name)[:8])
     else:
@@ -959,7 +961,6 @@ def do_server_interaction(server):
                         track.component.component_name, " ".join(files_to_attach)
                     )
                     run_apx_command(key, command_line)
-                break  # more than one at the moment not supported
 
             server.state = "Pushing skins (if any) to the server"
             server.save()
