@@ -101,9 +101,42 @@ class ComponentAdmin(admin.ModelAdmin):
         return fieldsets
 
 
+from django.contrib.admin.views.main import ChangeList
+
+
+class TrackChangelist(ChangeList):
+    def get_results(self, request):
+        super(TrackChangelist, self).get_results(request)
+        totals = self.result_list
+        self.fack = "fasf"
+        print(totals)
+
+
 @admin.register(Track)
 class TrackAdmin(admin.ModelAdmin):
-    ordering = ["layout"]
+    ordering = ["layout", "component__component_name"]
+    list_display = (
+        "layout",
+        "component",
+    )
+    """
+    change_list_template = "admin/track_list.html"
+
+    def changelist_view(self, request, extra_context=None):
+        response = super().changelist_view(
+            request,
+            extra_context=extra_context,
+        )
+        all_tracks = Track.objects.all().order_by("component__component_name", "layout")
+        result = {}
+        for track in all_tracks:
+            component = track.component
+            if component not in result:
+                result[component] = []
+            result[component].append(track)
+        response.context_data["tracks"] = result
+        return response
+    """
 
     def get_form(self, request, obj=None, **kwargs):
         form = super(TrackAdmin, self).get_form(request, obj=None, **kwargs)
@@ -242,6 +275,11 @@ class EntryFileAdmin(admin.ModelAdmin):
 class EventAdmin(admin.ModelAdmin):
     ordering = ["name"]
     actions = ["copy"]
+    filter_horizontal = (
+        "tracks",
+        "entries",
+        "signup_components",
+    )
 
     def copy(self, request, queryset):
         for element in queryset:
@@ -254,15 +292,14 @@ class EventAdmin(admin.ModelAdmin):
 
     def get_form(self, request, obj=None, **kwargs):
         form = super(EventAdmin, self).get_form(request, obj=None, **kwargs)
-        form.base_fields["entries"].widget = CheckboxSelectMultiple()
         form.base_fields["plugins"].widget = CheckboxSelectMultiple()
-        form.base_fields["signup_components"].widget = CheckboxSelectMultiple()
+        # form.base_fields["tracks"].widget = CheckboxSelectMultiple()
         form.base_fields["entries"].queryset = Entry.objects.filter(
             component__type="VEH"
         ).order_by("team_name")
         form.base_fields["tracks"].queryset = Track.objects.filter(
             component__type="LOC"
-        ).order_by("component__component_name", "layout")
+        ).order_by("layout")
         form.base_fields["signup_components"].queryset = Component.objects.filter(
             type="VEH"
         ).order_by("component_name")
