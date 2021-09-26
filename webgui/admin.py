@@ -240,6 +240,7 @@ class EntryFileAdmin(admin.ModelAdmin):
 
 @admin.register(Event)
 class EventAdmin(admin.ModelAdmin):
+    ordering = ["name"]
     actions = ["copy"]
 
     def copy(self, request, queryset):
