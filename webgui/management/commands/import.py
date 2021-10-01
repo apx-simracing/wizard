@@ -1,4 +1,5 @@
 from django.core.management.base import BaseCommand
+from django.db.models import Q
 from os.path import exists, join
 from os import mkdir, listdir
 from wizard.settings import BASE_DIR, MEDIA_ROOT
@@ -55,12 +56,18 @@ class Command(BaseCommand):
         import_path = join(BASE_DIR, "import")
         if not exists(import_path):
             mkdir(import_path)
+        short_name = input(
+            "Name a valid short name, steam id or component name to identify the files: "
+        )
 
-        short_name = input("Name a valid short name to identify the files: ")
-        entries = Component.objects.filter(short_name=short_name)
+        entries = Component.objects.filter(
+            Q(short_name=short_name)
+            | Q(steam_id=short_name)
+            | Q(component_name=short_name)
+        )
         if entries.count() != 1:
             raise Exception(
-                f"Did not manage to find a component with short name {short_name}."
+                f"Did not manage to find a component with key {short_name}."
             )
         else:
             entry = entries.first()
@@ -69,7 +76,6 @@ class Command(BaseCommand):
                     entry.component_name
                 )
             )
-
         is_vehicle = entries.first().type == "VEH"
         files = listdir(import_path)
         if not is_vehicle:
