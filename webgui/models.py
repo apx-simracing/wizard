@@ -6,7 +6,7 @@ from django import forms
 from django.dispatch import receiver
 from os.path import isfile, basename
 from shutil import copy, rmtree
-from os import remove, linesep
+from os import remove, linesep, unlink
 from collections import OrderedDict
 from json import loads
 from django.contrib import messages
@@ -224,7 +224,19 @@ class Component(models.Model):
 
     def save(self, *args, **kwargs):
         needles = ["number", "name", "description"]
-
+        root_path = join(MEDIA_ROOT, "templates")
+        if not exists(root_path):
+            mkdir(root_path)
+        template_path = join(
+            root_path,
+            self.component_name + ".veh",
+        )
+        if (
+            self.type == ComponentType.VEHICLE
+            and not self.template
+            and exists(template_path)
+        ):
+            unlink(template_path)
         if self.type == ComponentType.VEHICLE and self.template:
 
             replacementMap = {
@@ -255,13 +267,6 @@ class Component(models.Model):
 
             self.template = "".join(newLines)
             # paste parsed template
-            root_path = join(MEDIA_ROOT, "templates")
-            if not exists(root_path):
-                mkdir(root_path)
-            template_path = join(
-                root_path,
-                self.component_name + ".veh",
-            )
             with open(template_path, "w") as file:
                 file.write(self.template)
         super(Component, self).save(*args, **kwargs)
