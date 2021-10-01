@@ -750,7 +750,6 @@ class ServerAdmin(admin.ModelAdmin):
             fieldsets[0][1]["fields"].remove("session_id")
             fieldsets[0][1]["fields"].remove("public_secret")
             fieldsets[0][1]["fields"].remove("webui_port")
-            fieldsets[0][1]["fields"].remove("heartbeat_only")
             fieldsets[2][1]["fields"] = [
                 "action",
                 "status_info",
