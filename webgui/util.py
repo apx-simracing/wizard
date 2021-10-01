@@ -464,8 +464,6 @@ def get_event_config(event_id: int):
                 }
     tracks = server.tracks.all().order_by("-id")
 
-    print(tracks)
-
     conditions = server.conditions
 
     track_groups = OrderedDict()
@@ -920,6 +918,7 @@ def do_server_interaction(server):
             else None
         )
         event_config["branch"] = server.branch
+        event_config["heartbeat_only"] = server.heartbeat_only
         event_config["update_on_build"] = server.update_on_build
         event_config["callback_target"] = (
             "{}addmessage/{}".format(PUBLIC_URL, server.public_secret)
@@ -988,7 +987,7 @@ def do_server_interaction(server):
             server.save()
         finally:
             do_post(MSG_DEPLOY_FINISH.format(server.name))
-            if state is not None and "Error" not in server.state:
+            if server.state is not None and "Error" not in server.state:
                 server.state = None
             server.action = ""
             server.save()

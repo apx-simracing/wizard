@@ -1440,6 +1440,10 @@ class Server(models.Model):
         default=None,
         null=True,
     )
+    heartbeat_only = models.BooleanField(
+        default=True,
+        help_text="Tells the reciever instance to only include status updates as ticker messages",
+    )
     update_on_build = models.BooleanField(
         default=False,
         help_text="Decides if APX will call dedicated server update when refreshing the content",
