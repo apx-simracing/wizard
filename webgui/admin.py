@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.core import management
 from webgui.models import (
     Component,
     Track,
@@ -222,8 +223,31 @@ class ChatAdmin(admin.ModelAdmin):
 
 @admin.register(ServerCron)
 class ServerCronAdmin(admin.ModelAdmin):
+    ordering = ("server", "disabled", "start_time")
+    actions = ["disable", "enable", "execute"]
+    def disable(self, request, queryset):
+        for element in queryset:
+            element.disabled = True
+            element.save()
+
+    disable.short_description = "Disable selected server schedules"
+
+    def enable(self, request, queryset):
+        for element in queryset:
+            element.disabled = False
+            element.save()
+
+    enable.short_description = "Enable selected server schedules"
+
+    def execute(self, request, queryset):
+        for element in queryset:
+            management.call_command('cron_run',element.pk)
+
+
+    execute.short_description = "Execute selected server schedule action ONCE"
+
     def get_readonly_fields(self, request, obj):
-        return self.readonly_fields + ("last_execution",)
+        return self.readonly_fields
 
 
 @admin.register(EntryFile)

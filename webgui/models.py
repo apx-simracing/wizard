@@ -6,7 +6,7 @@ from django import forms
 from django.dispatch import receiver
 from os.path import isfile, basename
 from shutil import copy, rmtree
-from os import remove, linesep, unlink
+from os import remove, linesep, unlink, system
 from collections import OrderedDict
 from json import loads
 from django.contrib import messages
@@ -32,6 +32,7 @@ from webgui.util import (
     get_random_short_name,
 )
 from wizard.settings import (
+    BASE_DIR,
     FAILURE_THRESHOLD,
     MEDIA_ROOT,
     STATIC_URL,
@@ -51,7 +52,7 @@ from os.path import exists, join
 from os import mkdir, linesep
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time, date
 import pytz
 from json import dumps
 
@@ -1795,20 +1796,12 @@ class ServerCron(models.Model):
         verbose_name_plural = "Server schedules"
         verbose_name = "Server schedule"
 
-    cron_text = models.CharField(
-        max_length=255,
-        blank=False,
-        null=False,
-        default=None,
-        help_text="Describe the execution time",
-    )
     server = models.ForeignKey(
         Server, on_delete=models.CASCADE, blank=False, null=False, default=None
     )
     event = models.ForeignKey(
         Event, on_delete=models.CASCADE, blank=True, null=True, default=None
     )
-    last_execution = models.DateTimeField(blank=True, null=True, default=None)
     action = models.CharField(
         max_length=3,
         choices=ServerStatus.choices,
@@ -1816,6 +1809,27 @@ class ServerCron(models.Model):
         default="",
         help_text="Runs an activity on the server.",
         verbose_name="Pending action to submit",
+    )
+    start_time = models.TimeField(
+        blank=True,
+        default=None,
+        null=True,
+        help_text="The start time the job should start",
+    )
+
+    modifier = models.IntegerField(
+        default=1, blank=False, null=False, help_text="Repeat the job each X minutes, a value of 1 means no repeat", verbose_name="Repeat"
+    )
+
+    disabled = models.BooleanField(
+        default=False, blank=False, null=False, help_text="Disables the job"
+    )
+
+    end_time = models.TimeField(
+        blank=True,
+        default=None,
+        null=True,
+        help_text="The end time the job should start",
     )
     message = models.TextField(
         default=None,
@@ -1827,11 +1841,28 @@ class ServerCron(models.Model):
     apply_only_if_practice = models.BooleanField(default=False)
 
     def __str__(self):
-        return "{}: {}@{}".format(self.cron_text, self.action, self.server)
+        base_str = "{} \"{}\"".format(dict(ServerStatus.choices)[self.action], self.server) if self.action else "Message \"{}\"".format(self.server)
+        if self.event:
+            base_str = "{} \"{}\" on \"{}\"".format(dict(ServerStatus.choices)[self.action], self.event, self.server)
+        if self.disabled:
+            base_str = "Disabled: " + base_str
+        if self.end_time:
+            base_str = base_str + " from {} to {}".format(self.start_time, self.end_time)
+        else:
+            base_str = base_str + " at {}".format(self.start_time)
+        if self.modifier > 1:
+            base_str = base_str + ", repeat each {} minutes".format(self.modifier)
+
+        
+        return base_str
 
     def clean(self):
-        if not croniter.is_valid(self.cron_text):
-            raise ValidationError("This is not a valid cron description")
+        if self.action != "D" and self.event:
+            raise ValidationError("The event is only needed when deploying new updates.")
+        if self.modifier == 1 and self.end_time:
+            raise ValidationError(
+                "Yo only need an end time if the job should repeat multiple times per day"
+            )
         if not self.server:
             raise ValidationError("Select a server first")
         if self.action == "D" and not self.event:
@@ -1843,6 +1874,66 @@ class ServerCron(models.Model):
                     raise ValidationError(
                         "Limit the line length of each line of the text to 50!"
                     )
+
+
+@receiver(models.signals.pre_delete, sender=ServerCron)
+def remove_cron_from_windows(sender, instance, **kwargs):
+    id = instance.pk
+    task_name = f"apx_task_{id}"
+    delete_command_line = f"schtasks /delete /tn {task_name} /f"
+    print(delete_command_line)
+    system(delete_command_line)
+
+
+@receiver(models.signals.post_save, sender=ServerCron)
+def add_cron_to_windows(sender, instance, **kwargs):
+    id = instance.pk
+    task_name = f"apx_task_{id}"
+    delete_command_line = f"schtasks /delete /tn {task_name} /f"
+    print(delete_command_line)
+    system(delete_command_line)
+    if not instance.disabled:
+        python_path = (
+            join(BASE_DIR, "python.exe")
+            if exists(join(BASE_DIR, "python.exe"))
+            else "python.exe"
+        )
+        django_path = join(BASE_DIR, "manage.py")
+
+        today = datetime.today().strftime("%Y-%m-%d")
+        schedule_part = ""
+        start_time = instance.start_time
+        end_time = instance.end_time
+        modifier = instance.modifier
+        schedule_part = "DAILY"
+        if modifier > 1:
+            start_str = str(start_time).split(":")
+
+            start_hours = int(start_str[0])
+            start_minutes = int(start_str[1])
+
+            end_hours = 24
+            end_minutes = 59
+            if end_time:
+                end_str = str(end_time).split(":")
+                end_hours = int(end_str[0])
+                end_minutes = int(end_str[1])
+
+            diff_hours = end_hours - start_hours
+            diff_minutes = end_minutes - start_minutes
+
+            if diff_hours < 0:
+                diff_hours = 24 + diff_hours
+
+            if diff_minutes < 0:
+                diff_minutes = 60 - start_minutes + end_Minutes
+
+            schedule_part = (
+                schedule_part + f" /ri {modifier} /du {diff_hours}:{diff_minutes}"
+            )
+        command_line = f"schtasks /create /tn {task_name} /st {start_time} /sc {schedule_part} /tr \"cmd /d '{BASE_DIR}' /c '{django_path}' cron_run {id}\""
+        print(command_line)
+        system(command_line)
 
 
 class TickerMessageType(models.TextChoices):

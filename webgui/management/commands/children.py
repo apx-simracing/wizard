@@ -9,10 +9,6 @@ from wizard.settings import (
     PACKS_ROOT,
     FAILURE_THRESHOLD,
     INSTANCE_NAME,
-    CRON_CHUNK_SIZE,
-    CRON_TIMEOUT,
-    CRON_THREAD_KILL_TIMEOUT,
-    CRON_TIMEZONE,
     BASE_DIR,
 )
 import subprocess
