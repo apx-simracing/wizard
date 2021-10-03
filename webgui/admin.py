@@ -141,7 +141,8 @@ class TrackAdmin(admin.ModelAdmin):
 
     def get_form(self, request, obj=None, **kwargs):
         form = super(TrackAdmin, self).get_form(request, obj=None, **kwargs)
-        form.base_fields["component"].queryset = Component.objects.filter(type="LOC")
+        if not EASY_MODE:
+            form.base_fields["component"].queryset = Component.objects.filter(type="LOC")
         return form
 
     def get_fieldsets(self, request, obj):
@@ -170,7 +171,15 @@ class TrackAdmin(admin.ModelAdmin):
             ),
         )
         if EASY_MODE:
-            fieldsets[2][1]["fields"] = ()
+            fieldsets = (
+                (
+                    "Layout",
+                    {
+                        "fields": ("layout",),
+                    },
+                ),
+            )
+
         return fieldsets
 
 
