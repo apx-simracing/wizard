@@ -976,7 +976,9 @@ def do_server_interaction(server):
             plugin_args = ""
             for plugin in server.event.plugins.all():
                 plugin_path = plugin.plugin_file.path
-                plugin_args = plugin_args + " " + plugin_path
+                target_path = plugin.plugin_path
+                additional_path_arg = "\"|" + target_path + "\"" if target_path else "" 
+                plugin_args = plugin_args + " " + plugin_path + additional_path_arg
             if len(plugin_args) > 0:
                 server.state = "Pushing plugins to the server"
                 server.save()

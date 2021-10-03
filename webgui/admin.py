@@ -303,6 +303,7 @@ class EventAdmin(admin.ModelAdmin):
         "tracks",
         "entries",
         "signup_components",
+        "plugins",
     )
 
     def copy(self, request, queryset):
@@ -316,8 +317,6 @@ class EventAdmin(admin.ModelAdmin):
 
     def get_form(self, request, obj=None, **kwargs):
         form = super(EventAdmin, self).get_form(request, obj=None, **kwargs)
-        form.base_fields["plugins"].widget = CheckboxSelectMultiple()
-        # form.base_fields["tracks"].widget = CheckboxSelectMultiple()
         form.base_fields["entries"].queryset = Entry.objects.filter(
             component__type="VEH"
         ).order_by("team_name")

@@ -639,6 +639,14 @@ class ServerPlugin(models.Model):
         null=False,
     )
 
+    plugin_path = models.CharField(
+        blank=True,
+        max_length=500,
+        default=None,
+        null=True,
+        help_text="The target folder the file should be placed into. Seen relative from the rFactor 2 server root folder",
+    )
+
     name = models.CharField(
         blank=True,
         max_length=500,
@@ -660,6 +668,9 @@ class ServerPlugin(models.Model):
             loads(self.overwrites)
         except:
             raise ValidationError("This JSON is not valid.")
+    
+        if ".dll" not in self.plugin_file.path.lower() and self.overwrites != "{}":
+            raise ValidationError("The overwrites are only valid for DLL files.")
 
 
 class EventRejoinRules(models.TextChoices):
