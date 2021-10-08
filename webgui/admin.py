@@ -61,6 +61,7 @@ class ComponentAdmin(admin.ModelAdmin):
                     "fields": (
                         "type",
                         "steam_id",
+                        "base_component",
                         "component_name",
                         "short_name",
                         "is_official",

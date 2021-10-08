@@ -389,6 +389,7 @@ def get_event_config(event_id: int):
     for vehicle in ungrouped_vehicles:
         component = vehicle.component
         steam_id = component.steam_id
+        base_steam_id = base_steam_id = component.base_component.steam_id if component.base_component else 0
         version = "latest"
         name = component.component_name
         short_name = component.short_name
@@ -402,6 +403,7 @@ def get_event_config(event_id: int):
                 "entries": [],
                 "entries_overwrites": {},
                 "component": {
+                    "base_steam_id": base_steam_id,
                     "version": version,
                     "name": name,
                     "update": True,
@@ -441,6 +443,7 @@ def get_event_config(event_id: int):
         # use signup components for the event.json
         for component in signup_components:
             steam_id = component.steam_id
+            base_steam_id = component.base_component.steam_id if component.base_component else 0
             version = "latest"
             name = component.component_name
             short_name = component.short_name
@@ -454,6 +457,7 @@ def get_event_config(event_id: int):
                     "entries": [],
                     "entries_overwrites": {},
                     "component": {
+                        "base_steam_id": base_steam_id,
                         "version": version,
                         "name": name,
                         "update": False,
@@ -469,10 +473,12 @@ def get_event_config(event_id: int):
     track_groups = OrderedDict()
     for track in tracks:
         track_component = track.component
+        base_steam_id = track_component.base_component.steam_id if track_component.base_component else 0
         requires_update = models.TrackFile.objects.filter(track=track).count() > 0
         track_groups[track_component.steam_id] = {
             "layout": track.layout,
             "component": {
+                "base_steam_id": base_steam_id,
                 "version": "latest",
                 "name": track_component.component_name,
                 "update": requires_update,

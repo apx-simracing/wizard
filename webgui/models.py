@@ -156,6 +156,7 @@ class Component(models.Model):
         max_length=3, choices=ComponentType.choices, default=ComponentType.VEHICLE
     )
     steam_id = models.BigIntegerField(default=0, blank=True)
+    base_component=models.ForeignKey("Component", on_delete=models.CASCADE, blank=True, null=True)
     component_name = models.CharField(
         default="Example_Mod",
         max_length=200,
@@ -273,6 +274,8 @@ class Component(models.Model):
         super(Component, self).save(*args, **kwargs)
 
     def __str__(self):
+        if self.base_component:
+            return "{} (updates {})".format(self.component_name, self.base_component.steam_id)
         return self.component_name
 
 
