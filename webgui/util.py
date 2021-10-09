@@ -53,8 +53,13 @@ logger = logging.getLogger(__name__)
 
 FILE_NAME_SUFFIXES = [
     ".json",
-    ".dds",
+    "EXTRA4.dds",
+    "EXTRA5.dds",
+    "EXTRA6.dds",
+    "Window.dds",
+    "region.dds",
     "windshieldout.dds",
+    "WINDSHIELDIN.dds",
     "WINDOWSIN.dds",
     "WINDOWSOUT.dds",
     "WINDOW.dds",
@@ -69,12 +74,18 @@ FILE_NAME_SUFFIXES = [
     "-icon-512x288.png",
     "-icon-1024x576.png",
     "-icon-2048x1152.png",
+    ".dds",
 ]
 
 FILE_NAME_SUFFIXES_MEANINGS = [
     "JSON file",
-    "Livery main file",
+    "EXTRA4",
+    "EXTRA5",
+    "EXTRA6",
+    "Window file",
+    "Region file",
     "Outer windshield file",
+    "Inner windshield file",
     "Inner windows file",
     "Outer windows file",
     "Windscreen file",
@@ -89,6 +100,7 @@ FILE_NAME_SUFFIXES_MEANINGS = [
     "Icon 512x288",
     "Icon 1024x576",
     "Icon 2048x1152",
+    "Livery main file",
 ]
 
 RECIEVER_COMP_INFO = open(join(BASE_DIR, "release")).read()

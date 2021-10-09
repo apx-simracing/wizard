@@ -62,6 +62,7 @@ class ComponentAdmin(admin.ModelAdmin):
                         "type",
                         "steam_id",
                         "base_component",
+                        "alternative_name",
                         "component_name",
                         "short_name",
                         "is_official",
@@ -73,6 +74,7 @@ class ComponentAdmin(admin.ModelAdmin):
                 {
                     "fields": (
                         "update",
+                        "component_files",
                         "numberplate_template_l",
                         "numberplate_template_mask_l",
                         "numberplate_template_r",

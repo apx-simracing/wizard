@@ -17,6 +17,7 @@ class Command(BaseCommand):
         for index, suffix in enumerate(FILE_NAME_SUFFIXES):
             if str(filename).endswith(suffix):
                 selected_suffix = FILE_NAME_SUFFIXES_MEANINGS[index]
+                break
         return selected_suffix
 
     def get_vehicle_filename(
@@ -39,6 +40,7 @@ class Command(BaseCommand):
         for suffix in FILE_NAME_SUFFIXES:
             if str(filename).endswith(suffix):
                 selected_suffix = suffix
+                break
         if selected_suffix is None:
             raise ValidationError("We can't identify that file purpose")
         if "#" in vehicle_number:
@@ -61,10 +63,16 @@ class Command(BaseCommand):
         )
 
         entries = Component.objects.filter(
-            Q(short_name=short_name)
-            | Q(steam_id=short_name)
-            | Q(component_name=short_name)
+            Q(short_name=str(short_name))
         )
+        if entries.count() == 0:
+            entries = Component.objects.filter(
+              Q(steam_id=int(short_name))
+            )
+        if entries.count() == 0:
+            entries = Component.objects.filter(
+              Q(steam_icomponent_named=str(short_name))
+            )
         if entries.count() != 1:
             raise Exception(
                 f"Did not manage to find a component with key {short_name}."

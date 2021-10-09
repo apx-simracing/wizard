@@ -162,6 +162,13 @@ class Component(models.Model):
         max_length=200,
         help_text="This is the folder name inside Installed/Vehicles/ or Installed/Locations/",
     )
+    alternative_name = models.CharField(
+        default=None,
+        null=True,
+        blank=True,
+        max_length=200,
+        help_text="Alternative display name to keep same mods with different components apart",
+    )
     is_official = models.BooleanField(
         default=False,
         help_text="Is official content which follows the even version and uneven version scheme (APX will select versions for you). If not checked, we will use the version you've selected.",
@@ -171,6 +178,10 @@ class Component(models.Model):
         max_length=200,
         help_text="The short name is required to idenitfy (livery) filenames belonging to this component. You only need this when 'Do update' is checked.",
         validators=[alphanumeric_validator],
+    )
+
+    component_files = models.FileField(
+        upload_to=get_update_filename, storage=OverwriteStorage, null=True, blank=True
     )
 
     update = models.FileField(
@@ -274,9 +285,12 @@ class Component(models.Model):
         super(Component, self).save(*args, **kwargs)
 
     def __str__(self):
+        base_str = ""
+        if self.alternative_name:
+            base_str = "[" + self.alternative_name + "] "
         if self.base_component:
-            return "{} (updates {})".format(self.component_name, self.base_component.steam_id)
-        return self.component_name
+            return base_str + "{} (updates {})".format(self.component_name, self.base_component.steam_id)
+        return base_str +  self.component_name
 
 
 class RaceSessions(models.Model):
