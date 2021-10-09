@@ -48,7 +48,7 @@ from wizard.settings import (
 from webgui.storage import OverwriteStorage
 from django.utils.html import mark_safe
 import re
-from os.path import exists, join
+from os.path import exists, join, basename
 from os import mkdir, linesep
 from django.db.models.signals import post_save
 from django.dispatch import receiver
@@ -443,7 +443,9 @@ class Track(models.Model):
 
 class Entry(models.Model):
     class Meta:
-        verbose_name_plural = "Entries"
+        verbose_name = "Livery"
+        verbose_name_plural = "Liveries"
+        
 
     component = models.ForeignKey(Component, on_delete=models.CASCADE)
     team_name = models.CharField(default="Example Team", max_length=200)
@@ -529,7 +531,8 @@ class EntryFile(models.Model):
 
     def __str__(self):
         return str(self.entry)
-
+    def filename(self):
+        return basename(self.file.name)
     def save(self, *args, **kwargs):
         needle = "{}_{}.dds".format(
             self.entry.component.short_name, self.entry.vehicle_number

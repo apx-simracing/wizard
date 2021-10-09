@@ -61,8 +61,12 @@
   }
 
   .module.aligned h2 {
-    background-color: #081153 !important;
+    background-color: #081153;
     color: white !important;
+  }
+
+  .entryfile-list-header h2 {
+    background-color: black !important;
   }
 
   .field-logfile div .readonly {
@@ -97,8 +101,42 @@
     color: white !important;
     font-weight: bold;
   }
+  .app-webgui table tr.model-entryfile {
+    display:none;
+  }
+  .component-entries {
+    margin-left: 2em;
+    margin-bottom: 1em;
+  }
+  .component-entries div table {
+    width: 100%;
+    display: none;
+  }
+  .shown {
+    display: block !important;
+    width: 100%;
+  }
+  .entry-name-li {
+    border-bottom: 1px solid #eee;
+  }
 
-  .track-name-li {
+  .module.aligned.entry-list-header {
+    margin-bottom: unset !important;
+  }
+
+  .entryfile-list-header {
+    margin-top: 1em;
+    margin-bottom: unset;
+    cursor: pointer;
+  }
+
+  .module.aligned h2 a.entry-name,
+  .entryfile-list-header h2 a {
+    color: white !important;
+    font-weight: bold;
+  }
+
+  .entryfile-name-li {
     border-bottom: 1px solid #eee;
   }
 </style>

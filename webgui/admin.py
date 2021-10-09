@@ -1,5 +1,6 @@
 from django.contrib import admin
 from django.core import management
+from django.shortcuts import redirect
 from webgui.models import (
     Component,
     Track,
@@ -190,6 +191,28 @@ class TrackAdmin(admin.ModelAdmin):
 class EntryAdmin(admin.ModelAdmin):
     ordering = ("component__component_name",)
 
+    
+    change_list_template = "admin/entry_list.html"
+
+    def changelist_view(self, request, extra_context=None):
+        response = super().changelist_view(
+            request,
+            extra_context=extra_context,
+        )
+        all_entries = Entry.objects.all().order_by("component__component_name")
+        result = {}
+        for entry in all_entries:
+            component = entry.component
+            if component not in result:
+                result[component] = []
+            files = EntryFile.objects.filter(entry=entry)
+            result[component].append({
+                "entry": entry,
+                "files": files
+            })
+        response.context_data["entries"] = result
+        return response
+
     def get_form(self, request, obj=None, **kwargs):
         form = super(EntryAdmin, self).get_form(request, obj=None, **kwargs)
         form.base_fields["component"].queryset = Component.objects.filter(type="VEH")
@@ -265,9 +288,18 @@ class ServerCronAdmin(admin.ModelAdmin):
 @admin.register(EntryFile)
 class EntryFileAdmin(admin.ModelAdmin):
     def get_form(self, request, obj=None, **kwargs):
+        
+        entry = request.GET.get("entry")
         form = super(EntryFileAdmin, self).get_form(request, obj=None, **kwargs)
+        if entry is not None:
+            form.base_fields["entry"].initial = int(entry)
         return form
-
+    def response_delete(self, request, obj_display, obj_id):
+        return redirect('/admin/webgui/entry')
+    def response_add(self, request, obj, post_url_continue=None):
+        return redirect('/admin/webgui/entry')
+    def response_change(self, request, obj):
+        return redirect('/admin/webgui/entry')
     list_display = (
         "computed_name",
         "mask_added",
