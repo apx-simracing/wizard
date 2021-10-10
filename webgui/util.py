@@ -390,8 +390,10 @@ def get_event_config(event_id: int):
     ungrouped_vehicles = server.entries.all()
     signup_components = server.signup_components.all()
     vehicle_groups = {}
+    entry_based_components_seen = []
     for vehicle in ungrouped_vehicles:
         component = vehicle.component
+        key = component.pk
         steam_id = component.steam_id
         base_steam_id = base_steam_id = component.base_component.steam_id if component.base_component else 0
         version = "latest"
@@ -399,15 +401,13 @@ def get_event_config(event_id: int):
         short_name = component.short_name
         is_official = component.is_official
 
-        if steam_id in vehicle_groups:
-            steam_id = str(steam_id) + ":" + name
-
-        if steam_id not in vehicle_groups:
-            vehicle_groups[steam_id] = {
+        if key not in vehicle_groups:
+            vehicle_groups[key] = {
                 "entries": [],
                 "entries_overwrites": {},
                 "component": {
                     "base_steam_id": base_steam_id,
+                    "steam_id": steam_id,
                     "version": version,
                     "name": name,
                     "update": True,
@@ -416,7 +416,7 @@ def get_event_config(event_id: int):
                     "numberplates": [],
                 },
             }
-        vehicle_groups[steam_id]["entries"].append(
+        vehicle_groups[key]["entries"].append(
             "{}#{}:{}".format(
                 vehicle.team_name, vehicle.vehicle_number, vehicle.pit_group
             )
@@ -429,23 +429,24 @@ def get_event_config(event_id: int):
                 got = match(pattern, line)
                 if got:
                     props[got.group(1)] = got.group(2)
-            vehicle_groups[steam_id]["entries_overwrites"][
+            vehicle_groups[key]["entries_overwrites"][
                 vehicle.vehicle_number
             ] = props
         if vehicle.base_class:
             if (
                 vehicle.vehicle_number
-                not in vehicle_groups[steam_id]["entries_overwrites"]
+                not in vehicle_groups[key]["entries_overwrites"]
             ):
-                vehicle_groups[steam_id]["entries_overwrites"][
+                vehicle_groups[key]["entries_overwrites"][
                     vehicle.vehicle_number
                 ] = []
-            vehicle_groups[steam_id]["entries_overwrites"][vehicle.vehicle_number][
+            vehicle_groups[key]["entries_overwrites"][vehicle.vehicle_number][
                 "BaseClass"
             ] = vehicle.base_class
     if len(ungrouped_vehicles) == 0:
         # use signup components for the event.json
         for component in signup_components:
+            key = component.pk
             steam_id = component.steam_id
             base_steam_id = component.base_component.steam_id if component.base_component else 0
             version = "latest"
@@ -453,15 +454,13 @@ def get_event_config(event_id: int):
             short_name = component.short_name
             official = component.is_official
 
-            if steam_id in vehicle_groups:
-                steam_id = str(steam_id) + ":" + name
-
-            if steam_id not in vehicle_groups:
-                vehicle_groups[steam_id] = {
+            if key not in vehicle_groups:
+                vehicle_groups[key] = {
                     "entries": [],
                     "entries_overwrites": {},
                     "component": {
                         "base_steam_id": base_steam_id,
+                        "steam_id": steam_id,
                         "version": version,
                         "name": name,
                         "update": False,
@@ -476,13 +475,16 @@ def get_event_config(event_id: int):
 
     track_groups = OrderedDict()
     for track in tracks:
+        key = track.component.pk
         track_component = track.component
+        steam_id = track.component.steam_id
         base_steam_id = track_component.base_component.steam_id if track_component.base_component else 0
         requires_update = models.TrackFile.objects.filter(track=track).count() > 0
-        track_groups[track_component.steam_id] = {
+        track_groups[key] = {
             "layout": track.layout,
             "component": {
                 "base_steam_id": base_steam_id,
+                "steam_id": steam_id,
                 "version": "latest",
                 "name": track_component.component_name,
                 "update": requires_update,
