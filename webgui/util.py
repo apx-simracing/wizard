@@ -590,6 +590,15 @@ def do_post(message):
             headers={"Content-type": "application/json"},
         )
 
+def do_embed_post(message):
+    if not message or len(message) == 0:
+        return
+    if DISCORD_WEBHOOK is not None and DISCORD_WEBHOOK_NAME is not None:
+        got = post(
+            DISCORD_WEBHOOK,
+            json=message,
+            headers={"Content-type": "application/json"},
+        )
 
 def do_rc_post(message):
     if (
@@ -830,6 +839,33 @@ def create_firewall_script(server):
         )
         file.write(content)
 
+def get_component_blob_for_discord(entry, is_vehicle, is_update=False):
+    description = "🖌 The server will provide a skin pack for this mod." if is_update else ""
+    if not is_vehicle:
+        description = "🖌 The server will provide a track update pack for this mod." if is_update else ""
+    discord_blob = {
+        "title": entry.component_name,			
+        "fields": [],
+        "color": 463186 if is_vehicle else 33791,
+        "description": description
+    }
+    if entry.base_component is not None:
+        discord_blob["fields"].append(
+            {
+                "name": "Link of required base mod",
+                "value": "https://steamcommunity.com/sharedfiles/filedetails/?id={}".format( entry.base_component.steam_id) if  entry.base_component.steam_id > 0 else "Contact administrator for source",
+                "inline": False
+            }
+        )
+
+    discord_blob["fields"].append(
+        {
+            "name": "Link",
+            "value": "https://steamcommunity.com/sharedfiles/filedetails/?id={}".format(entry.steam_id) if entry.steam_id > 0 else "Contact administrator for source",
+            "inline": False
+        }
+    )
+    return discord_blob
 
 def do_server_interaction(server):
     secret = server.secret
@@ -872,8 +908,66 @@ def do_server_interaction(server):
                     command_line = "--cmd weatherupdate --args {}".format(config_path)
 
                     run_apx_command(key, command_line)
-            run_apx_command(key, "--cmd start")
-            do_post(MSG_START_OK.format(server.name))
+            #run_apx_command(key, "--cmd start")
+            # build the discord embed message
+            json_blob = {
+                "avatar_url": "https://apx.chmr.eu/images/apx.png",
+                "embeds": [
+                    {
+                        "title": "Server started",
+                        "thumbnail": {
+                            "url": "https://apx.chmr.eu/images/apx.png"
+                        },
+                        "color": 65404,
+                        "fields": [
+                            {
+                                "name": "Name",
+                                "value": "**"+server.event.name+"**",
+                                "inline": True
+                            },
+                            {
+                                "name": "Password",
+                                "value": "`"+server.event.password+"`" if server.event.password else "No password",
+                                "inline": True
+                            },
+                            {
+                                "name": "Branch",
+                                "value": "`"+server.branch+"`",
+                                "inline": True
+                            },
+                            {
+                                "name": "Content",
+                                "value": "See below",
+                                "inline": False
+                            }
+                        ]
+                    }
+                ]
+            }
+            #get files for tcars
+            seen_components = []
+            components_to_update = []
+            for vehicle in server.event.signup_components.all():
+                if vehicle not in seen_components:
+                    seen_components.append(vehicle)
+                
+            
+            
+            for vehicle in server.event.entries.all():
+                # entry vehicles might be redundant, so create list first
+                if vehicle.component not in seen_components:
+                    seen_components.append(vehicle.component)
+                else:
+                    components_to_update.append(vehicle.component.pk)
+
+            for component in seen_components:
+                json_blob["embeds"].append(get_component_blob_for_discord(component, True, component.pk in components_to_update))
+
+            for track in server.event.tracks.all():
+                has_updates = models.TrackFile.objects.filter(track=track).count() > 0
+                json_blob["embeds"].append(get_component_blob_for_discord(track.component, False, has_updates))
+            
+            do_embed_post(json_blob)
         except Exception as e:
             print(e)
             do_post(MSG_START_FAIL.format(server.name, str(e)))
