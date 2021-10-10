@@ -1,0 +1,81 @@
+{% extends 'admin/change_list.html' %}
+{% load i18n admin_urls static admin_list %}
+
+{% block content %}
+<ul class="object-tools">
+  <li>
+    <a href="/admin/webgui/entry/add" class="addlink">
+      Add a new livery
+    </a>
+  </li>
+</ul>
+{% for component, entries  in entries.items%}
+<div class="module aligned entry-list-header">
+  <h2>
+    <a href="/admin/webgui/component/{{component.id}}/change/" class="entry-name">{{ component.component_name }}</a>
+    {% if component.steam_id > 0 %}
+    Steam: {{ component.steam_id }}
+    {% endif %}
+    {% if component.steam_id < 0 %}
+    File based item
+    {% endif %}
+  </h2>
+</div>
+<div class="component-entries">
+{% for entry in entries %}
+<div class="module aligned entryfile-list-header files-header-{{entry.entry.id}}">
+  <h2>
+    {% if entry.entry.base_class %}
+    [{{entry.entry.base_class}}]
+    {% endif%}
+    {{ entry.entry.team_name }}#{{ entry.entry.vehicle_number }}
+    <a class="entry-name-link" href="/admin/webgui/entry/{{entry.entry.id}}/change/">
+      <img src="{% static "/admin/img/icon-changelink.svg" %}" title="Change this entry">
+    </a>
+    <a class="entry-name-link" href="/admin/webgui/entry/{{entry.entry.id}}/delete/">
+      <img src="{% static "/admin/img/icon-deletelink.svg" %}" title="Delete this entry">
+    </a>
+    <a class="entry-name-link" href="/admin/webgui/entryfile/add/?entry={{entry.entry.id}}">
+      <img src="{% static "/admin/img/icon-addlink.svg" %}" title="Add a new file">
+    </a>
+  </h2>
+</div>
+    <div>
+      <table class="entry-files-list files-{{entry.entry.id}}">
+        <thead>
+          <tr>
+            <th scope="col" class="column-computed_name">
+              
+              <div class="text"><span>Name</span></div>
+              <div class="clear"></div>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for file in entry.files %}
+          <tr>
+            <td class="field-computed_name">
+              <a href="/admin/webgui/entryfile/{{file.id}}/change/">{{ file.filename }}</a>
+              <a class="entryfile-name-link" href="/admin/webgui/entryfile/{{file.id}}/delete/">
+                <img src="{% static "/admin/img/icon-deletelink.svg" %}" title="Delete this file">
+              </a>
+            </td>
+          </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+        <script>
+          document.querySelector(".files-header-{{entry.entry.id}}").addEventListener("click", function() {
+            document.querySelector(".files-{{entry.entry.id}}").classList.toggle("shown")
+          });
+        </script>
+        <span class="entry-file">
+          <a class="entryfile-name-link" href="/admin/webgui/entryfile/{{file.id}}/change/">{{ file.file.name }}</a>
+        </span class="entry-file">
+    </div>
+  </li>
+</ul>
+{% endfor %}
+</div>
+{% endfor %}
+{% endblock %}

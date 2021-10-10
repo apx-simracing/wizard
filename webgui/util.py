@@ -14,15 +14,7 @@ from wizard.settings import (
     WEBUI_PORT_RANGE,
     HTTP_PORT_RANGE,
     SIM_PORT_RANGE,
-    MSG_RESTART_WEEKEND_OK,
-    MSG_RESTART_WEEKEND_FAIL,
-    MSG_START_OK,
-    MSG_START_FAIL,
-    MSG_STOP_OK,
-    MSG_STOP_FAIL,
-    MSG_DEPLOY_START,
-    MSG_DEPLOY_FAIL,
-    MSG_DEPLOY_FINISH,
+    MSG_LOGO,
     USE_GLOBAL_STEAMCMD,
 )
 import hashlib
@@ -839,7 +831,7 @@ def create_firewall_script(server):
         )
         file.write(content)
 
-def get_component_blob_for_discord(entry, is_vehicle, is_update=False):
+def get_component_blob_for_discord(entry, is_vehicle, is_update=False, additional_text=""):
     description = "🖌 The server will provide a skin pack for this mod." if is_update else ""
     if not is_vehicle:
         description = "🖌 The server will provide a track update pack for this mod." if is_update else ""
@@ -857,14 +849,22 @@ def get_component_blob_for_discord(entry, is_vehicle, is_update=False):
                 "inline": False
             }
         )
-
+    
     discord_blob["fields"].append(
         {
-            "name": "Link",
+            "name": "Base mod link",
             "value": "https://steamcommunity.com/sharedfiles/filedetails/?id={}".format(entry.steam_id) if entry.steam_id > 0 else "Contact administrator for source",
             "inline": False
         }
     )
+    if additional_text != "":
+        discord_blob["fields"].append(
+            {
+                "name": "Entries",
+                "value": additional_text,
+                "inline": False
+            }
+        )
     return discord_blob
 
 def do_server_interaction(server):
@@ -877,10 +877,8 @@ def do_server_interaction(server):
     if server.action == "W":
         try:
             run_apx_command(key, "--cmd new_weekend")
-            do_post(MSG_RESTART_WEEKEND_OK.format(server.name))
         except Exception as e:
             print(e)
-            do_post(MSG_RESTART_WEEKEND_FAIL.format(server.name, str(e)))
         finally:
             server.action = ""
             server.save()
@@ -911,12 +909,12 @@ def do_server_interaction(server):
             run_apx_command(key, "--cmd start")
             # build the discord embed message
             json_blob = {
-                "avatar_url": "https://apx.chmr.eu/images/apx.png",
+                "avatar_url": MSG_LOGO,
                 "embeds": [
                     {
                         "title": "Server started",
                         "thumbnail": {
-                            "url": "https://apx.chmr.eu/images/apx.png"
+                            "url": MSG_LOGO
                         },
                         "color": 65404,
                         "fields": [
@@ -947,6 +945,7 @@ def do_server_interaction(server):
             #get files for tcars
             seen_components = []
             components_to_update = []
+            entry_map = {}
             for vehicle in server.event.signup_components.all():
                 if vehicle not in seen_components:
                     seen_components.append(vehicle)
@@ -959,18 +958,26 @@ def do_server_interaction(server):
                     seen_components.append(vehicle.component)
                 else:
                     components_to_update.append(vehicle.component.pk)
+                if vehicle.component.pk not in entry_map:
+                    entry_map[vehicle.component.pk] = []
+                entry_map[vehicle.component.pk].append("#{}: {}".format(vehicle.vehicle_number, vehicle.team_name))
 
             for component in seen_components:
-                json_blob["embeds"].append(get_component_blob_for_discord(component, True, component.pk in components_to_update))
+                additional_text = ""
+                if component.pk in entry_map:
+                    addtional_text = "\n"
+                    for entry in entry_map[component.pk]:
+                        additional_text = additional_text + "\n" + entry
+                json_blob["embeds"].append(get_component_blob_for_discord(component, True, component.pk in components_to_update, additional_text))
 
             for track in server.event.tracks.all():
                 has_updates = models.TrackFile.objects.filter(track=track).count() > 0
                 json_blob["embeds"].append(get_component_blob_for_discord(track.component, False, has_updates))
-            
             do_embed_post(json_blob)
         except Exception as e:
             print(e)
-            do_post(MSG_START_FAIL.format(server.name, str(e)))
+            server.state = "Error: " + str(e)
+            server.save()
         finally:
             server.action = ""
             server.save()
@@ -992,7 +999,8 @@ def do_server_interaction(server):
             run_apx_command(key, command_line)
 
         except Exception as e:
-            print(e)
+            server.state = "Error: " + str(e)
+            server.save()
         finally:
             server.action = ""
             server.save()
@@ -1000,15 +1008,34 @@ def do_server_interaction(server):
 
         try:
             run_apx_command(key, "--cmd stop")
-            do_post(MSG_STOP_OK.format(server.name))
+            json_blob = {
+                "avatar_url": MSG_LOGO,
+                "embeds": [
+                    {
+                        "title": "Server stopped",
+                        "thumbnail": {
+                            "url": MSG_LOGO
+                        },
+                        "color": 16711680,
+                        "fields": [
+                            {
+                                "name": "Name",
+                                "value": "**"+server.event.name+"**",
+                                "inline": True
+                            }
+                        ]
+                    }
+                ]
+            }
+            do_embed_post(json_blob)
         except Exception as e:
-            do_post(MSG_STOP_FAIL.format(server.name, str(e)))
+            server.state = "Error: " + str(e)
+            server.save()
         finally:
             server.action = ""
             server.save()
 
     if server.action == "D":
-        do_post(MSG_DEPLOY_START.format(server.name))
         server.state = "Attempting to create event configuration"
         server.save()
         # save event json
@@ -1096,11 +1123,30 @@ def do_server_interaction(server):
                 server.save()
                 run_apx_command(key, "--cmd plugins --args " + plugin_args)
         except Exception as e:
-            do_post(MSG_DEPLOY_FAIL.format(server.name, str(e)))
             server.state = "Error: " + str(e)
             server.save()
         finally:
-            do_post(MSG_DEPLOY_FINISH.format(server.name))
+            # build the discord embed message
+            json_blob = {
+                "avatar_url": MSG_LOGO,
+                "embeds": [
+                    {
+                        "title": "Server update completed",
+                        "thumbnail": {
+                            "url": MSG_LOGO
+                        },
+                        "color": 16744192,
+                        "fields": [
+                            {
+                                "name": "Name",
+                                "value": "**"+server.event.name+"**",
+                                "inline": True
+                            }
+                        ]
+                    }
+                ]
+            }
+            do_embed_post(json_blob)
             if server.state is not None and "Error" not in server.state:
                 server.state = None
             server.action = ""

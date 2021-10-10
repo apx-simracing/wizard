@@ -343,6 +343,13 @@ class EntryFileAdmin(admin.ModelAdmin):
 class EventAdmin(admin.ModelAdmin):
     ordering = ["name"]
     actions = ["copy"]
+    
+    change_form_template = (
+        "admin/event_change_form.html"
+    )
+    change_list_template = (
+        "admin/event_list.html"
+    )
     filter_horizontal = (
         "tracks",
         "entries",

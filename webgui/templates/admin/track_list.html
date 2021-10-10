@@ -1,0 +1,23 @@
+{% extends 'admin/change_list.html' %}
+{% block content %}
+{% for component, tracks  in tracks.items%}
+<div class="module aligned track-list-header">
+  <h2>
+    <a href="/admin/webgui/component/{{component.id}}/change/" class="track-name">{{ component.component_name }}</a>
+    {% if component.steam_id > 0 %}
+    Steam: {{ component.steam_id }}
+    {% endif %}
+    {% if component.steam_id < 0 %}
+    File based item
+    {% endif %}
+  </h2>
+</div>
+{% for track in tracks %}
+<ul>
+  <li>
+    <a class="track-name-link" href="/admin/webgui/track/{{track.id}}/change/">{{ track.layout }}</a>
+  </li>
+</ul>
+{% endfor %}
+{% endfor %}
+{% endblock %}

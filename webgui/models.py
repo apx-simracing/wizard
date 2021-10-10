@@ -792,7 +792,7 @@ class Event(models.Model):
         verbose_name="race weekend",
         help_text="Conditions is a bundle of session definitions, containing session lengths and grip information.",
     )
-    entries = models.ManyToManyField(Entry, blank=True)
+    entries = models.ManyToManyField(Entry, blank=True, verbose_name="Liveries")
     tracks = models.ManyToManyField(Track)
     signup_active = models.BooleanField(default=False)
     signup_components = models.ManyToManyField(
