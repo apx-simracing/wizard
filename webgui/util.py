@@ -908,7 +908,7 @@ def do_server_interaction(server):
                     command_line = "--cmd weatherupdate --args {}".format(config_path)
 
                     run_apx_command(key, command_line)
-            #run_apx_command(key, "--cmd start")
+            run_apx_command(key, "--cmd start")
             # build the discord embed message
             json_blob = {
                 "avatar_url": "https://apx.chmr.eu/images/apx.png",
