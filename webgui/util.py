@@ -39,6 +39,7 @@ import socket
 import random
 import logging
 import zipfile, io
+from time import sleep
 from collections import OrderedDict
 
 logger = logging.getLogger(__name__)
@@ -230,7 +231,7 @@ def remove_orphan_files():
 
 def get_random_string(length):
     # put your letters in the following string
-    sample_letters = "abcdefghi"
+    sample_letters = "abcdefghijklmnopqrstuvwxyz"
     result_str = "".join((random.choice(sample_letters) for i in range(length)))
     return result_str
 
@@ -264,19 +265,18 @@ def get_free_tcp_port(
             break
     return port
 
+def set_state(id, message):
+    models.state_map[id] = message
 
 def bootstrap_reciever(root_path, server_obj, port, secret):
     try:
-        server_obj.state = "Downloading reciever release"
-        server_obj.save()
+        set_state(server_obj.pk, "Downloading reciever release")
         r = get(RECIEVER_DOWNLOAD_FROM)
         z = zipfile.ZipFile(io.BytesIO(r.content))
         z.extractall(root_path)
-        server_obj.state = "Extracted reciever release"
-        server_obj.save()
+        set_state(server_obj.pk, "Extracted reciever release")
     except:
-        server_obj.state = "Download for reciever failed"
-        server_obj.save()
+        set_state(server_obj.pk, "Extracted reciever release")
         return False
 
     reciever_path = join(root_path, "reciever")
@@ -288,8 +288,7 @@ def bootstrap_reciever(root_path, server_obj, port, secret):
         "redownload_steam": False,
         "root_path": root_path,
     }
-    server_obj.state = "Doing reciever bootstrap"
-    server_obj.save()
+    set_state(server_obj.pk, "Doing APX reciever bootstrap")
     try:
         # TODO: find solution for admin issue
         got = subprocess.check_output(
@@ -297,7 +296,7 @@ def bootstrap_reciever(root_path, server_obj, port, secret):
         ).decode("utf-8")
     except Exception as e:
         # Exceptions can't really handled at this point, so we are ignoring them
-        pass
+        set_state(server_obj.pk, str(e))
 
     # set ports
     other_servers = models.Server.objects.exclude(pk=server_obj.pk)
@@ -330,7 +329,7 @@ def bootstrap_reciever(root_path, server_obj, port, secret):
     server_obj.webui_port = webui_port
 
     # create server.json
-    server_obj.state = "Done with bootstrap"
+    set_state(server_obj.pk, "Done with bootstrap")
     server_obj.save()
     config_path = join(reciever_path, "server.json")
 
@@ -338,8 +337,7 @@ def bootstrap_reciever(root_path, server_obj, port, secret):
     key_file = join(BASE_DIR, "uploads", "keys")
 
     if exists(join(key_file, "ServerUnlock.bin")):
-        server_obj.state = "Injecting global keys"
-        server_obj.save()
+        set_state(server_obj.pk, "Injecting global keys")
         copyfile(
             join(key_file, "ServerUnlock.bin"),
             join(root_path, "server", "UserData", "ServerUnlock.bin"),
@@ -347,16 +345,28 @@ def bootstrap_reciever(root_path, server_obj, port, secret):
 
     with open(config_path, "w") as file:
         file.write(dumps(config))
-    try:
-        for i in range(0, 5):
-            server_obj.state = "Trying to collect keys. Try {} of 5".format(i)
-            server_obj.save()
-            do_server_interaction(server_obj)
-        server_obj.state = "Ready for deployment"
-        server_obj.save()
-    except:
-        server_obj.state = "Failed to collect keys"
-        server_obj.save()
+    
+    for i in range(0, 10):
+        try:
+            key = get_server_hash(server_obj.url)
+            set_state(server_obj.pk, "Trying to collect keys. Try {} of 10".format(i))
+            key_root_path = join(MEDIA_ROOT, "keys", key)
+            if not exists(key_root_path):
+                mkdir(key_root_path)
+            key_path = join(key_root_path, "ServerKeys.bin")
+            relative_path = join("keys", key, "ServerKeys.bin")
+            download_key_command = run_apx_command(
+                key, "--cmd lockfile --args {}".format(key_path)
+            )
+            if exists(key_path):
+                server_obj.server_key = relative_path
+                server_obj.save()
+                set_state(server_obj.pk, f"Ready for usage. Key was collected on try {i}")    
+                break
+            sleep(2)
+        except Exception as e:
+            set_state(server_obj.pk, f"Key collect try {i} of 10 failed: {e}")  
+
 
 
 def get_hash(input):
@@ -584,9 +594,15 @@ def do_post(message):
             headers={"Content-type": "application/json"},
         )
 
-def do_embed_post(message):
+def do_embed_post(message, alternative_url=None):
     if not message or len(message) == 0:
         return
+    if alternative_url is not None and len(alternative_url) > 0:
+        got = post(
+            alternative_url,
+            json=message,
+            headers={"Content-type": "application/json"},
+        )
     if DISCORD_WEBHOOK is not None and DISCORD_WEBHOOK_NAME is not None:
         got = post(
             DISCORD_WEBHOOK,
@@ -872,8 +888,8 @@ def get_component_blob_for_discord(entry, is_vehicle, is_update=False, additiona
 def do_server_interaction(server):
     secret = server.secret
     url = server.url
-    server.state = None
-    server.status = None
+    discord_url = server.discord_url
+    set_state(server.pk, "-")
     server.save()
     key = get_server_hash(url)
     if server.action == "W":
@@ -886,6 +902,7 @@ def do_server_interaction(server):
             server.save()
 
     if server.action == "S+":
+        set_state(server.pk, "Start requested")
         try:
             # update weather, if needed
             if server.event and server.event.real_weather:
@@ -975,12 +992,13 @@ def do_server_interaction(server):
             for track in server.event.tracks.all():
                 has_updates = models.TrackFile.objects.filter(track=track).count() > 0
                 json_blob["embeds"].append(get_component_blob_for_discord(track.component, False, has_updates))
-            do_embed_post(json_blob)
+            do_embed_post(json_blob, discord_url)
         except Exception as e:
             print(e)
-            server.state = "Error: " + str(e)
+            set_state(server.pk, str(e))
             server.save()
         finally:
+            set_state(server.pk, "-") 
             server.action = ""
             server.save()
 
@@ -1001,13 +1019,13 @@ def do_server_interaction(server):
             run_apx_command(key, command_line)
 
         except Exception as e:
-            server.state = "Error: " + str(e)
+            set_state(server.pk, str(e))
             server.save()
         finally:
             server.action = ""
             server.save()
     if server.action == "R-":
-
+        set_state(server.pk, "Stop requested")
         try:
             run_apx_command(key, "--cmd stop")
             json_blob = {
@@ -1029,17 +1047,18 @@ def do_server_interaction(server):
                     }
                 ]
             }
-            do_embed_post(json_blob)
+            do_embed_post(json_blob, discord_url)
         except Exception as e:
-            server.state = "Error: " + str(e)
+            set_state(server.pk, str(e))
             server.save()
         finally:
             server.action = ""
             server.save()
+            
+            set_state(server.pk, "-") 
 
     if server.action == "D":
-        server.state = "Attempting to create event configuration"
-        server.save()
+        set_state(server.pk, "Attempting to create event configuration")
         # save event json
         event_config = get_event_config(server.event.pk)
         # add ports
@@ -1095,22 +1114,19 @@ def do_server_interaction(server):
                     files_to_attach.append(file_name)
                 # only add skin files if needed
                 if len(files_to_attach) > 0:
-                    server.state = "Pushing track update to the server"
-                    server.save()
+                    set_state(server.pk, "Pushing track update to the server")
                     command_line = "--cmd build_track --args {} {}".format(
                         track.component.component_name, " ".join(files_to_attach)
                     )
                     run_apx_command(key, command_line)
-
-            server.state = "Pushing skins (if any) to the server"
-            server.save()
+            
+            set_state(server.pk, "Pushing skins (if any) to the server")
             command_line = "--cmd build_skins --args {} {}".format(
                 config_path, rfm_path
             )
             run_apx_command(key, command_line)
 
-            server.state = "Request deployment"
-            server.save()
+            set_state(server.pk, "Asking server for deployment")
             command_line = "--cmd deploy --args {} {}".format(config_path, rfm_path)
             run_apx_command(key, command_line)
             # push plugins, if needed
@@ -1121,12 +1137,10 @@ def do_server_interaction(server):
                 additional_path_arg = "\"|" + target_path + "\"" if target_path else "" 
                 plugin_args = plugin_args + " " + plugin_path + additional_path_arg
             if len(plugin_args) > 0:
-                server.state = "Pushing plugins to the server"
-                server.save()
+                set_state(server.pk, "Installing plugins")
                 run_apx_command(key, "--cmd plugins --args " + plugin_args)
         except Exception as e:
-            server.state = "Error: " + str(e)
-            server.save()
+            set_state(server.pk,str(e))
         finally:
             # build the discord embed message
             json_blob = {
@@ -1148,9 +1162,7 @@ def do_server_interaction(server):
                     }
                 ]
             }
-            do_embed_post(json_blob)
-            if server.state is not None and "Error" not in server.state:
-                server.state = None
+            do_embed_post(json_blob, discord_url)
             server.action = ""
             server.save()
 

@@ -56,6 +56,10 @@ from datetime import datetime, timedelta, time, date
 import pytz
 from json import dumps
 
+status_map = {}
+state_map = {}
+session_map = {}
+
 USE_WAND = True
 try:
     from wand import image
@@ -1428,6 +1432,10 @@ class Server(models.Model):
     url = models.CharField(
         blank=False, max_length=500, default="", help_text="The URL to the APX reciever"
     )
+    
+    discord_url = models.CharField(
+        blank=True,null=True, max_length=500, default="", help_text="An alternative webhook URL to be used instead of the DISCORD_WEBHOOK setting"
+    )
     secret = models.CharField(
         blank=False,
         max_length=500,
@@ -1515,13 +1523,6 @@ class Server(models.Model):
         default=None,
         help_text="APX Session Id",
     )
-    status = models.TextField(blank=True, null=True, default=None)
-    state = models.TextField(
-        blank=True,
-        null=True,
-        default=None,
-        help_text="The last update info got from the reciever",
-    )
 
     @property
     def logfile(self):
@@ -1564,18 +1565,16 @@ class Server(models.Model):
             self.http_port + 1,
             self.http_port + 2,
         )
-
+    @property
+    def state_info(self):
+        if not self.pk or self.pk not in state_map:
+            return "-"
+        return state_map[self.pk]
     @property
     def status_info(self):
-        status = self.status
-        if self.state and not self.status:
-            if "failed" in self.state or "Exception" in self.state:
-                return mark_safe(
-                    '<img src="{}admin/img/icon-no.svg" alt="Not Running"> {}</br>'.format(
-                        STATIC_URL, self.state
-                    )
-                )
-            return self.state
+        if not self.pk or self.pk not in status_map:
+            return "-"
+        status = status_map[self.pk]
         # no status to report (e. g. new server)
         response = '<img src="{}admin/img/icon-no.svg" alt="Not Running"> Server is not running</br>'.format(
             STATIC_URL
@@ -1615,7 +1614,7 @@ class Server(models.Model):
         return self.url if not self.name else self.name
 
     def clean(self):
-        status = self.status
+        status = status_map[self.pk] if self.pk and self.pk in status_map else None
         if not self.server_key and self.action:
             raise ValidationError(
                 "The server was not processed yet. Wait a short time until the key is present."

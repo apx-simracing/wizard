@@ -572,7 +572,6 @@ class ServerAdmin(admin.ModelAdmin):
         "admin/server_list.html" if not EASY_MODE else "admin/server_list_easy.html"
     )
     actions = [
-        "reset_status",
         "get_thumbnails",
         "apply_reciever_update",
         "delete_chats_and_messages",
@@ -639,15 +638,6 @@ class ServerAdmin(admin.ModelAdmin):
             )
         return HttpResponseRedirect("../")
 
-    def reset_status(self, request, queryset):
-        for server in queryset:
-            server.status = None
-            server.state = None
-            server.save()
-        messages.success(request, "Status are resetted.")
-
-    reset_status.short_description = "Reset status (if stuck)"
-
     def delete_chats_and_messages(self, request, queryset):
         for server in queryset:
             TickerMessage.objects.filter(server=server).delete()
@@ -710,8 +700,6 @@ class ServerAdmin(admin.ModelAdmin):
                     ),
                 )
 
-    reset_status.short_description = "Reset status (if stuck)"
-
     def get_thumbnails(self, request, queryset):
         try:
             for server in queryset:
@@ -756,7 +744,7 @@ class ServerAdmin(admin.ModelAdmin):
     list_display = (
         "name",
         "event",
-        "state",
+        "state_info",
         "status_info",
         "is_created_by_apx",
         "ports",
@@ -770,6 +758,7 @@ class ServerAdmin(admin.ModelAdmin):
                     "fields": [
                         "name",
                         "url",
+                        "discord_url",
                         "secret",
                         "public_secret",
                         "session_id",
@@ -792,7 +781,7 @@ class ServerAdmin(admin.ModelAdmin):
                     "fields": [
                         "action",
                         "status_info",
-                        "state",
+                        "state_info",
                         "is_created_by_apx",
                         "update_on_build",
                         "remove_cbash_shaders",
@@ -841,6 +830,7 @@ class ServerAdmin(admin.ModelAdmin):
             return self.readonly_fields + (
                 "event",
                 "status_info",
+                "state_info",
                 "is_created_by_apx",
                 "state",
                 "public_secret",
@@ -849,6 +839,7 @@ class ServerAdmin(admin.ModelAdmin):
         return self.readonly_fields + (
             "is_running",
             "status_info",
+            "state_info",
             "is_created_by_apx",
             "state",
             "public_secret",
@@ -859,14 +850,14 @@ class ServerAdmin(admin.ModelAdmin):
         if not obj:
             return False
         status = self.get_status(obj)
-        if not status:
+        if not status or status == "-":
             return False
         return "not_running" not in status
 
     is_running.short_description = "Running"
 
     def get_status(self, obj):
-        return obj.status
+        return obj.status_info
 
 
 @admin.register(TickerMessage)

@@ -28,6 +28,8 @@ from .models import (
     Event,
     Component,
     TickerMessage,
+    state_map,
+    status_map
 )
 import pathlib
 import zipfile
@@ -504,8 +506,7 @@ def add_message(request, secret: str):
             if parsed["args"]
             else parsed["event"]
         )
-        server.state = state
-        server.save()
+        state_map[server.pk] = state
     else:
 
         ticker = TickerMessage()
@@ -558,8 +559,7 @@ def add_status(request, secret: str):
             text.session_id = server.session_id
     except:
         pass
-    server.status = got
-    server.save()
+    status_map[server.pk] = got
     return HttpResponse("OK")
 
 
