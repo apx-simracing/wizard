@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
 from django.db.models import Q
-from os.path import exists, join
+from os.path import exists, join, isfile
 from os import mkdir, listdir
 from wizard.settings import BASE_DIR, MEDIA_ROOT
 from webgui.models import Component, Entry, EntryFile, TrackFile, Track
@@ -42,7 +42,7 @@ class Command(BaseCommand):
                 selected_suffix = suffix
                 break
         if selected_suffix is None:
-            raise ValidationError("We can't identify that file purpose")
+            raise Exception("We can't identify that file purpose")
         if "#" in vehicle_number:
             vehicle_number = vehicle_number.split("#")[1]
         if not full_path:
@@ -61,18 +61,21 @@ class Command(BaseCommand):
         short_name = input(
             "Name a valid short name, steam id or component name to identify the files: "
         )
-
+        clear_old = input(
+            "Do you want to clear old entries referred to this component? Y/N: "
+        ).lower() == "y"
         entries = Component.objects.filter(
             Q(short_name=str(short_name))
         )
         if entries.count() == 0:
             entries = Component.objects.filter(
-              Q(steam_id=int(short_name))
+              Q(component_name=str(short_name))
             )
         if entries.count() == 0:
             entries = Component.objects.filter(
-              Q(steam_icomponent_named=str(short_name))
+              Q(steam_id=int(short_name))
             )
+       
         if entries.count() != 1:
             raise Exception(
                 f"Did not manage to find a component with key {short_name}."
@@ -100,6 +103,8 @@ class Command(BaseCommand):
             confirm = input("Is this okay? Y/N: ")
             if confirm.lower() != "y":
                 raise Exception("Abort.")
+            if clear_old:
+                TrackFile.objects.filter(track=track).delete()
             for file in files:
                 track_file = TrackFile()
                 track_file.track = track
@@ -137,6 +142,7 @@ class Command(BaseCommand):
 
             # group files
             file_groups = {}
+            unknown_files = []
 
             for file in files:
                 matches = search(pattern, file)
@@ -148,7 +154,7 @@ class Command(BaseCommand):
                         file_groups[number] = []
                     file_groups[number].append(file)
                 else:
-                    raise Exception(f"Could not identify file: {file}")
+                    unknown_files.append(file)
 
             team_names_add = input("Do you want to set team names? Y/N: ")
             if team_names_add.lower() == "y":
@@ -183,37 +189,42 @@ class Command(BaseCommand):
                             f"\t File {file}: "
                             + "({})".format(self.get_file_meaning(file))
                         )
+            print("Following files will be ignored (e. g. as it's a file not related to an entry or the file is not yet supported by APX)")
+            for file in unknown_files:
+                print(f"\t{file}")
             confirm = input("Is this okay? Y/N: ")
 
-            if confirm.lower() != "y":
-                raise Exception("Abort.")
-            for number, files in file_groups.items():
-                print(f"Processing matches for car {number}")
-                existing_entries = Entry.objects.filter(
-                    component=entries.first(), vehicle_number=number
-                )
-                if existing_entries.count() == 1:
-                    raise Exception("The entry is already existing for this component")
-                e = Entry()
-                e.component = entries.first()
-                if "#" not in number:
-                    e.team_name = team_name
-                    e.vehicle_number = number
-                else:
-                    parts = number.split("#")
-                    e.team_name = parts[0]
-                    e.vehicle_number = parts[1]
-                e.save()
-                for file in files:
-                    print(f"Adding file {file} to entry of car {number}")
-                    e_f = EntryFile()
-                    e_f.entry = e
-                    source_path = join(BASE_DIR, "import", file)
-                    file_name = self.get_vehicle_filename(
-                        file, e.component.component_name, e.component.short_name, number
+            if confirm.lower() == "y":
+                if clear_old:
+                    Entry.objects.filter(component=entries.first()).delete()
+                    EntryFile.objects.filter(entry__component=entries.first()).delete()
+                for number, files in file_groups.items():
+                    print(f"Processing matches for car {number}")
+                    existing_entries = Entry.objects.filter(
+                        component=entries.first(), vehicle_number=number
                     )
-                    e_f.file = file_name
-                    target_path = join(BASE_DIR, "uploads", file_name)
-                    print(f"Copied {file} to {target_path}")
-                    e_f.save()
-                    copyfile(source_path, target_path)
+                    if existing_entries.count() == 1:
+                        raise Exception("The entry is already existing for this component")
+                    e = Entry()
+                    e.component = entries.first()
+                    if "#" not in number:
+                        e.team_name = team_name
+                        e.vehicle_number = number
+                    else:
+                        parts = number.split("#")
+                        e.team_name = parts[0]
+                        e.vehicle_number = parts[1]
+                    e.save()
+                    for file in files:
+                        print(f"Adding file {file} to entry of car {number}")
+                        e_f = EntryFile()
+                        e_f.entry = e
+                        source_path = join(BASE_DIR, "import", file)
+                        file_name = self.get_vehicle_filename(
+                            file, e.component.component_name, e.component.short_name, number
+                        )
+                        e_f.file = file_name
+                        target_path = join(BASE_DIR, "uploads", file_name)
+                        print(f"Copied {file} to {target_path}")
+                        e_f.save()
+                        copyfile(source_path, target_path)
