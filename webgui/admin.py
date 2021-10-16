@@ -833,7 +833,7 @@ class ServerAdmin(admin.ModelAdmin):
             fieldsets[2][1]["fields"] = [
                 "action",
                 "status_info",
-                "state",
+                "state_info",
                 "is_created_by_apx",
                 "update_on_build",
                 "collect_results_replays",
