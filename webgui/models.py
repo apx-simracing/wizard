@@ -723,6 +723,11 @@ class QualyMode(models.TextChoices):
     O = "1", "only one car is visible at a time"
     R = "2", "use default from RFM, season, or track entry"
 
+class WeatherAPI(models.TextChoices):
+    OpenWeatherMap = "OpenWeatherMap", "OpenWeatherMap"
+    DarkSky = "DarkSky", "DarkSky"
+    ClimaCell = "ClimaCell", "ClimaCell"
+    ClimaCell_V4 = "ClimaCell_V4", "ClimaCell_V4"
 
 class BlueFlags(models.TextChoices):
     N = "0", "None"
@@ -816,7 +821,23 @@ class Event(models.Model):
 
     real_weather = models.BooleanField(
         default=False,
-        help_text="Decides if real weather should be used. The weather is based on a hourly forecast.",
+        help_text="Decides if real weather should be used. This will be using https://forum.studio-397.com/index.php?threads/weatherplugin.58614/ in the background.",
+    )
+    weather_api = models.CharField(
+        max_length=20,
+        choices=WeatherAPI.choices,
+        blank=True,
+        null=True,
+        default=None,
+        help_text="The Weather API to use",
+        verbose_name="Weather API",
+    )
+    weather_key = models.CharField(
+        blank=True,
+        null=True,
+        default=None,
+        max_length=255,
+        help_text="The key to use for the weather API.",
     )
 
     temp_offset = models.IntegerField(
@@ -1297,9 +1318,11 @@ class Event(models.Model):
         blob["Game Options"]["Record Replays"] = self.replays
 
         blob["Race Conditions"] = OrderedDict()
+        """
         if self.real_weather:
             blob["Race Conditions"]["MULTI Weather"] = 5
             blob["Race Conditions"]["GPRIX Weather"] = 5
+        """
         blob["Race Conditions"]["MULTI Flag Rules"] = int(self.rules)
         blob["Race Conditions"]["RPLAY Flag Rules"] = int(self.rules)
         blob["Race Conditions"]["CHAMP Flag Rules"] = int(self.rules)
@@ -1366,6 +1389,8 @@ class Event(models.Model):
         return "{}".format(self.name)
 
     def clean(self, *args, **kwargs):
+        if self.real_weather and not self.weather_api or self.real_weather and not self.weather_key:
+            raise ValidationError("Check your weather settings")
         if self.admin_password == "apx":
             raise ValidationError("Please set the admin password.")
         if self.downstream == 0:
@@ -1642,9 +1667,6 @@ class Server(models.Model):
 
         if status is not None and "not_running" not in status and self.action == "WU":
             raise ValidationError("Start the server first")
-
-        if self.event and not self.event.real_weather and self.action == "WU":
-            raise ValidationError("The event has no real weather enabled")
 
         if not str(self.url).endswith("/"):
             raise ValidationError("The server url must end with a slash!")

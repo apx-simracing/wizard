@@ -567,6 +567,9 @@ def get_event_config(event_id: int):
         "track": track_groups,
         "start_type": start_type,
         "real_weather": server.real_weather,
+        "weather_api": server.weather_api,
+        "weather_key": server.weather_key,
+        "weather_uid": server.pk,
         "temp_offset": server.temp_offset,
         "comp": RECIEVER_COMP_INFO,
         "plugins": plugins,
@@ -1078,6 +1081,7 @@ def do_server_interaction(server):
             else None
         )
         event_config["branch"] = server.branch
+        event_config["weather_uid"] = server.pk
         event_config["heartbeat_only"] = server.heartbeat_only
         event_config["update_on_build"] = server.update_on_build
         event_config["callback_target"] = (

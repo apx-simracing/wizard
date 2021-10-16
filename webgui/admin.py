@@ -394,7 +394,7 @@ class EventAdmin(admin.ModelAdmin):
             obj.allow_stability_control,
         )
 
-    all_aids.short_description = "Auto clutch/ AI toggle/ TC/ ABS/ Stability Control"
+    all_aids.short_description = "Auto clutch/ AI toggle/ TC/ ABS/ SC"
 
     list_display = (
         "name",
@@ -404,6 +404,10 @@ class EventAdmin(admin.ModelAdmin):
         "rejoin",
         "real_name",
         "replays",
+        "real_weather",
+        "temp_offset",
+        "weather_api",
+        "weather_key",
     )
 
     fieldsets = (
@@ -496,6 +500,17 @@ class EventAdmin(admin.ModelAdmin):
                     "start_type",
                     "must_be_stopped",
                     "pit_speed_override",
+                ),
+            },
+        ),
+        (
+            "Weather",
+            {
+                "fields": (
+                    "real_weather",
+                    "weather_api",
+                    "weather_key",
+                    "temp_offset"
                 ),
             },
         ),
