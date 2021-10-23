@@ -1983,7 +1983,8 @@ def add_cron_to_windows(sender, instance, **kwargs):
             schedule_part = (
                 schedule_part + f" /ri {modifier} /du {diff_hours}:{diff_minutes}"
             )
-        command_line = f"schtasks /create /tn {task_name} /st {start_time} /sc {schedule_part} /tr \"cmd /d '{BASE_DIR}' /c '{django_path}' cron_run {id}\""
+        run_command = f"start /d '{BASE_DIR}' /b \'{python_path}\' \'{django_path}\' cron_run {id}"
+        command_line = f"schtasks /create /tn {task_name} /st {start_time} /sc {schedule_part} /tr \"cmd /c {run_command}\""
         print(command_line)
         system(command_line)
 
