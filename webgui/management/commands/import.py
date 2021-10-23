@@ -42,7 +42,7 @@ class Command(BaseCommand):
                 selected_suffix = suffix
                 break
         if selected_suffix is None:
-            raise Exception("We can't identify that file purpose")
+            raise Exception(f"We can't identify that file purpose: {filename}")
         if "#" in vehicle_number:
             vehicle_number = vehicle_number.split("#")[1]
         if not full_path:

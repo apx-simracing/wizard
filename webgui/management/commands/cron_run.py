@@ -1,5 +1,5 @@
 from django.core.management.base import BaseCommand
-from webgui.models import Server, ServerCron, Chat, background_action_chat
+from webgui.models import Server, ServerCron, Chat, background_action_chat, do_server_interaction
 from wizard.settings import BASE_DIR
 from os.path import join, exists
 from os import unlink
@@ -33,12 +33,15 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         maint_file = join(BASE_DIR, "maint")
+        got_lock = False
         if exists(maint_file):
             raise Exception("Instance is in maintenance mode, aborting")
         try:
             cron_id = options["cron_id"]
             cron_job = ServerCron.objects.get(pk=cron_id)
+            print(f"Desired job description: {cron_job}")
             self.try_to_obtain_lock()
+            got_lock = True
             server = cron_job.server
             server.action = cron_job.action
             only_when_practice = cron_job.apply_only_if_practice
@@ -50,8 +53,8 @@ class Command(BaseCommand):
                 ):
                     if cron_job.event is not None:
                         server.event = cron_job.event
-                    server.clean()
                     server.save()
+                    do_server_interaction(server)
                     if cron_job.message is not None and cron_job.message != "":
                         parts = cron_job.message.split(linesep)
                         for part in parts:
@@ -63,6 +66,7 @@ class Command(BaseCommand):
         except Exception as e:
             print(e)
         finally:
-            lock_path = join(BASE_DIR, "cron.lock")
-            unlink(lock_path)
-            print(f"Unlocked {lock_path}")
+            if got_lock:
+                lock_path = join(BASE_DIR, "cron.lock")
+                unlink(lock_path)
+                print(f"Unlocked {lock_path}")
