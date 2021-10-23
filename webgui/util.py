@@ -600,18 +600,51 @@ def do_post(message):
 def do_embed_post(message, alternative_url=None):
     if not message or len(message) == 0:
         return
+    additional_embeds = []
+    new_message = None
+    chunk_size = 5
+    if len(message["embeds"]) > chunk_size:
+        additional_embeds = message["embeds"][chunk_size:]
+        message["embeds"] = message["embeds"][:chunk_size]
+        
     if alternative_url is not None and len(alternative_url) > 0:
         got = post(
             alternative_url,
             json=message,
             headers={"Content-type": "application/json"},
         )
+        if len(additional_embeds) > 0:
+
+            while len(additional_embeds) > 0:
+                new_embed = additional_embeds[:chunk_size]
+                additional_embeds = additional_embeds[chunk_size:]
+                new_message = {
+                    "avatar_url": MSG_LOGO,
+                    "embeds": new_embed
+                }
+                got = post(
+                    alternative_url,
+                    json=new_message,
+                    headers={"Content-type": "application/json"},
+                )
     if DISCORD_WEBHOOK is not None and DISCORD_WEBHOOK_NAME is not None:
         got = post(
             DISCORD_WEBHOOK,
             json=message,
             headers={"Content-type": "application/json"},
         )
+        while len(additional_embeds) > 0:
+            new_embed = additional_embeds[:chunk_size]
+            additional_embeds = additional_embeds[chunk_size:]
+            new_message = {
+                "avatar_url": MSG_LOGO,
+                "embeds": new_embed
+            }
+            got = post(
+                DISCORD_WEBHOOK,
+                json=new_message,
+                headers={"Content-type": "application/json"},
+            )
 
 def do_rc_post(message):
     if (
