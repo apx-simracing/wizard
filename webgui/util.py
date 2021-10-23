@@ -485,7 +485,7 @@ def get_event_config(event_id: int):
 
     track_groups = OrderedDict()
     for track in tracks:
-        key = track.component.pk
+        key = track.pk
         track_component = track.component
         steam_id = track.component.steam_id
         base_steam_id = track_component.base_component.steam_id if track_component.base_component else 0
