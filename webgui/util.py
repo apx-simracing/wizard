@@ -453,32 +453,31 @@ def get_event_config(event_id: int):
             vehicle_groups[key]["entries_overwrites"][vehicle.vehicle_number][
                 "BaseClass"
             ] = vehicle.base_class
-    if len(ungrouped_vehicles) == 0:
-        # use signup components for the event.json
-        for component in signup_components:
-            key = component.pk
-            steam_id = component.steam_id
-            base_steam_id = component.base_component.steam_id if component.base_component else 0
-            version = "latest"
-            name = component.component_name
-            short_name = component.short_name
-            official = component.is_official
+    # use signup components for the event.json
+    for component in signup_components:
+        key = component.pk
+        steam_id = component.steam_id
+        base_steam_id = component.base_component.steam_id if component.base_component else 0
+        version = "latest"
+        name = component.component_name
+        short_name = component.short_name
+        official = component.is_official
 
-            if key not in vehicle_groups:
-                vehicle_groups[key] = {
-                    "entries": [],
-                    "entries_overwrites": {},
-                    "component": {
-                        "base_steam_id": base_steam_id,
-                        "steam_id": steam_id,
-                        "version": version,
-                        "name": name,
-                        "update": False,
-                        "short": short_name,
-                        "official": official,
-                        "numberplates": [],
-                    },
-                }
+        if key not in vehicle_groups:
+            vehicle_groups[key] = {
+                "entries": [],
+                "entries_overwrites": {},
+                "component": {
+                    "base_steam_id": base_steam_id,
+                    "steam_id": steam_id,
+                    "version": version,
+                    "name": name,
+                    "update": False,
+                    "short": short_name,
+                    "official": official,
+                    "numberplates": [],
+                },
+            }
     tracks = server.tracks.all().order_by("-id")
 
     conditions = server.conditions
