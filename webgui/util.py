@@ -1093,7 +1093,7 @@ def do_server_interaction(server):
             
             set_state(server.pk, "-") 
 
-    if server.action == "D":
+    if server.action == "D" or server.action == "D+F":
         set_state(server.pk, "Attempting to create event configuration")
         # save event json
         event_config = get_event_config(server.event.pk)
@@ -1113,6 +1113,8 @@ def do_server_interaction(server):
             if server.event and server.event.mod_version
             else None
         )
+        if server.action == "D+F":
+            event_config["ignore_fingerprints"] = True
         event_config["branch"] = server.branch
         event_config["weather_uid"] = server.pk
         event_config["heartbeat_only"] = server.heartbeat_only

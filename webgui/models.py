@@ -1410,6 +1410,7 @@ class ServerStatus(models.TextChoices):
     STARTREQUESTED = "S+", "Start"
     STOPREQUESTED = "R-", "Stop"
     DEPLOY = "D", "Update config and redeploy"
+    DEPLOYFORCE = "D+F", "Update config and redeploy, force content re-installation"
     RESTARTWEEKEND = "W", "Restart weekend"
     WEATHERUPDATE = "WU", "Weather forecast update"
 
