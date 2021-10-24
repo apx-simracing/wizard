@@ -423,6 +423,7 @@ class EventAdmin(admin.ModelAdmin):
                     "entries",
                     "tracks",
                     "signup_components",
+                    "include_stock_skins"
                 ),
             },
         ),
