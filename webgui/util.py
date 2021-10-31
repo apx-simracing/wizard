@@ -578,6 +578,7 @@ def get_event_config(event_id: int):
         "plugins": plugins,
         "race_finish_criteria": race_finish_criteria,
         "welcome_message": server.welcome_message,
+        "force_versions": int(server.force_versions),
         "mod": {
             "name": mod_name,
             "version": mod_version,

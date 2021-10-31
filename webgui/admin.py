@@ -146,7 +146,9 @@ class TrackAdmin(admin.ModelAdmin):
     def get_form(self, request, obj=None, **kwargs):
         form = super(TrackAdmin, self).get_form(request, obj=None, **kwargs)
         if not EASY_MODE:
-            form.base_fields["component"].queryset = Component.objects.filter(type="LOC")
+            form.base_fields["component"].queryset = Component.objects.filter(
+                type="LOC"
+            )
         return form
 
     def get_fieldsets(self, request, obj):
@@ -191,7 +193,6 @@ class TrackAdmin(admin.ModelAdmin):
 class EntryAdmin(admin.ModelAdmin):
     ordering = ("component__component_name",)
 
-    
     change_list_template = "admin/entry_list.html"
 
     def changelist_view(self, request, extra_context=None):
@@ -206,10 +207,7 @@ class EntryAdmin(admin.ModelAdmin):
             if component not in result:
                 result[component] = []
             files = EntryFile.objects.filter(entry=entry)
-            result[component].append({
-                "entry": entry,
-                "files": files
-            })
+            result[component].append({"entry": entry, "files": files})
         response.context_data["entries"] = result
         return response
 
@@ -260,6 +258,7 @@ class ChatAdmin(admin.ModelAdmin):
 class ServerCronAdmin(admin.ModelAdmin):
     ordering = ("server", "disabled", "start_time")
     actions = ["disable", "enable", "execute"]
+
     def disable(self, request, queryset):
         for element in queryset:
             element.disabled = True
@@ -276,8 +275,7 @@ class ServerCronAdmin(admin.ModelAdmin):
 
     def execute(self, request, queryset):
         for element in queryset:
-            management.call_command('cron_run',element.pk)
-
+            management.call_command("cron_run", element.pk)
 
     execute.short_description = "Execute selected server schedule action ONCE"
 
@@ -288,18 +286,22 @@ class ServerCronAdmin(admin.ModelAdmin):
 @admin.register(EntryFile)
 class EntryFileAdmin(admin.ModelAdmin):
     def get_form(self, request, obj=None, **kwargs):
-        
+
         entry = request.GET.get("entry")
         form = super(EntryFileAdmin, self).get_form(request, obj=None, **kwargs)
         if entry is not None:
             form.base_fields["entry"].initial = int(entry)
         return form
+
     def response_delete(self, request, obj_display, obj_id):
-        return redirect('/admin/webgui/entry')
+        return redirect("/admin/webgui/entry")
+
     def response_add(self, request, obj, post_url_continue=None):
-        return redirect('/admin/webgui/entry')
+        return redirect("/admin/webgui/entry")
+
     def response_change(self, request, obj):
-        return redirect('/admin/webgui/entry')
+        return redirect("/admin/webgui/entry")
+
     list_display = (
         "computed_name",
         "mask_added",
@@ -423,7 +425,7 @@ class EventAdmin(admin.ModelAdmin):
                     "entries",
                     "tracks",
                     "signup_components",
-                    "include_stock_skins"
+                    "include_stock_skins",
                 ),
             },
         ),
@@ -474,6 +476,7 @@ class EventAdmin(admin.ModelAdmin):
                     "collision_fade_threshold",
                     "enable_auto_downloads",
                     "plugins",
+                    "force_versions",
                 ),
             },
         ),
@@ -508,12 +511,7 @@ class EventAdmin(admin.ModelAdmin):
         (
             "Weather",
             {
-                "fields": (
-                    "real_weather",
-                    "weather_api",
-                    "weather_key",
-                    "temp_offset"
-                ),
+                "fields": ("real_weather", "weather_api", "weather_key", "temp_offset"),
             },
         ),
         (
@@ -869,7 +867,9 @@ class ServerAdmin(admin.ModelAdmin):
         status = self.get_status(obj)
         if not status or status == "-":
             return False
-        return "Server is not running" not in status # get_stauts returns the display text, not the status anymore.
+        return (
+            "Server is not running" not in status
+        )  # get_stauts returns the display text, not the status anymore.
 
     is_running.short_description = "Running"
 

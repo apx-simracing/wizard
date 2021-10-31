@@ -160,7 +160,9 @@ class Component(models.Model):
         max_length=3, choices=ComponentType.choices, default=ComponentType.VEHICLE
     )
     steam_id = models.BigIntegerField(default=0, blank=True)
-    base_component=models.ForeignKey("Component", on_delete=models.CASCADE, blank=True, null=True)
+    base_component = models.ForeignKey(
+        "Component", on_delete=models.CASCADE, blank=True, null=True
+    )
     component_name = models.CharField(
         default="Example_Mod",
         max_length=200,
@@ -293,8 +295,10 @@ class Component(models.Model):
         if self.alternative_name:
             base_str = "[" + self.alternative_name + "] "
         if self.base_component:
-            return base_str + "{} (updates {})".format(self.component_name, self.base_component.steam_id)
-        return base_str +  self.component_name
+            return base_str + "{} (updates {})".format(
+                self.component_name, self.base_component.steam_id
+            )
+        return base_str + self.component_name
 
 
 class RaceSessions(models.Model):
@@ -449,7 +453,6 @@ class Entry(models.Model):
     class Meta:
         verbose_name = "Livery"
         verbose_name_plural = "Liveries"
-        
 
     component = models.ForeignKey(Component, on_delete=models.CASCADE)
     team_name = models.CharField(default="Example Team", max_length=200)
@@ -535,8 +538,10 @@ class EntryFile(models.Model):
 
     def __str__(self):
         return str(self.entry)
+
     def filename(self):
         return basename(self.file.name)
+
     def save(self, *args, **kwargs):
         needle = "{}_{}.dds".format(
             self.entry.component.short_name, self.entry.vehicle_number
@@ -692,7 +697,7 @@ class ServerPlugin(models.Model):
             loads(self.overwrites)
         except:
             raise ValidationError("This JSON is not valid.")
-    
+
         if ".dll" not in self.plugin_file.path.lower() and self.overwrites != "{}":
             raise ValidationError("The overwrites are only valid for DLL files.")
 
@@ -723,11 +728,13 @@ class QualyMode(models.TextChoices):
     O = "1", "only one car is visible at a time"
     R = "2", "use default from RFM, season, or track entry"
 
+
 class WeatherAPI(models.TextChoices):
     OpenWeatherMap = "OpenWeatherMap", "OpenWeatherMap"
     DarkSky = "DarkSky", "DarkSky"
     ClimaCell = "ClimaCell", "ClimaCell"
     ClimaCell_V4 = "ClimaCell_V4", "ClimaCell_V4"
+
 
 class BlueFlags(models.TextChoices):
     N = "0", "None"
@@ -786,6 +793,21 @@ class ForcedDrivingViewMode(models.TextChoices):
     CO = "3", "cockpit only"
     TO = "4", "tracksides"
     TOG1 = "5", "tracksides group 1"
+
+
+class VersionOverwritePolicy(models.TextChoices):
+    N = (
+        "0",
+        "Use the versions as user provided: If more than 1 version, use latest even version if updates are needed and the latest if not.",
+    )
+    G = (
+        "1",
+        "Try to guess versions: If base mod is encrypted, use this version for updates, else use the latest version.",
+    )
+    GT = (
+        "2",
+        "Same as second option, but use the scheme also for mods without an encrypted base mod",
+    )
 
 
 class Event(models.Model):
@@ -1192,6 +1214,15 @@ class Event(models.Model):
         help_text="Whether to allow clients to autodownload files that they are missing.",
     )
 
+    force_versions = models.CharField(
+        max_length=10,
+        choices=VersionOverwritePolicy.choices,
+        default=VersionOverwritePolicy.N,
+        blank=False,
+        null=False,
+        help_text="Versioning scheme",
+    )
+
     @property
     def multiplayer_json(self):
         blob = OrderedDict()
@@ -1389,7 +1420,12 @@ class Event(models.Model):
         return "{}".format(self.name)
 
     def clean(self, *args, **kwargs):
-        if self.real_weather and not self.weather_api or self.real_weather and not self.weather_key:
+        if (
+            self.real_weather
+            and not self.weather_api
+            or self.real_weather
+            and not self.weather_key
+        ):
             raise ValidationError("Check your weather settings")
         if self.admin_password == "apx":
             raise ValidationError("Please set the admin password.")
@@ -1458,9 +1494,13 @@ class Server(models.Model):
     url = models.CharField(
         blank=False, max_length=500, default="", help_text="The URL to the APX reciever"
     )
-    
+
     discord_url = models.CharField(
-        blank=True,null=True, max_length=500, default="", help_text="An alternative webhook URL to be used instead of the DISCORD_WEBHOOK setting"
+        blank=True,
+        null=True,
+        max_length=500,
+        default="",
+        help_text="An alternative webhook URL to be used instead of the DISCORD_WEBHOOK setting",
     )
     secret = models.CharField(
         blank=False,
@@ -1591,11 +1631,13 @@ class Server(models.Model):
             self.http_port + 1,
             self.http_port + 2,
         )
+
     @property
     def state_info(self):
         if not self.pk or self.pk not in state_map:
             return "-"
         return state_map[self.pk]
+
     @property
     def status_info(self):
         if not self.pk or self.pk not in status_map:
@@ -1871,7 +1913,11 @@ class ServerCron(models.Model):
     )
 
     modifier = models.IntegerField(
-        default=1, blank=False, null=False, help_text="Repeat the job each X minutes, a value of 1 means no repeat", verbose_name="Repeat"
+        default=1,
+        blank=False,
+        null=False,
+        help_text="Repeat the job each X minutes, a value of 1 means no repeat",
+        verbose_name="Repeat",
     )
 
     disabled = models.BooleanField(
@@ -1894,24 +1940,33 @@ class ServerCron(models.Model):
     apply_only_if_practice = models.BooleanField(default=False)
 
     def __str__(self):
-        base_str = "{} \"{}\"".format(dict(ServerStatus.choices)[self.action], self.server) if self.action else "Message \"{}\"".format(self.server)
+        base_str = (
+            '{} "{}"'.format(dict(ServerStatus.choices)[self.action], self.server)
+            if self.action
+            else 'Message "{}"'.format(self.server)
+        )
         if self.event:
-            base_str = "{} \"{}\" on \"{}\"".format(dict(ServerStatus.choices)[self.action], self.event, self.server)
+            base_str = '{} "{}" on "{}"'.format(
+                dict(ServerStatus.choices)[self.action], self.event, self.server
+            )
         if self.disabled:
             base_str = "Disabled: " + base_str
         if self.end_time:
-            base_str = base_str + " from {} to {}".format(self.start_time, self.end_time)
+            base_str = base_str + " from {} to {}".format(
+                self.start_time, self.end_time
+            )
         else:
             base_str = base_str + " at {}".format(self.start_time)
         if self.modifier > 1:
             base_str = base_str + ", repeat each {} minutes".format(self.modifier)
 
-        
         return base_str
 
     def clean(self):
         if self.action != "D" and self.event:
-            raise ValidationError("The event is only needed when deploying new updates.")
+            raise ValidationError(
+                "The event is only needed when deploying new updates."
+            )
         if self.modifier == 1 and self.end_time:
             raise ValidationError(
                 "Yo only need an end time if the job should repeat multiple times per day"
@@ -1984,8 +2039,10 @@ def add_cron_to_windows(sender, instance, **kwargs):
             schedule_part = (
                 schedule_part + f" /ri {modifier} /du {diff_hours}:{diff_minutes}"
             )
-        run_command = f"start /d '{BASE_DIR}' /b \'{python_path}\' \'{django_path}\' cron_run {id}"
-        command_line = f"schtasks /create /tn {task_name} /st {start_time} /sc {schedule_part} /tr \"cmd /c {run_command}\""
+        run_command = (
+            f"start /d '{BASE_DIR}' /b '{python_path}' '{django_path}' cron_run {id}"
+        )
+        command_line = f'schtasks /create /tn {task_name} /st {start_time} /sc {schedule_part} /tr "cmd /c {run_command}"'
         print(command_line)
         system(command_line)
 
