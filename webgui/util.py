@@ -97,7 +97,7 @@ FILE_NAME_SUFFIXES_MEANINGS = [
 ]
 
 RECIEVER_COMP_INFO = open(join(BASE_DIR, "release")).read()
-RECIEVER_DOWNLOAD_FROM = "https://github.com/apx-simracing/reciever/releases/download/R83/reciever-2021R83.zip"
+RECIEVER_DOWNLOAD_FROM = "https://github.com/apx-simracing/reciever/releases/download/R84/reciever-2021R84.zip"
 
 
 def get_update_filename(instance, filename):
@@ -265,8 +265,10 @@ def get_free_tcp_port(
             break
     return port
 
+
 def set_state(id, message):
     models.state_map[id] = message
+
 
 def bootstrap_reciever(root_path, server_obj, port, secret):
     try:
@@ -345,8 +347,8 @@ def bootstrap_reciever(root_path, server_obj, port, secret):
 
     with open(config_path, "w") as file:
         file.write(dumps(config))
-    
-    for i in range(0, 10):
+
+    for i in range(1, 10):
         try:
             key = get_server_hash(server_obj.url)
             set_state(server_obj.pk, "Trying to collect keys. Try {} of 10".format(i))
@@ -361,12 +363,13 @@ def bootstrap_reciever(root_path, server_obj, port, secret):
             if exists(key_path):
                 server_obj.server_key = relative_path
                 server_obj.save()
-                set_state(server_obj.pk, f"Ready for usage. Key was collected on try {i}")    
+                set_state(
+                    server_obj.pk, f"Ready for usage. Key was collected on try {i}"
+                )
                 break
             sleep(2)
         except Exception as e:
-            set_state(server_obj.pk, f"Key collect try {i} of 10 failed: {e}")  
-
+            set_state(server_obj.pk, f"Key collect try {i} of 10 failed: {e}")
 
 
 def get_hash(input):
@@ -405,7 +408,9 @@ def get_event_config(event_id: int):
         component = vehicle.component
         key = component.pk
         steam_id = component.steam_id
-        base_steam_id = base_steam_id = component.base_component.steam_id if component.base_component else 0
+        base_steam_id = base_steam_id = (
+            component.base_component.steam_id if component.base_component else 0
+        )
         version = "latest"
         name = component.component_name
         short_name = component.short_name
@@ -439,17 +444,10 @@ def get_event_config(event_id: int):
                 got = match(pattern, line)
                 if got:
                     props[got.group(1)] = got.group(2)
-            vehicle_groups[key]["entries_overwrites"][
-                vehicle.vehicle_number
-            ] = props
+            vehicle_groups[key]["entries_overwrites"][vehicle.vehicle_number] = props
         if vehicle.base_class:
-            if (
-                vehicle.vehicle_number
-                not in vehicle_groups[key]["entries_overwrites"]
-            ):
-                vehicle_groups[key]["entries_overwrites"][
-                    vehicle.vehicle_number
-                ] = []
+            if vehicle.vehicle_number not in vehicle_groups[key]["entries_overwrites"]:
+                vehicle_groups[key]["entries_overwrites"][vehicle.vehicle_number] = []
             vehicle_groups[key]["entries_overwrites"][vehicle.vehicle_number][
                 "BaseClass"
             ] = vehicle.base_class
@@ -457,7 +455,9 @@ def get_event_config(event_id: int):
     for component in signup_components:
         key = component.pk
         steam_id = component.steam_id
-        base_steam_id = component.base_component.steam_id if component.base_component else 0
+        base_steam_id = (
+            component.base_component.steam_id if component.base_component else 0
+        )
         version = "latest"
         name = component.component_name
         short_name = component.short_name
@@ -487,7 +487,11 @@ def get_event_config(event_id: int):
         key = track.pk
         track_component = track.component
         steam_id = track.component.steam_id
-        base_steam_id = track_component.base_component.steam_id if track_component.base_component else 0
+        base_steam_id = (
+            track_component.base_component.steam_id
+            if track_component.base_component
+            else 0
+        )
         requires_update = models.TrackFile.objects.filter(track=track).count() > 0
         track_groups[key] = {
             "layout": track.layout,
@@ -596,6 +600,7 @@ def do_post(message):
             headers={"Content-type": "application/json"},
         )
 
+
 def do_embed_post(message, alternative_url=None):
     if not message or len(message) == 0:
         return
@@ -605,7 +610,7 @@ def do_embed_post(message, alternative_url=None):
     if len(message["embeds"]) > chunk_size:
         additional_embeds = message["embeds"][chunk_size:]
         message["embeds"] = message["embeds"][:chunk_size]
-        
+
     if alternative_url is not None and len(alternative_url) > 0:
         got = post(
             alternative_url,
@@ -617,10 +622,7 @@ def do_embed_post(message, alternative_url=None):
             while len(additional_embeds) > 0:
                 new_embed = additional_embeds[:chunk_size]
                 additional_embeds = additional_embeds[chunk_size:]
-                new_message = {
-                    "avatar_url": MSG_LOGO,
-                    "embeds": new_embed
-                }
+                new_message = {"avatar_url": MSG_LOGO, "embeds": new_embed}
                 got = post(
                     alternative_url,
                     json=new_message,
@@ -635,15 +637,13 @@ def do_embed_post(message, alternative_url=None):
         while len(additional_embeds) > 0:
             new_embed = additional_embeds[:chunk_size]
             additional_embeds = additional_embeds[chunk_size:]
-            new_message = {
-                "avatar_url": MSG_LOGO,
-                "embeds": new_embed
-            }
+            new_message = {"avatar_url": MSG_LOGO, "embeds": new_embed}
             got = post(
                 DISCORD_WEBHOOK,
                 json=new_message,
                 headers={"Content-type": "application/json"},
             )
+
 
 def do_rc_post(message):
     if (
@@ -884,41 +884,55 @@ def create_firewall_script(server):
         )
         file.write(content)
 
-def get_component_blob_for_discord(entry, is_vehicle, is_update=False, additional_text=""):
-    description = "🖌 The server will provide a skin pack for this mod." if is_update else ""
+
+def get_component_blob_for_discord(
+    entry, is_vehicle, is_update=False, additional_text=""
+):
+    description = (
+        "🖌 The server will provide a skin pack for this mod." if is_update else ""
+    )
     if not is_vehicle:
-        description = "🖌 The server will provide a track update pack for this mod." if is_update else ""
+        description = (
+            "🖌 The server will provide a track update pack for this mod."
+            if is_update
+            else ""
+        )
     discord_blob = {
-        "title": entry.component_name,			
+        "title": entry.component_name,
         "fields": [],
         "color": 463186 if is_vehicle else 33791,
-        "description": description
+        "description": description,
     }
     if entry.base_component is not None:
         discord_blob["fields"].append(
             {
                 "name": "Link of required base mod",
-                "value": "https://steamcommunity.com/sharedfiles/filedetails/?id={}".format( entry.base_component.steam_id) if  entry.base_component.steam_id > 0 else "Contact administrator for source",
-                "inline": False
+                "value": "https://steamcommunity.com/sharedfiles/filedetails/?id={}".format(
+                    entry.base_component.steam_id
+                )
+                if entry.base_component.steam_id > 0
+                else "Contact administrator for source",
+                "inline": False,
             }
         )
-    
+
     discord_blob["fields"].append(
         {
             "name": "Base mod link",
-            "value": "https://steamcommunity.com/sharedfiles/filedetails/?id={}".format(entry.steam_id) if entry.steam_id > 0 else "Contact administrator for source",
-            "inline": False
+            "value": "https://steamcommunity.com/sharedfiles/filedetails/?id={}".format(
+                entry.steam_id
+            )
+            if entry.steam_id > 0
+            else "Contact administrator for source",
+            "inline": False,
         }
     )
     if additional_text != "":
         discord_blob["fields"].append(
-            {
-                "name": "Entries",
-                "value": additional_text,
-                "inline": False
-            }
+            {"name": "Entries", "value": additional_text, "inline": False}
         )
     return discord_blob
+
 
 def do_server_interaction(server):
     secret = server.secret
@@ -967,45 +981,39 @@ def do_server_interaction(server):
                 "embeds": [
                     {
                         "title": "Server started",
-                        "thumbnail": {
-                            "url": MSG_LOGO
-                        },
+                        "thumbnail": {"url": MSG_LOGO},
                         "color": 65404,
                         "fields": [
                             {
                                 "name": "Name",
-                                "value": "**"+server.event.name+"**",
-                                "inline": True
+                                "value": "**" + server.event.name + "**",
+                                "inline": True,
                             },
                             {
                                 "name": "Password",
-                                "value": "`"+server.event.password+"`" if server.event.password else "No password",
-                                "inline": True
+                                "value": "`" + server.event.password + "`"
+                                if server.event.password
+                                else "No password",
+                                "inline": True,
                             },
                             {
                                 "name": "Branch",
-                                "value": "`"+server.branch+"`",
-                                "inline": True
+                                "value": "`" + server.branch + "`",
+                                "inline": True,
                             },
-                            {
-                                "name": "Content",
-                                "value": "See below",
-                                "inline": False
-                            }
-                        ]
+                            {"name": "Content", "value": "See below", "inline": False},
+                        ],
                     }
-                ]
+                ],
             }
-            #get files for tcars
+            # get files for tcars
             seen_components = []
             components_to_update = []
             entry_map = {}
             for vehicle in server.event.signup_components.all():
                 if vehicle not in seen_components:
                     seen_components.append(vehicle)
-                
-            
-            
+
             for vehicle in server.event.entries.all():
                 # entry vehicles might be redundant, so create list first
                 if vehicle.component not in seen_components:
@@ -1014,7 +1022,9 @@ def do_server_interaction(server):
                     components_to_update.append(vehicle.component.pk)
                 if vehicle.component.pk not in entry_map:
                     entry_map[vehicle.component.pk] = []
-                entry_map[vehicle.component.pk].append("#{}: {}".format(vehicle.vehicle_number, vehicle.team_name))
+                entry_map[vehicle.component.pk].append(
+                    "#{}: {}".format(vehicle.vehicle_number, vehicle.team_name)
+                )
 
             for component in seen_components:
                 additional_text = ""
@@ -1022,18 +1032,27 @@ def do_server_interaction(server):
                     addtional_text = "\n"
                     for entry in entry_map[component.pk]:
                         additional_text = additional_text + "\n" + entry
-                json_blob["embeds"].append(get_component_blob_for_discord(component, True, component.pk in components_to_update, additional_text))
+                json_blob["embeds"].append(
+                    get_component_blob_for_discord(
+                        component,
+                        True,
+                        component.pk in components_to_update,
+                        additional_text,
+                    )
+                )
 
             for track in server.event.tracks.all():
                 has_updates = models.TrackFile.objects.filter(track=track).count() > 0
-                json_blob["embeds"].append(get_component_blob_for_discord(track.component, False, has_updates))
+                json_blob["embeds"].append(
+                    get_component_blob_for_discord(track.component, False, has_updates)
+                )
             do_embed_post(json_blob, discord_url)
         except Exception as e:
             print(e)
             set_state(server.pk, str(e))
             server.save()
         finally:
-            set_state(server.pk, "-") 
+            set_state(server.pk, "-")
             server.action = ""
             server.save()
 
@@ -1068,19 +1087,17 @@ def do_server_interaction(server):
                 "embeds": [
                     {
                         "title": "Server stopped",
-                        "thumbnail": {
-                            "url": MSG_LOGO
-                        },
+                        "thumbnail": {"url": MSG_LOGO},
                         "color": 16711680,
                         "fields": [
                             {
                                 "name": "Name",
-                                "value": "**"+server.event.name+"**",
-                                "inline": True
+                                "value": "**" + server.event.name + "**",
+                                "inline": True,
                             }
-                        ]
+                        ],
                     }
-                ]
+                ],
             }
             do_embed_post(json_blob, discord_url)
         except Exception as e:
@@ -1089,8 +1106,8 @@ def do_server_interaction(server):
         finally:
             server.action = ""
             server.save()
-            
-            set_state(server.pk, "-") 
+
+            set_state(server.pk, "-")
 
     if server.action == "D" or server.action == "D+F":
         set_state(server.pk, "Attempting to create event configuration")
@@ -1157,7 +1174,7 @@ def do_server_interaction(server):
                         track.component.component_name, " ".join(files_to_attach)
                     )
                     run_apx_command(key, command_line)
-            
+
             set_state(server.pk, "Pushing skins (if any) to the server")
             command_line = "--cmd build_skins --args {} {}".format(
                 config_path, rfm_path
@@ -1172,13 +1189,13 @@ def do_server_interaction(server):
             for plugin in server.event.plugins.all():
                 plugin_path = plugin.plugin_file.path
                 target_path = plugin.plugin_path
-                additional_path_arg = "\"|" + target_path + "\"" if target_path else "" 
+                additional_path_arg = '"|' + target_path + '"' if target_path else ""
                 plugin_args = plugin_args + " " + plugin_path + additional_path_arg
             if len(plugin_args) > 0:
                 set_state(server.pk, "Installing plugins")
                 run_apx_command(key, "--cmd plugins --args " + plugin_args)
         except Exception as e:
-            set_state(server.pk,str(e))
+            set_state(server.pk, str(e))
         finally:
             # build the discord embed message
             json_blob = {
@@ -1186,19 +1203,17 @@ def do_server_interaction(server):
                 "embeds": [
                     {
                         "title": "Server update completed",
-                        "thumbnail": {
-                            "url": MSG_LOGO
-                        },
+                        "thumbnail": {"url": MSG_LOGO},
                         "color": 16744192,
                         "fields": [
                             {
                                 "name": "Name",
-                                "value": "**"+server.event.name+"**",
-                                "inline": True
+                                "value": "**" + server.event.name + "**",
+                                "inline": True,
                             }
-                        ]
+                        ],
                     }
-                ]
+                ],
             }
             do_embed_post(json_blob, discord_url)
             server.action = ""
