@@ -165,16 +165,6 @@ class TrackAdmin(admin.ModelAdmin):
                     "fields": ("layout",),
                 },
             ),
-            (
-                "Other",
-                {
-                    "fields": (
-                        "section_list",
-                        "lon",
-                        "lat",
-                    ),
-                },
-            ),
         )
         if EASY_MODE:
             fieldsets = (
