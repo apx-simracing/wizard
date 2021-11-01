@@ -801,7 +801,6 @@ class ServerAdmin(admin.ModelAdmin):
                         "update_on_build",
                         "remove_cbash_shaders",
                         "remove_settings",
-                        "update_weather_on_start",
                         "collect_results_replays",
                     ]
                 },
