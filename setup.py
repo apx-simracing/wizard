@@ -43,6 +43,20 @@ questions = [
         "values": ["yes", "no"],
         "is_hidden": False,
     },
+    {
+        "text": "What database should be used? sqlite or mariadb?",
+        "default": "sqlite",
+        "key": "add_prefix",
+        "values": ["sqlite", "mariadb"],
+        "is_hidden": False,
+    },
+    {
+        "text": "Is APX allowed to to speedtest to identify the bandwith (will be done once on startup). Uses speedtest.net in the background.",
+        "default": "yes",
+        "key": "allow_speedtest",
+        "values": ["yes", "no"],
+        "is_hidden": False,
+    },
 ]
 answers = {}
 
@@ -107,6 +121,7 @@ with open(settings_path, "r", encoding="utf-8") as file:
     easy_mode = answers["easy_mode"] == "yes"
     global_steam = answers["global_steam"] == "yes"
     add_prefix = answers["add_prefix"] == "yes"
+    allow_speedtest = answers["allow_speedtest"] == "yes"
     for line in content:
         if "SECRET_KEY" in line:
             random_key = "".join(
@@ -129,6 +144,8 @@ with open(settings_path, "r", encoding="utf-8") as file:
             line = f"USE_GLOBAL_STEAMCMD = {global_steam}\n"
         if "ADD_PREFIX" in line:
             line = f"ADD_PREFIX = {add_prefix}\n"
+        if "SPEEDTEST_ALLOWED" in line:
+            line = f"SPEEDTEST_ALLOWED = {allow_speedtest}\n"
         new_content.append(line)
 
 

@@ -30,6 +30,7 @@ from webgui.util import (
     get_plugin_root_path,
     create_firewall_script,
     get_random_short_name,
+    get_speedtest_result,
 )
 from wizard.settings import (
     BASE_DIR,
@@ -1429,10 +1430,16 @@ class Event(models.Model):
             raise ValidationError("Check your weather settings")
         if self.admin_password == "apx":
             raise ValidationError("Please set the admin password.")
-        if self.downstream == 0:
-            raise ValidationError("The downstream cannot be 0.")
-        if self.upstream == 0:
-            raise ValidationError("The upstream cannot be 0.")
+        if self.upstream == 0 and self.downstream == 0:
+            got = get_speedtest_result()
+            if got is not None:
+                self.upstream = int(got["upstream"] * 1000)
+                self.downstream = int(got["downstream"] * 1000)
+            else:
+                raise ValidationError(
+                    "Please set upstream or downstream according to your network connection"
+                )
+
         if self.welcome_message:
             parts = self.welcome_message.split(linesep)
             for part in parts:

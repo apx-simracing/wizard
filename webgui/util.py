@@ -1253,3 +1253,12 @@ def do_server_interaction(server):
 
         finally:
             server.save()
+
+
+def get_speedtest_result():
+    speed_file_path = join(BASE_DIR, "networkspeed.txt")
+    if exists(speed_file_path):
+        with open(speed_file_path, "r") as file:
+            return loads(file.read())
+    else:
+        return None
