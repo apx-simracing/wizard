@@ -1454,8 +1454,8 @@ class ServerStatus(models.TextChoices):
     STOPREQUESTED = "R-", "Stop"
     DEPLOY = "D", "Update config and redeploy"
     DEPLOYFORCE = "D+F", "Update config and redeploy, force content re-installation"
+    STEAMUPDATE = "U", "Update to latest version of Steam branch"
     RESTARTWEEKEND = "W", "Restart weekend"
-    WEATHERUPDATE = "WU", "Weather forecast update"
 
 
 class ServerBranch(models.TextChoices):

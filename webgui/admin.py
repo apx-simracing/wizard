@@ -577,11 +577,13 @@ class ServerAdmin(admin.ModelAdmin):
         "admin/server_list.html" if not EASY_MODE else "admin/server_list_easy.html"
     )
     actions = [
-        "get_thumbnails",
+        # "get_thumbnails", this is disabled  until work on the timing resumes.
         "apply_reciever_update",
         "delete_chats_and_messages",
         "start_server",
         "stop_server",
+        "update_server_content",
+        "update_server_only",
     ]
 
     def get_urls(self):
@@ -664,6 +666,30 @@ class ServerAdmin(admin.ModelAdmin):
             messages.success(request, f"Requested start for {server}")
 
     start_server.short_description = "Start selected servers"
+
+    def update_server_content(self, request, queryset):
+        for server in queryset:
+            server.action = "D+F"
+            server.save()
+            background_thread = Thread(
+                target=background_action_server, args=(server,), daemon=True
+            )
+            background_thread.start()
+            messages.success(request, f"Requested update for {server}")
+
+    update_server_content.short_description = "Update server content"
+
+    def update_server_only(self, request, queryset):
+        for server in queryset:
+            server.action = "U"
+            server.save()
+            background_thread = Thread(
+                target=background_action_server, args=(server,), daemon=True
+            )
+            background_thread.start()
+            messages.success(request, f"Requested update for {server}")
+
+    update_server_only.short_description = "Update to latest version of Steam branch"
 
     def stop_server(self, request, queryset):
         for server in queryset:

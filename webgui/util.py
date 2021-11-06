@@ -951,6 +951,18 @@ def do_server_interaction(server):
             server.action = ""
             server.save()
 
+    if server.action == "U":
+        try:
+
+            set_state(server.pk, "Steam update requested")
+            run_apx_command(key, "--cmd update --args {}".format(server.branch))
+        except Exception as e:
+            print(e)
+            set_state(server.pk, str(e))
+        finally:
+            server.action = ""
+            server.save()
+
     if server.action == "S+":
         set_state(server.pk, "Start requested")
         try:
