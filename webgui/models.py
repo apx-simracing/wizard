@@ -1970,7 +1970,7 @@ class ServerCron(models.Model):
         return base_str
 
     def clean(self):
-        if self.action != "D" and self.event:
+        if self.action != "D" and self.action != "D+F" and self.event:
             raise ValidationError(
                 "The event is only needed when deploying new updates."
             )
