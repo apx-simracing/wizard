@@ -2013,7 +2013,6 @@ def add_cron_to_windows(sender, instance, **kwargs):
             if exists(join(BASE_DIR, "python.exe"))
             else "python.exe"
         )
-        django_path = join(BASE_DIR, "manage.py")
 
         today = datetime.today().strftime("%Y-%m-%d")
         schedule_part = ""
@@ -2046,9 +2045,8 @@ def add_cron_to_windows(sender, instance, **kwargs):
             schedule_part = (
                 schedule_part + f" /ri {modifier} /du {diff_hours}:{diff_minutes}"
             )
-        run_command = (
-            f"start /d '{BASE_DIR}' /b '{python_path}' '{django_path}' cron_run {id}"
-        )
+        # https://stackoverflow.com/questions/6814075/windows-start-b-command-problem#6814111
+        run_command = f"start /d '{BASE_DIR}' /b 'apx' '{python_path}' manage.py cron_run {id}"
         command_line = f'schtasks /create /tn {task_name} /st {start_time} /sc {schedule_part} /tr "cmd /c {run_command}"'
         print(command_line)
         system(command_line)
