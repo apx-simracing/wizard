@@ -190,3 +190,5 @@ EASY_MODE = True
 ADD_PREFIX = True
 
 SPEEDTEST_ALLOWED = True
+
+NON_WORKSHOP_PAYLOAD_TEXT = "Contact administrator for source"

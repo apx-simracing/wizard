@@ -16,6 +16,7 @@ from wizard.settings import (
     SIM_PORT_RANGE,
     MSG_LOGO,
     USE_GLOBAL_STEAMCMD,
+    NON_WORKSHOP_PAYLOAD_TEXT,
 )
 import hashlib
 import subprocess
@@ -912,7 +913,7 @@ def get_component_blob_for_discord(
                     entry.base_component.steam_id
                 )
                 if entry.base_component.steam_id > 0
-                else "Contact administrator for source",
+                else NON_WORKSHOP_PAYLOAD_TEXT,
                 "inline": False,
             }
         )
@@ -924,7 +925,7 @@ def get_component_blob_for_discord(
                 entry.steam_id
             )
             if entry.steam_id > 0
-            else "Contact administrator for source",
+            else NON_WORKSHOP_PAYLOAD_TEXT,
             "inline": False,
         }
     )
