@@ -247,7 +247,7 @@ class ChatAdmin(admin.ModelAdmin):
 @admin.register(ServerCron)
 class ServerCronAdmin(admin.ModelAdmin):
     ordering = ("server", "disabled", "start_time")
-    actions = ["disable", "enable", "execute"]
+    actions = ["disable", "enable", "execute", "update"]
 
     def disable(self, request, queryset):
         for element in queryset:
@@ -255,6 +255,12 @@ class ServerCronAdmin(admin.ModelAdmin):
             element.save()
 
     disable.short_description = "Disable selected server schedules"
+
+    def update(self, request, queryset):
+        for element in queryset:
+            element.save()
+
+    update.short_description = "Recreate selected schedules in Windows task planning"
 
     def enable(self, request, queryset):
         for element in queryset:
@@ -790,6 +796,9 @@ class ServerAdmin(admin.ModelAdmin):
                         "name",
                         "url",
                         "discord_url",
+                        "ignore_start_hook",
+                        "ignore_stop_hook",
+                        "ignore_updates_hook",
                         "secret",
                         "public_secret",
                         "session_id",

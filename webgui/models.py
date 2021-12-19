@@ -1597,6 +1597,23 @@ class Server(models.Model):
         help_text="APX Session Id",
     )
 
+    
+    ignore_start_hook = models.BooleanField(
+        default=True,
+        help_text="Don't fire the Discord messages when the server starts",
+    )
+
+        
+    ignore_stop_hook = models.BooleanField(
+        default=True,
+        help_text="Don't fire the Discord messages when the server stops",
+    )
+
+    ignore_updates_hook = models.BooleanField(
+        default=True,
+        help_text="Don't fire the Discord messages when the server was updated",
+    )
+
     @property
     def logfile(self):
         key = get_server_hash(self.url)

@@ -1068,7 +1068,8 @@ def do_server_interaction(server):
                 json_blob["embeds"].append(
                     get_component_blob_for_discord(track.component, False, has_updates)
                 )
-            do_embed_post(json_blob, discord_url)
+            if not server.ignore_start_hook:
+                do_embed_post(json_blob, discord_url)
         except Exception as e:
             print(e)
             set_state(server.pk, str(e))
@@ -1121,7 +1122,9 @@ def do_server_interaction(server):
                     }
                 ],
             }
-            do_embed_post(json_blob, discord_url)
+            
+            if not server.ignore_stop_hook:
+                do_embed_post(json_blob, discord_url)
         except Exception as e:
             set_state(server.pk, str(e))
             server.save()
@@ -1237,7 +1240,9 @@ def do_server_interaction(server):
                     }
                 ],
             }
-            do_embed_post(json_blob, discord_url)
+            
+            if not server.ignore_updates_hook:
+                do_embed_post(json_blob, discord_url)
             server.action = ""
             server.save()
 
