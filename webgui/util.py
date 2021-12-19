@@ -17,6 +17,8 @@ from wizard.settings import (
     MSG_LOGO,
     USE_GLOBAL_STEAMCMD,
     NON_WORKSHOP_PAYLOAD_TEXT,
+    WINE_DRIVE,
+    WINE_IMPLEMENTATION
 )
 import hashlib
 import subprocess
@@ -42,6 +44,7 @@ import logging
 import zipfile, io
 from time import sleep
 from collections import OrderedDict
+from sys import platform
 
 logger = logging.getLogger(__name__)
 
@@ -291,6 +294,11 @@ def bootstrap_reciever(root_path, server_obj, port, secret):
         "redownload_steam": False,
         "root_path": root_path,
     }
+
+    # add the wine related settings
+    if platform == "linux":
+        config["wine_root_path"] = WINE_DRIVE + ":\\" + root_path.replace("/", "\\")
+        config["abstractionlayer"] = WINE_IMPLEMENTATION
     set_state(server_obj.pk, "Doing APX reciever bootstrap")
     try:
         # TODO: find solution for admin issue
@@ -334,7 +342,7 @@ def bootstrap_reciever(root_path, server_obj, port, secret):
     # create server.json
     set_state(server_obj.pk, "Done with bootstrap")
     server_obj.save()
-    config_path = join(reciever_path, "server.json")
+    config_path = join(reciever_path, "server.json" if platform != "linux" else "server_linux.json")
 
     # try to inject keypair
     key_file = join(BASE_DIR, "uploads", "keys")

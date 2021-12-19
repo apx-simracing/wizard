@@ -192,3 +192,7 @@ ADD_PREFIX = True
 SPEEDTEST_ALLOWED = True
 
 NON_WORKSHOP_PAYLOAD_TEXT = "Contact administrator for source"
+
+WINE_DRIVE = "Z"
+
+WINE_IMPLEMENTATION = "wine"
