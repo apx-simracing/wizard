@@ -1,10 +1,14 @@
-target = "https://wiki.apx.chmr.eu/doku.php?id=common_components&do=export_text"
+from os import path
 from requests import get
 from json import dumps
 from string import ascii_uppercase, digits
 from random import choice
+from wizard.settings import BASE_DIR
 
-lines = get(target).text.split("\n")
+TARGET = "https://wiki.apx.chmr.eu/doku.php?id=common_components&do=export_text"
+PATH_COMMON_JSON = path.join(BASE_DIR, "common.json")
+
+lines = get(TARGET).text.split("\n")
 data = []
 component_index = 0
 layouts_index = 0
@@ -45,7 +49,7 @@ for line in lines:
                     }
                     data.append(new_track)
 
-with open("common.json", "w") as file:
+with open(PATH_COMMON_JSON, "w") as file:
     parsed = dumps(data, sort_keys=True, indent=4)
     parsed = parsed.replace("\\u2013", "--")
     file.write(parsed)

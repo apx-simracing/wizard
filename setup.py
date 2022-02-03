@@ -1,11 +1,11 @@
 from pwinput import pwinput
 from subprocess import check_output
-from os import environ, getcwd, unlink
-from os.path import join, exists
+from os import path, environ
 import random
 import string
 
 SECRET_KEY_LENGTH = 50
+BASE_DIR = path.dirname(path.realpath(__file__))
 
 questions = [
     {
@@ -51,7 +51,7 @@ questions = [
         "is_hidden": False,
     },
     {
-        "text": "Is APX allowed to to speedtest to identify the bandwith (will be done once on startup). Uses speedtest.net in the background.",
+        "text": "Is APX allowed to speedtest to identify the bandwith (will be done once on startup). Uses speedtest.net in the background.",
         "default": "yes",
         "key": "allow_speedtest",
         "values": ["yes", "no"],
@@ -113,10 +113,10 @@ for question in questions:
     answers[key] = got
 
 
-settings_path = join(getcwd(), "wizard", "settings.py.tpl")
+settings_tpl_path = path.join(BASE_DIR, "wizard", "settings.py.tpl")
 
 new_content = []
-with open(settings_path, "r", encoding="utf-8") as file:
+with open(settings_tpl_path, "r", encoding="utf-8") as file:
     content = file.readlines()
     easy_mode = answers["easy_mode"] == "yes"
     global_steam = answers["global_steam"] == "yes"
@@ -149,7 +149,7 @@ with open(settings_path, "r", encoding="utf-8") as file:
         new_content.append(line)
 
 
-settings_path = join(getcwd(), "wizard", "settings.py")
+settings_path = path.join(BASE_DIR, "wizard", "settings.py")
 
 with open(settings_path, "w", encoding="utf-8") as file:
     for line in new_content:
@@ -162,8 +162,10 @@ django_env = dict(
     DJANGO_SUPERUSER_PASSWORD=answers["user_pass"],
 )
 
+manage_path = path.join(BASE_DIR, "manage.py")
+
 got = check_output(
-    "python.exe manage.py createsuperuser --noinput --email apx@localhost",
+    f"python.exe {manage_path} createsuperuser --noinput --email apx@localhost",
     env=django_env,
     shell=True,
 ).decode("utf-8")

@@ -2,10 +2,12 @@ from threading import Thread
 from subprocess import Popen, PIPE
 import signal
 from sys import exit
-from os.path import join, exists
+from os import path
 from wizard.settings import (
     MEDIA_PORT,
     STATIC_PORT,
+    STATIC_ROOT,
+    MEDIA_ROOT,
     WIZARD_PORT,
     LISTEN_IP,
     BASE_DIR,
@@ -14,15 +16,18 @@ from wizard.settings import (
 from json import dumps, loads
 import speedtest
 
+PATH_MANAGE_PY = path.join(BASE_DIR, "manage.py")
+PATH_SPEED_TEST = path.join(BASE_DIR, "networkspeed.txt")
+PATH_LOGS = path.join(BASE_DIR, "wizard.log")
+
 threads = []
 
 opened_processes = []
 
 
 def do_speedtest():
-    speed_file_path = join(BASE_DIR, "networkspeed.txt")
-    if exists(speed_file_path):
-        with open(speed_file_path, "r") as file:
+    if path.exists(PATH_SPEED_TEST):
+        with open(PATH_SPEED_TEST, "r") as file:
             return loads(file.read())
     else:
         print("Doing speedtest, please wait")
@@ -32,7 +37,7 @@ def do_speedtest():
         "upstream": bit_to_mbit(s.upload(threads=1)),
         "downstream": bit_to_mbit(s.download(threads=1)),
     }
-    with open(speed_file_path, "w") as file:
+    with open(PATH_SPEED_TEST, "w") as file:
         file.write(dumps(result))
     return result
 
@@ -44,7 +49,7 @@ def bit_to_mbit(value: float):
 
 
 def start(cmd_line):
-    log = open("wizard.log", "a")
+    log = open(PATH_LOGS, "a")
     print('Executing "{}"'.format(cmd_line))
     child = Popen(
         cmd_line,
@@ -56,7 +61,7 @@ def start(cmd_line):
 
 
 def exit_handler(signum, frame):
-    print("Recieved exit")
+    print("Received exit")
     for process in opened_processes:
         print("Killing child process with ID{}".format(process.pid))
         process.kill()
@@ -87,11 +92,11 @@ print("ALWAYS EXIT THIS WINDOW WITH CTRL+C!")
 print("We will start following processes:")
 
 
-start(f"python.exe manage.py runserver {LISTEN_IP}:{WIZARD_PORT}")
-start("python.exe manage.py children")
-start("python.exe manage.py collectstatic --noinput")
-start(f"python.exe -m http.server {STATIC_PORT} --directory ./static")
-start(f"python.exe -m http.server {MEDIA_PORT} --directory ./uploads")
+start(f"python.exe {PATH_MANAGE_PY} runserver {LISTEN_IP}:{WIZARD_PORT}")
+start(f"python.exe {PATH_MANAGE_PY} children")
+start(f"python.exe {PATH_MANAGE_PY} collectstatic --noinput")
+start(f"python.exe -m http.server {STATIC_PORT} --directory {STATIC_ROOT}")
+start(f"python.exe -m http.server {MEDIA_PORT} --directory {MEDIA_ROOT}")
 print("Ready")
 
 try:

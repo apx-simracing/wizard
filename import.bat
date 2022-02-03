@@ -1,2 +1,5 @@
 @echo off
-python.exe manage.py import
+
+set dir=%~dp0
+
+python.exe %dir%/manage.py import
