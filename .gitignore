@@ -127,3 +127,13 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# axp specific
+server_children/
+static/
+packs/
+uploads/
+firewall_rules/
+wizard/settings.py
+networkspeed.txt
+common.json
