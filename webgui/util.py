@@ -10,7 +10,7 @@ from wizard.settings import (
     BASE_DIR,
     PUBLIC_URL,
     BASE_DIR,
-    MAX_STEAMCMD_BANDWIDTH,
+    # MAX_STEAMCMD_BANDWIDTH,
     WEBUI_PORT_RANGE,
     HTTP_PORT_RANGE,
     SIM_PORT_RANGE,
@@ -146,7 +146,7 @@ def get_conditions_file_root(instance, filename):
 
 
 def track_filename(instance, filename):
-    component_short_name = instance.track.component.short_name
+    # component_short_name = instance.track.component.short_name
     component_name = instance.track.component.component_name
     path = join(MEDIA_ROOT, "tracks", component_name)
 
