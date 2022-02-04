@@ -1,5 +1,5 @@
 @echo off
 
-set dir=%~dp0
+set "dir=%~dp0"
 
-python %dir%/manage.py createsuperuser
+python "%dir%\manage.py" createsuperuser
