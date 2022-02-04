@@ -18,7 +18,7 @@ if not exist %dir%/"db.sqlite3" (
 	
 	python.exe -m pip install -r %dir%/requirements.txt
 	python.exe %dir%/manage.py migrate
-	%dir%/addcommon.bat
+	%dir%/runaddcommon.bat
 	python.exe %dir%/setup.py
 	python.exe %dir%/apx.py
 )
