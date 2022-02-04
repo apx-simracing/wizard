@@ -1,0 +1,29 @@
+DefaultLivery="Aston_{number}.dds"
+MaterialOverride="AMV_GT3_BaseMat.json"
+
+HDVehicle=AM_V-GT3.hdv
+Graphics=AMV_GT3.gen
+Spinner=AMV_GT3_Spinner.gen
+Upgrades=AMV_GT3_Upgrades.ini
+GenString=B                    // Used to generate GMT names in *.gen file
+Cameras=AMV_GT3.cam          // Defaults to cams.cfg in UserData directory
+Sounds=AMV_GT3.sfx          // Sounds=default.sfx
+HeadPhysics=HeadPhysics_GT.ini // Affects driver eyepoint only
+Cockpit=AMV_GT3_cockpitinfo.ini
+AIUpgradeClass=AMV-GT3
+ExternalDisplays=AMV_GT3_externalDisplay.ini
+
+Driver="Grigoriy Volodislavu"
+Number={number}
+Team="{name}"
+PitGroup="Group1"
+Description="{description}"
+Engine="AM 4.0L V6"
+Manufacturer="Aston Martin"
+Classes="GT3, GT3_AstonMartin"
+
+
+FullTeamName="{description}"
+TeamHeadquarters=""
+
+Category="Aston Martin, Aston Martin Vantage GT3"
