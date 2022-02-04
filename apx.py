@@ -102,5 +102,6 @@ print("Ready")
 try:
     while True:
         pass
+    # idea: https://stackoverflow.com/questions/22565606/python-asynhronously-print-stdout-from-multiple-subprocesses
 except KeyboardInterrupt:
     print("Exiting")
