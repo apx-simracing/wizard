@@ -9,7 +9,7 @@ from wizard.settings import (
     # PACKS_ROOT,
     # FAILURE_THRESHOLD,
     # INSTANCE_NAME,
-    BASE_DIR,
+    CHILDREN_DIR
 )
 import subprocess
 from webgui.util import RECIEVER_DOWNLOAD_FROM
@@ -18,19 +18,16 @@ import zipfile, io
 from psutil import process_iter
 from requests import get
 
-
-PATH_CHILDREN = join(BASE_DIR, "server_children")
-
 class Command(BaseCommand):
     help = "Makes sure client recievers are running"
 
     def kill_children(self):
 
-        if not exists(PATH_CHILDREN):
-            print(f"Nothing to kill or servers not in {PATH_CHILDREN}. Exiting...")
+        if not exists(CHILDREN_DIR):
+            print(f"Nothing to kill or servers not in {CHILDREN_DIR}. Exiting...")
             return
 
-        folders = listdir(PATH_CHILDREN)
+        folders = listdir(CHILDREN_DIR)
         for secret in folders:
             print("Processing {} to exit...".format(secret))
             server_obj = Server.objects.filter(public_secret=secret).first()
@@ -38,7 +35,7 @@ class Command(BaseCommand):
                 server_obj.status = None
                 server_obj.save()
 
-            expected_path = join(PATH_CHILDREN, secret)
+            expected_path = join(CHILDREN_DIR, secret)
             # TODO: SOMETHING IS STILL STRANGE HERE
             # something_running = False
             for process in process_iter():
@@ -66,12 +63,12 @@ class Command(BaseCommand):
                 
                 sleep(5)
 
-                if not exists(PATH_CHILDREN):
+                if not exists(CHILDREN_DIR):
                     # let's sleep a bit more
                     sleep(10)
                     continue
 
-                folders = listdir(PATH_CHILDREN)
+                folders = listdir(CHILDREN_DIR)
                 for secret in folders:
                     server_obj = Server.objects.filter(public_secret=secret).first()
                     if server_obj:
@@ -79,20 +76,20 @@ class Command(BaseCommand):
                         server_obj.save()
 
                     expected_path = join(
-                        PATH_CHILDREN, secret, "python.exe"
+                        CHILDREN_DIR, secret, "python.exe"
                     )
 
-                    path = join(PATH_CHILDREN, secret)
+                    path = join(CHILDREN_DIR, secret)
                     # TODO: SOMETHING IS STILL STRANGE HERE
                     something_running = False
 
                     delete_lock = join(
-                        PATH_CHILDREN,
+                        CHILDREN_DIR,
                         secret,
                         "delete.lock",
                     )
                     update_lock = join(
-                        PATH_CHILDREN,
+                        CHILDREN_DIR,
                         secret,
                         "update.lock",
                     )
@@ -114,23 +111,23 @@ class Command(BaseCommand):
 
                         if not something_running:
                             keys = join(
-                                PATH_CHILDREN,
+                                CHILDREN_DIR,
                                 secret,
                                 "server",
                                 "UserData",
                                 "ServerKeys.bin",
                             )
                             server_json = join(
-                                PATH_CHILDREN,
+                                CHILDREN_DIR,
                                 secret,
                                 "reciever",
                                 "server.json",
                             )
                             batch_path_cwd = join(
-                                PATH_CHILDREN, secret, "reciever"
+                                CHILDREN_DIR, secret, "reciever"
                             )
                             batch_path = join(
-                                PATH_CHILDREN,
+                                CHILDREN_DIR,
                                 secret,
                                 "reciever",
                                 "reciever.bat",
@@ -162,7 +159,7 @@ class Command(BaseCommand):
                                 )
                     if exists(update_lock):
                         download_lock = join(
-                            PATH_CHILDREN,
+                            CHILDREN_DIR,
                             secret,
                             "download.lock",
                         )
@@ -183,7 +180,7 @@ class Command(BaseCommand):
                                             process.kill()
                                         cmd_line = process.cwd()
                                         expected_path = join(
-                                            PATH_CHILDREN, secret
+                                            CHILDREN_DIR, secret
                                         )
                                         if expected_path in cmd_line:
                                             print(
@@ -245,7 +242,7 @@ class Command(BaseCommand):
                                         process.kill()
                                     cmd_line = process.cwd()
                                     expected_path = join(
-                                        PATH_CHILDREN, secret
+                                        CHILDREN_DIR, secret
                                     )
                                     if expected_path in cmd_line:
                                         print(
