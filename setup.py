@@ -6,6 +6,7 @@ import string
 
 SECRET_KEY_LENGTH = 50
 BASE_DIR = path.dirname(path.realpath(__file__))
+MANAGE_PATH = path.join(BASE_DIR, "manage.py")
 
 questions = [
     {
@@ -162,10 +163,8 @@ django_env = dict(
     DJANGO_SUPERUSER_PASSWORD=answers["user_pass"],
 )
 
-manage_path = path.join(BASE_DIR, "manage.py")
-
 got = check_output(
-    f"python.exe {manage_path} createsuperuser --noinput --email apx@localhost",
+    f'python.exe "{MANAGE_PATH}" createsuperuser --noinput --email apx@localhost',
     env=django_env,
     shell=True,
 ).decode("utf-8")

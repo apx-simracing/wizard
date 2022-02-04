@@ -45,7 +45,6 @@ from .util import (
     do_post,
     do_rc_post,
     get_server_hash,
-    run_apx_command,
     FILE_NAME_SUFFIXES,
     FILE_NAME_SUFFIXES_MEANINGS,
 )

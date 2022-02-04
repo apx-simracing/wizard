@@ -2,4 +2,4 @@
 
 set "dir=%~dp0"
 
-python "%dir%\manage.py" createsuperuser
+python.exe "%dir%\manage.py" createsuperuser

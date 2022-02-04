@@ -92,11 +92,11 @@ print("ALWAYS EXIT THIS WINDOW WITH CTRL+C!")
 print("We will start following processes:")
 
 
-start(f"python.exe {PATH_MANAGE_PY} runserver {LISTEN_IP}:{WIZARD_PORT}")
-start(f"python.exe {PATH_MANAGE_PY} children")
-start(f"python.exe {PATH_MANAGE_PY} collectstatic --noinput")
-start(f"python.exe -m http.server {STATIC_PORT} --directory {STATIC_ROOT}")
-start(f"python.exe -m http.server {MEDIA_PORT} --directory {MEDIA_ROOT}")
+start(f'python.exe "{PATH_MANAGE_PY}" runserver {LISTEN_IP}:{WIZARD_PORT}')
+start(f'python.exe "{PATH_MANAGE_PY}" children')
+start(f'python.exe "{PATH_MANAGE_PY}" collectstatic --noinput')
+start(f'python.exe -m http.server "{STATIC_PORT}" --directory "{STATIC_ROOT}"')
+start(f'python.exe -m http.server "{MEDIA_PORT}" --directory "{MEDIA_ROOT}"')
 print("Ready")
 
 try:
