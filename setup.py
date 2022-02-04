@@ -30,7 +30,7 @@ questions = [
         "is_hidden": True,
     },
     {
-        "text": "Should APX use a global steamcmd instead of one per server?",
+        "text": "Should APX use a global steamcmd instead of one per server? no - recommended",
         "default": "no",
         "key": "global_steam",
         "values": ["yes", "no"],
@@ -44,7 +44,7 @@ questions = [
         "is_hidden": False,
     },
     {
-        "text": "What database should be used? sqlite or mariadb?",
+        "text": "What database should be used? sqlite or mariadb? sqlite - recommended",
         "default": "sqlite",
         "key": "add_prefix",
         "values": ["sqlite", "mariadb"],
