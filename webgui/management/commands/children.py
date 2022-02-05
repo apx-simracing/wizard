@@ -12,11 +12,14 @@ from wizard.settings import (
     CHILDREN_DIR
 )
 import subprocess
-from webgui.util import RECIEVER_DOWNLOAD_FROM
+from webgui.util import sanitize_subprocess_cmd, RECIEVER_DOWNLOAD_FROM
 from time import sleep
 import zipfile, io
 from psutil import process_iter
 from requests import get
+import logging
+
+logger = logging.getLogger(__name__)
 
 class Command(BaseCommand):
     help = "Makes sure client recievers are running"
@@ -24,12 +27,12 @@ class Command(BaseCommand):
     def kill_children(self):
 
         if not exists(CHILDREN_DIR):
-            print(f"Nothing to kill or servers not in {CHILDREN_DIR}. Exiting...")
+            logger.info(f"Nothing to kill or servers not in {CHILDREN_DIR}. Exiting...")
             return
 
         folders = listdir(CHILDREN_DIR)
         for secret in folders:
-            print("Processing {} to exit...".format(secret))
+            logger.info("Processing {} to exit...".format(secret))
             server_obj = Server.objects.filter(public_secret=secret).first()
             if server_obj:
                 server_obj.status = None
@@ -43,17 +46,17 @@ class Command(BaseCommand):
                     path = process.exe()
                     if "rFactor2 Dedicated.exe" not in path:
                         if path.startswith(expected_path):
-                            print(
+                            logger.info(
                                 "Killing process {} b/c of origin path".format(process)
                             )
                             process.kill()
                         # find the cmd
                         cmd_line = process.cwd()
                         if expected_path in cmd_line:
-                            print("Killing process {} b/c of cwd path".format(process))
+                            logger.info("Killing process {} b/c of cwd path".format(process))
                             process.kill()
                     else:
-                        print("There is an server running. This is not our job.")
+                        logger.info("There is an server running. This is not our job.")
                 except Exception as e:
                     pass  # there will be a lot of access denied messages
 
@@ -103,7 +106,7 @@ class Command(BaseCommand):
                             except:
                                 pass
                         if something_running:
-                            print(
+                            logger.info(
                                 "Server {} has running something. Will not be altered.".format(
                                     secret
                                 )
@@ -124,7 +127,7 @@ class Command(BaseCommand):
                                 "server.json",
                             )
                             batch_path_cwd = join(
-                                CHILDREN_DIR, secret, "reciever"
+                                CHILDREN_DIR, secret, "reciever\\"
                             )
                             batch_path = join(
                                 CHILDREN_DIR,
@@ -138,21 +141,27 @@ class Command(BaseCommand):
                                 and exists(server_json)
                                 and not exists(update_lock)
                             ):
+                                # TODO: python win path with space issue
                                 # check if there is already something running within the directory
-                                print("Server {} needs start".format(secret))
+                                logger.info("Server {} needs start".format(secret))
+                                cmd = sanitize_subprocess_cmd(batch_path)
+                                # cwd = sanitize_subprocess_cmd(batch_path_cwd)
+                                # cmd = batch_path
+                                cwd = batch_path_cwd
                                 try:
                                     subprocess.Popen(
-                                        batch_path,
-                                        cwd=batch_path_cwd,
+                                        cmd,
+                                        cwd=cwd,
                                         stdout=subprocess.DEVNULL,
                                         stderr=subprocess.DEVNULL,
                                     )
                                 except Exception as e:
-                                    print(e)
+                                    logger.error(str(e))
+                                    logger.error(f"cmd={cmd} cwd={cwd}")
                                     # Exceptions can't really handled at this point, so we are ignoring them
                                     pass
                             else:
-                                print(
+                                logger.info(
                                     "Server {} needs start, but is not finished deploying".format(
                                         secret
                                     )
@@ -167,7 +176,7 @@ class Command(BaseCommand):
                             with open(download_lock, "w") as file:
                                 file.write("locking download")
                             try:
-                                print(
+                                logger.info(
                                     "Server {} has a update lock, trying to kill reciever. Full path: {}".format(
                                         secret, path
                                     )
@@ -176,14 +185,14 @@ class Command(BaseCommand):
                                     try:
                                         process_path = process.exe()
                                         if process_path.startswith(path):
-                                            print("killing", process_path)
+                                            logger.info("killing", process_path)
                                             process.kill()
                                         cmd_line = process.cwd()
                                         expected_path = join(
                                             CHILDREN_DIR, secret
                                         )
                                         if expected_path in cmd_line:
-                                            print(
+                                            logger.info(
                                                 "Killing process {} b/c of cwd path".format(
                                                     process
                                                 )
@@ -203,7 +212,7 @@ class Command(BaseCommand):
                                     server_obj.state = (
                                         f"Extracting contents to {path}"
                                     )
-                                    print(f"Extracting contents to {path}")
+                                    logger.info(f"Extracting contents to {path}")
                                     server_obj.save()
                                     z.extractall(path)
                                     server_obj.state = "Extracted reciever release"
@@ -218,7 +227,7 @@ class Command(BaseCommand):
                                     )
                                     server_obj.save()
                             except Exception as e:
-                                print(
+                                logger.error(
                                     "Server {} has a update lock, but I failed".format(
                                         secret
                                     )
@@ -229,7 +238,7 @@ class Command(BaseCommand):
                                 server_obj.save()
                     if exists(delete_lock):
                         try:
-                            print(
+                            logger.info(
                                 "Server {} has a delete lock. Full path: {}".format(
                                     secret, path
                                 )
@@ -238,14 +247,14 @@ class Command(BaseCommand):
                                 try:
                                     process_path = process.exe()
                                     if process_path.startswith(path):
-                                        print("killing", process_path)
+                                        logger.info("killing", process_path)
                                         process.kill()
                                     cmd_line = process.cwd()
                                     expected_path = join(
                                         CHILDREN_DIR, secret
                                     )
                                     if expected_path in cmd_line:
-                                        print(
+                                        logger.info(
                                             "Killing process {} b/c of cwd path".format(
                                                 process
                                             )
@@ -256,7 +265,7 @@ class Command(BaseCommand):
                             if exists(path):
                                 rmtree(path)
                         except:
-                            print(
+                            logger.error(
                                 "Server {} has a delete lock, but I failed".format(
                                     secret
                                 )

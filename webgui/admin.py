@@ -45,6 +45,9 @@ from django.http import HttpResponseRedirect
 from pydng import generate_name
 from django.forms.widgets import CheckboxSelectMultiple
 from threading import Thread
+import logging
+
+logger = logging.getLogger(__name__)
 
 admin.site.site_url = None
 admin.site.site_title = "APX"
@@ -114,7 +117,7 @@ class TrackChangelist(ChangeList):
         super(TrackChangelist, self).get_results(request)
         totals = self.result_list
         self.fack = "fasf"
-        print(totals)
+        logger.info(totals)
 
 
 @admin.register(Track)

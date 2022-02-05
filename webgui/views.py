@@ -418,7 +418,6 @@ def get_weather(request, secret: str):
         raise Http404()
     unlocked = False
     if "secret" in request.GET:
-        print(server.secret)
         unlocked = server.secret == request.GET["secret"]
     sessions = server.event.conditions.sessions.all()
 

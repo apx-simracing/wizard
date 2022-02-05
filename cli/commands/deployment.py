@@ -1,8 +1,11 @@
+from os import path
 from requests import post, get
 from os.path import exists, basename
 from json import loads, dumps
-from commands import http_api_helper
+from .util import http_api_helper
+import logging
 
+logger = logging.getLogger(__name__)
 
 def deploy_command(env, *args, **kwargs) -> bool:
     server_key = env["server"]
@@ -83,13 +86,13 @@ def install_command(env, *args, **kwargs) -> bool:
     if "not_running" not in status_json:
         raise Exception("Server is running, install failed")
     got, text = http_api_helper(env, "install", {}, get)
-    print(text)
+    logger.info(text)
     return got
 
 
 def unlock_command(env, *args, **kwargs):
     if not env["server"]:
-        print("no server set")
+        logger.info("no server set")
     else:
         server_key = env["server"]
         server_data = env["server_data"][server_key]
@@ -106,7 +109,7 @@ def unlock_command(env, *args, **kwargs):
 
 def install_plugins_command(env, *args, **kwargs):
     if not env["server"]:
-        print("no server set")
+        logger.info("no server set")
     else:
         server_key = env["server"]
         server_data = env["server_data"][server_key]
@@ -136,7 +139,7 @@ def install_plugins_command(env, *args, **kwargs):
 
 def get_lockfile_command(env, *args, **kwargs):
     if not env["server"]:
-        print("no server set")
+        logger.info("no server set")
     else:
         server_key = env["server"]
         server_data = env["server_data"][server_key]
@@ -151,7 +154,7 @@ def get_lockfile_command(env, *args, **kwargs):
 
 def get_thumbs_command(env, *args, **kwargs):
     if not env["server"]:
-        print("no server set")
+        logger.info("no server set")
     else:
         server_key = env["server"]
         server_data = env["server_data"][server_key]
@@ -166,7 +169,7 @@ def get_thumbs_command(env, *args, **kwargs):
 
 def get_log_command(env, *args, **kwargs):
     if not env["server"]:
-        print("no server set")
+        logger.info("no server set")
     else:
         server_key = env["server"]
         server_data = env["server_data"][server_key]

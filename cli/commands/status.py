@@ -1,12 +1,14 @@
 from requests import get
-from json import loads
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def get_status_command(env, *args, **kwargs):
     if not env["server"]:
-        print("no server set")
+        logger.info("no server set")
     else:
-        print(background_status(env))
+        logger.info(background_status(env))
         return True
 
 
@@ -27,7 +29,7 @@ def background_status(env):
 
 def get_drivers_command(env, *args, **kwargs):
     if not env["server"]:
-        print("no server set")
+        logger.info("no server set")
     else:
         got = background_status(env)
         if got:
@@ -47,7 +49,7 @@ def get_drivers_command(env, *args, **kwargs):
                     vehicles,
                 )
             )
-            print(mapped_vehicles)
+            logger.info(mapped_vehicles)
         else:
             return False
     return True
@@ -55,7 +57,7 @@ def get_drivers_command(env, *args, **kwargs):
 
 def get_states_command(env, *args, **kwargs):
     if not env["server"]:
-        print("no server set")
+        logger.info("no server set")
     else:
         got = background_status(env)
-        print(got["states"])
+        logger.info(got["states"])

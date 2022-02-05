@@ -1,8 +1,42 @@
 from subprocess import check_output, Popen, PIPE
 from re import match
 import glob
-from os import listdir
 from json import loads
+from typing import Union
+from requests import post
+from urllib.parse import urljoin
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+def http_api_helper(env: dict, route: str, data: dict, method=post) -> Union[bool, str]:
+    if "server_data" not in env or env["server"] not in env["server_data"]:
+        raise Exception("Server.json invalid")
+    result_ok = False
+    result_text = None
+    secret = env["server_data"][env["server"]]["secret"]
+    url = env["server_data"][env["server"]]["url"]
+    endpoint = urljoin(url, route)
+    logger.info(f'Requesting {endpoint}')
+    try:
+        got = method(
+            endpoint,
+            headers={
+                "authorization": secret,
+                "content-type": "application/x-www-form-urlencoded",
+            },
+            data=data,
+        )
+
+        result_ok = got.status_code == 200
+        result_text = got.text
+    except Exception as err:
+        logger.error(result_text)
+        result_ok = False
+        result_text = str(err)
+
+    return result_ok, result_text
 
 
 def get_rfcmp_info_command(env, *args, **kwargs):
@@ -24,9 +58,9 @@ def get_rfcmp_info_command(env, *args, **kwargs):
                     value = got.groups(1)[1]
                     results[file][name] = value
         except:
-            print("File read error")
+            logger.error("File read error")
             return False
-    print(results)
+    logger.info(results)
     return True
 
 
@@ -37,7 +71,7 @@ def get_components_in_directory_command(env, *args, **kwargs):
     for file in files:
         component_in_file = get_rfcmp_info_command(env, [file], kwargs)
         components.append(component_in_file)
-    print(components)
+    logger.info(components)
     return True
 
 
@@ -45,4 +79,4 @@ def check_config_command(env, *args, **kwargs):
     config = args[0][0]
     with open(config, "r") as file:
         data = loads(file.read())
-        print(data)
+        logger.info(data)

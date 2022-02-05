@@ -24,3 +24,5 @@ if not exist "%dir%\db.sqlite3" (
 )
 
 python.exe "%dir%\apx.py"
+
+pause

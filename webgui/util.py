@@ -1,5 +1,6 @@
 from wizard.settings import (
     APX_ROOT,
+    APX_DIRECT,
     MEDIA_ROOT,
     PACKS_ROOT,
     DISCORD_WEBHOOK,
@@ -103,6 +104,15 @@ FILE_NAME_SUFFIXES_MEANINGS = [
 RECIEVER_COMP_INFO = open(join(BASE_DIR, "release")).read()
 RECIEVER_DOWNLOAD_FROM = "https://github.com/apx-simracing/reciever/releases/download/R87/reciever-2021R87.zip"
 
+
+def sanitize_subprocess_cmd(cmd):
+    if not isinstance(cmd, str):
+        raise ValidationError(f"{str(cmd)} is not a valid subprocess command")
+    if ' ' not in cmd:
+        return cmd
+    if not cmd.startswith("'") or not cmd.startswith('"'):
+        return f'"{cmd}"'
+    return cmd
 
 def get_update_filename(instance, filename):
     component_name = instance.component_name
@@ -367,7 +377,7 @@ def bootstrap_reciever(root_path, server_obj, port, secret):
             key_path = join(key_root_path, "ServerKeys.bin")
             relative_path = join("keys", key, "ServerKeys.bin")
             download_key_command = run_apx_command(
-                key, "--cmd lockfile --args {}".format(key_path)
+                key, '--cmd lockfile --args "{}"'.format(key_path)
             )
             if exists(key_path):
                 server_obj.server_key = relative_path
@@ -393,18 +403,21 @@ def get_server_hash(url):
 
 
 def run_apx_command(hashed_url, commandline):
-    apx_path = join(APX_ROOT, "apx.py")
-    python_path = "python.exe"
-    local_python_path = join(BASE_DIR, "python.exe")
-    if exists(local_python_path):
-        python_path = local_python_path
-    command_line = '"{}" "{}" --server {} {}'.format(
-        python_path, apx_path, hashed_url, commandline
-    )
-    got = subprocess.check_output(command_line, cwd=APX_ROOT, shell=True).decode(
-        "utf-8"
-    )
-    return got
+    if not APX_DIRECT:
+        apx_path = join(APX_ROOT, "apx.py")
+        python_path = "python.exe"
+        local_python_path = join(BASE_DIR, "python.exe")
+        
+        if exists(local_python_path):
+            python_path = local_python_path
+        
+        command_line = f'"{python_path}" "{apx_path}" --server {hashed_url} {commandline}'
+        got = subprocess.check_output(command_line, cwd=APX_ROOT, shell=True).decode("utf-8")
+        return got
+    else:
+        from cli.apx import run_command
+        logger.info(f'Running APX command: {hashed_url} {commandline}')
+        run_command(hashed_url, commandline)
 
 
 def get_event_config(event_id: int):
@@ -955,7 +968,7 @@ def do_server_interaction(server):
         try:
             run_apx_command(key, "--cmd new_weekend")
         except Exception as e:
-            print(e)
+            logger.error(e)
         finally:
             server.action = ""
             server.save()
@@ -966,7 +979,7 @@ def do_server_interaction(server):
             set_state(server.pk, "Steam update requested")
             run_apx_command(key, "--cmd update --args {}".format(server.branch))
         except Exception as e:
-            print(e)
+            logger.error(e)
             set_state(server.pk, str(e))
         finally:
             server.action = ""
@@ -993,7 +1006,7 @@ def do_server_interaction(server):
                     config_path = join(APX_ROOT, "configs", key + ".json")
                     with open(config_path, "w") as file:
                         file.write(dumps(event_config))
-                    command_line = "--cmd weatherupdate --args {}".format(config_path)
+                    command_line = '--cmd weatherupdate --args "{}"'.format(config_path)
 
                     run_apx_command(key, command_line)
             run_apx_command(key, "--cmd start")
@@ -1071,7 +1084,7 @@ def do_server_interaction(server):
             if not server.ignore_start_hook:
                 do_embed_post(json_blob, discord_url)
         except Exception as e:
-            print(e)
+            logger.error(e)
             set_state(server.pk, str(e))
             server.save()
         finally:
@@ -1092,7 +1105,7 @@ def do_server_interaction(server):
             config_path = join(APX_ROOT, "configs", key + ".json")
             with open(config_path, "w") as file:
                 file.write(dumps(event_config))
-            command_line = "--cmd weatherupdate --args {}".format(config_path)
+            command_line = '--cmd weatherupdate --args "{}"'.format(config_path)
             run_apx_command(key, command_line)
 
         except Exception as e:
@@ -1201,13 +1214,13 @@ def do_server_interaction(server):
                     run_apx_command(key, command_line)
 
             set_state(server.pk, "Pushing skins (if any) to the server")
-            command_line = "--cmd build_skins --args {} {}".format(
+            command_line = '--cmd build_skins --args "{}" "{}"'.format(
                 config_path, rfm_path
             )
             run_apx_command(key, command_line)
 
             set_state(server.pk, "Asking server for deployment")
-            command_line = "--cmd deploy --args {} {}".format(config_path, rfm_path)
+            command_line = '--cmd deploy --args "{}" "{}"'.format(config_path, rfm_path)
             run_apx_command(key, command_line)
             # push plugins, if needed
             plugin_args = ""
@@ -1255,13 +1268,13 @@ def do_server_interaction(server):
             key_path = join(key_root_path, "ServerKeys.bin")
             relative_path = join("keys", key, "ServerKeys.bin")
             download_key_command = run_apx_command(
-                key, "--cmd lockfile --args {}".format(key_path)
+                key, '--cmd lockfile --args "{}"'.format(key_path)
             )
             if exists(key_path):
                 server.server_key = relative_path
                 server.save()
         except:
-            print("{} does not offer a key".format(server.pk))
+            logger.error("{} does not offer a key".format(server.pk))
 
     # if an unlock key is present - attempt unlock!
     if server.server_unlock_key:
@@ -1271,11 +1284,11 @@ def do_server_interaction(server):
                 mkdir(key_root_path)
             key_path = join(key_root_path, "ServerUnlock.bin")
             download_key_command = run_apx_command(
-                key, "--cmd unlock --args {}".format(key_path)
+                key, '--cmd unlock --args "{}"'.format(key_path)
             )
             server.server_unlock_key = None
         except Exception as e:
-            print("{} unlock failed".format(server.pk))
+            logger.error("{} unlock failed".format(server.pk))
 
         finally:
             server.save()

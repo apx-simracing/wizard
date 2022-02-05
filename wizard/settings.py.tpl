@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
 ]
+
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -49,6 +50,39 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'style': '{',
+        }
+    },
+    'handlers': {
+        'file': {
+            'level': 'DEBUG',
+            'class': 'logging.FileHandler',
+            'filename': join(BASE_DIR, "apx.log"),
+            'formatter': 'verbose'
+        },
+    },
+    'loggers': {
+        '': {
+            'handlers': ['file'],
+            'propagate': True,
+        },
+        'django': {
+            'handlers': ['file'],
+            'propagate': True,
+        },
+        'root': {
+            'handlers': ['file'],
+            'propagate': True,
+        },
+    }
+}
 
 FILE_UPLOAD_HANDLERS = ("django.core.files.uploadhandler.TemporaryFileUploadHandler",)
 
@@ -144,6 +178,8 @@ FAILURE_THRESHOLD = 500
 MEDIA_ROOT = join(str(BASE_DIR), "uploads")
 
 APX_ROOT = join(str(BASE_DIR), "cli")
+
+APX_DIRECT = False
 
 PACKS_ROOT = join(str(BASE_DIR), "packs")
 

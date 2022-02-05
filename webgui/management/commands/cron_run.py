@@ -4,6 +4,9 @@ from wizard.settings import BASE_DIR
 from os.path import join, exists
 from os import unlink
 from time import sleep
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
@@ -15,19 +18,19 @@ class Command(BaseCommand):
     def try_to_obtain_lock(self):
         lock_path = join(BASE_DIR, "cron.lock")
         if exists(lock_path):
-            print(f"Lock {lock_path} is existing.")
+            logger.info(f"Lock {lock_path} is existing.")
             for i in range(1, 5):
-                print(f"Lock {lock_path} is existing. Waiting...")
+                logger.info(f"Lock {lock_path} is existing. Waiting...")
                 sleep(10)
                 if not exists(lock_path):
-                    print(f"Lock {lock_path} has gone. Continuing...")
+                    logger.info(f"Lock {lock_path} has gone. Continuing...")
                     break
 
             if exists(lock_path):
-                print(f"Lock {lock_path} is still there. Aborting...")
+                logger.info(f"Lock {lock_path} is still there. Aborting...")
                 raise Exception("Lock still there")
 
-        print(f"Locking {lock_path}")
+        logger.info(f"Locking {lock_path}")
         with open(lock_path, "w") as file:
             file.write("Silence is golden")
 
@@ -39,7 +42,7 @@ class Command(BaseCommand):
         try:
             cron_id = options["cron_id"]
             cron_job = ServerCron.objects.get(pk=cron_id)
-            print(f"Desired job description: {cron_job}")
+            logger.info(f"Desired job description: {cron_job}")
             self.try_to_obtain_lock()
             got_lock = True
             server = cron_job.server
@@ -64,9 +67,9 @@ class Command(BaseCommand):
                             message.save()
                             background_action_chat(message)
         except Exception as e:
-            print(e)
+            logger.error(e)
         finally:
             if got_lock:
                 lock_path = join(BASE_DIR, "cron.lock")
                 unlink(lock_path)
-                print(f"Unlocked {lock_path}")
+                logger.info(f"Unlocked {lock_path}")

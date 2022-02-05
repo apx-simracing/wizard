@@ -137,7 +137,7 @@ with open(settings_tpl_path, "r", encoding="utf-8") as file:
                 '"', ""
             )  # make sure we have no string delimiters in there
             line = f'SECRET_KEY = "{random_key}"\n'
-        if "DEBUG" in line:
+        if "DEBUG" in line and not "'DEBUG'" in line:
             line = f"DEBUG = False\n"
         if "EASY_MODE" in line:
             line = f"EASY_MODE = {easy_mode}\n"

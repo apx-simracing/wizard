@@ -1,13 +1,16 @@
 from requests import post, get
 from os.path import exists, join
-from os import listdir, mkdir, unlink
-from json import load, loads
+from os import listdir
+from json import load
 import re
-from shutil import copyfile, rmtree
 import tarfile
-from commands import http_api_helper
 import io
 import zipfile
+from .util import http_api_helper
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 team_pattern = r"(?P<name>.+)\s?#(?P<number>.+)\:(?P<pitgroup>\d+)"
 
@@ -51,7 +54,7 @@ def get_final_filename(needle: str, short_name: str, number: str) -> str:
 
 def build_track_command(env, *args, **kwargs):
     if not env["server"]:
-        print("no server set")
+        logger.info("no server set")
     else:
         server_key = env["server"]
         server_data = env["server_data"][server_key]
@@ -96,7 +99,7 @@ def build_track_command(env, *args, **kwargs):
 
 def build_skin_command(env, *args, **kwargs):
     if not env["server"]:
-        print("no server set")
+        logger.info("no server set")
     else:
         server_key = env["server"]
         server_data = env["server_data"][server_key]
@@ -104,7 +107,7 @@ def build_skin_command(env, *args, **kwargs):
         secret = server_data["secret"]
         file_name = args[0][0]
         if not exists(file_name):
-            print("file not existing")
+            logger.info(f"file not exists: {file_name}")
         else:
 
             # read templates
@@ -117,6 +120,7 @@ def build_skin_command(env, *args, **kwargs):
                 if file.endswith(".veh"):
                     with open(join(templates_path, file)) as file_handle:
                         templates[file.replace(".veh", "")] = file_handle.read()
+            logger.info(f"Opening file: {file_name}")
             with open(file_name, "r") as file:
                 data = load(file)
                 veh_mods = data["cars"]
@@ -140,12 +144,12 @@ def build_skin_command(env, *args, **kwargs):
                                     tar.add(
                                         join(build_path, mod_name, raw_file), raw_file
                                     )
-                                    print(f"Adding {raw_file} to archive")
+                                    logger.info(f"Adding {raw_file} to archive")
                                 if ".png" in raw_file:
                                     tar.add(
                                         join(build_path, mod_name, raw_file), raw_file
                                     )
-                                    print(f"Adding {raw_file} to archive")
+                                    logger.info(f"Adding {raw_file} to archive")
                             for entry in entries:
                                 match = re.match(team_pattern, entry)
                                 name = match.group("name").strip()
@@ -164,7 +168,7 @@ def build_skin_command(env, *args, **kwargs):
                                         else None
                                     )
                                     if overwrites:
-                                        print(
+                                        logger.info(
                                             "Found overwrites for VEH template for entry {}".format(
                                                 number
                                             )
@@ -188,7 +192,7 @@ def build_skin_command(env, *args, **kwargs):
                                                         if not use_quotes
                                                         else '"{}"'.format(value),
                                                     )
-                                                    print(
+                                                    logger.info(
                                                         "Using value {} (in quotes: {}) for key {} of entry {}".format(
                                                             value,
                                                             use_quotes,
@@ -230,10 +234,10 @@ def build_skin_command(env, *args, **kwargs):
                                     final_name = skin_file
                                     had_custom_file = True
                                     tar.add(path, final_name)
-                                    print(f"Adding {final_name} to archive")
+                                    logger.info(f"Adding {final_name} to archive")
 
                                 if had_custom_file and mod_name in templates:
-                                    print(f"Adding generated {info.name} to archive")
+                                    logger.info(f"Adding generated {info.name} to archive")
                                     tar.addfile(info, io.BytesIO(tar_template))
 
                         got = post(
@@ -247,13 +251,13 @@ def build_skin_command(env, *args, **kwargs):
 
 def query_config(env, *args, **kwargs):
     got, text = http_api_helper(env, "config", {}, get)
-    print(text)
+    logger.info(text)
     return got
 
 
 def get_config_command(env, *args, **kwargs) -> bool:
     got = query_config(env, args, kwargs)
-    print(got)
+    logger.info(got)
     return True
 
 
@@ -266,5 +270,5 @@ def get_ports_command(env, *args, **kwargs) -> bool:
         "TCP": [simulation_port, http_port, reciever_port],
         "UDP": [simulation_port, http_port + 1, http_port + 2],
     }
-    print(ports)
+    logger.info(ports)
     return True

@@ -9,6 +9,9 @@ from requests import get
 from zipfile import ZipFile
 from os.path import join, exists
 from subprocess import Popen, PIPE
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class WebguiConfig(AppConfig):
@@ -22,18 +25,18 @@ class WebguiConfig(AppConfig):
             join(steamcmd_folder_path, "steamerrorreporter.exe")
         ):
             # try to bootstrap steamcmd
-            print("Attempting do download a global steamcmd")
+            logger.info("Attempting do download a global steamcmd")
             steamcmd_path = join(BASE_DIR, "steamcmd.zip")
             r = get("https://steamcdn-a.akamaihd.net/client/installer/steamcmd.zip")
 
             with open(steamcmd_path, "wb") as f:
                 f.write(r.content)
-            print("Unpacking steamcmd")
+            logger.info("Unpacking steamcmd")
 
             zf = ZipFile(steamcmd_path, "r")
             zf.extractall(steamcmd_folder_path)
             zf.close()
-            print("Installing steamcmd")
+            logger.info("Installing steamcmd")
 
             command_line = join(BASE_DIR, "steamcmd", "steamcmd.exe") + " +quit"
             p = Popen(

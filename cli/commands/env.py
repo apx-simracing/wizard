@@ -1,6 +1,9 @@
 from requests import get
-from commands import http_api_helper
+from .util import http_api_helper
 from json import loads
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def oneclick_start_command(env, *args, **kwargs) -> bool:
@@ -12,7 +15,7 @@ def oneclick_start_command(env, *args, **kwargs) -> bool:
         raise Exception("Server already running")
 
     got, text = http_api_helper(env, "oneclick_start_server", {}, get)
-    print(text)
+    logger.info(text)
     return got
 
 
@@ -25,7 +28,7 @@ def start_command(env, *args, **kwargs) -> bool:
         raise Exception("Server already running")
 
     got, text = http_api_helper(env, "start", {}, get)
-    print(got)
+    logger.info(got)
     return got
 
 
@@ -37,7 +40,7 @@ def stop_command(env, *args, **kwargs) -> bool:
     if "not_running" in status_json:
         raise Exception("Server is not running")
     got, text = http_api_helper(env, "stop", {}, get)
-    print(got)
+    logger.info(got)
     return got
 
 
@@ -47,7 +50,7 @@ def list_command(env, *args, **kwargs) -> bool:
     servers = env["server_data"]
     for key, value in servers.items():
         url = value["url"]
-        print(f"{key} => {url}")
+        logger.info(f"{key} => {url}")
     return True
 
 
@@ -60,5 +63,5 @@ def update_command(env, *args, **kwargs) -> bool:
         raise Exception("Server is running")
 
     got, text = http_api_helper(env, "update", {}, get)
-    print(got, text)
+    logger.info(got, text)
     return got

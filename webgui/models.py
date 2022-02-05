@@ -53,9 +53,11 @@ from os.path import exists, join, basename
 from os import mkdir, linesep
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from datetime import datetime, timedelta, time, date
-import pytz
+from datetime import datetime
 from json import dumps
+import logging
+
+logger = logging.getLogger(__name__)
 
 status_map = {}
 state_map = {}
@@ -68,7 +70,7 @@ try:
     from wand.color import Color
 except ImportError:
     USE_WAND = False
-    print("Wand will not be available.")
+    logger.info("Wand will not be available.")
 
 from threading import Thread
 from croniter import croniter
@@ -2013,7 +2015,7 @@ def remove_cron_from_windows(sender, instance, **kwargs):
     id = instance.pk
     task_name = f"apx_task_{id}"
     delete_command_line = f"schtasks /delete /tn {task_name} /f"
-    print(delete_command_line)
+    logger.info(delete_command_line)
     system(delete_command_line)
 
 
@@ -2022,7 +2024,7 @@ def add_cron_to_windows(sender, instance, **kwargs):
     id = instance.pk
     task_name = f"apx_task_{id}"
     delete_command_line = f"schtasks /delete /tn {task_name} /f"
-    print(delete_command_line)
+    logger.info(delete_command_line)
     system(delete_command_line)
     if not instance.disabled:
         python_path = (
@@ -2065,8 +2067,8 @@ def add_cron_to_windows(sender, instance, **kwargs):
         # https://stackoverflow.com/questions/6814075/windows-start-b-command-problem#6814111
         run_command = f"start /d '{BASE_DIR}' /b 'apx' '{python_path}' manage.py cron_run {id}"
         command_line = f'schtasks /create /tn {task_name} /st {start_time} /sc {schedule_part} /tr "cmd /c {run_command}"'
-        print(command_line)
-        system(command_line)
+        logger.info(command_line)
+        logger.info(command_line)
 
 
 class TickerMessageType(models.TextChoices):
@@ -2211,6 +2213,6 @@ class TickerMessage(models.Model):
                     data["driver"], data["nearby"]
                 )
         except Exception as e:
-            print(e)
+            logger.error(e)
             pass
         return self.type

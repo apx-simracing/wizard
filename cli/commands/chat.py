@@ -1,11 +1,14 @@
-from commands import http_api_helper
+from .util import http_api_helper
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def chat_command(env, *args, **kwargs) -> bool:
     got, text = http_api_helper(env, "chat", {
         "message": ' '.join(args[0])
     })
-    print(text)
+    logger.info(text)
     return got
 
 
@@ -16,7 +19,7 @@ def kick_command(env, *args, **kwargs) -> bool:
     got, text = http_api_helper(env, "kick", {
         "driver": driver
     })
-    print(text)
+    logger.info(text)
     return got
 
 
@@ -27,14 +30,14 @@ def rejoin_driver_command(env, *args, **kwargs) -> bool:
     got_undq, undq_text = http_api_helper(env, "chat", {
         "message": "/undq " + ' '.join(args[0])
     })
-    print(dq_text)
-    print(undq_text)
+    logger.info(dq_text)
+    logger.info(undq_text)
     return got_dq and got_undq
 
 
 def action_helper(env, action: str):
     got, text = http_api_helper(env, "/action/" + action, {})
-    print(text)
+    logger.info(text)
     return got
 
 

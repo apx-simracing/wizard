@@ -7,6 +7,9 @@ from webgui.models import Component, Entry, EntryFile, TrackFile, Track
 from webgui.util import FILE_NAME_SUFFIXES, FILE_NAME_SUFFIXES_MEANINGS
 from shutil import copyfile
 from re import search
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
@@ -82,7 +85,7 @@ class Command(BaseCommand):
             )
         else:
             entry = entries.first()
-            print(
+            logger.info(
                 "We will use the component {} for this import".format(
                     entry.component_name
                 )
@@ -96,9 +99,9 @@ class Command(BaseCommand):
             ).first()
             if track is None:
                 raise Exception(f"No track found with layout {layout}")
-            print("Component {}, layout {}".format(entries.first(), layout))
+            logger.info("Component {}, layout {}".format(entries.first(), layout))
             for file in files:
-                print(f"\t File {file}")
+                logger.info(f"\t File {file}")
 
             confirm = input("Is this okay? Y/N: ")
             if confirm.lower() != "y":
@@ -123,7 +126,7 @@ class Command(BaseCommand):
                 track_file.file = join(relative_path)
                 source_path = join(BASE_DIR, "import", file)
                 target_path = join(BASE_DIR, "uploads", relative_path)
-                print(f"Copied {file} to {target_path}")
+                logger.info(f"Copied {file} to {target_path}")
                 track_file.save()
                 copyfile(source_path, target_path)
 
@@ -170,7 +173,7 @@ class Command(BaseCommand):
                 file_groups = new_groups
 
             for number, files in file_groups.items():
-                print(f"Entry {number}:")
+                logger.info(f"Entry {number}:")
                 for file in files:
                     new_name = self.get_vehicle_filename(
                         file,
@@ -180,18 +183,18 @@ class Command(BaseCommand):
                         False,
                     )
                     if new_name != file:
-                        print(
+                        logger.info(
                             f"\t File {file} => {new_name}: "
                             + "({})".format(self.get_file_meaning(file))
                         )
                     else:
-                        print(
+                        logger.info(
                             f"\t File {file}: "
                             + "({})".format(self.get_file_meaning(file))
                         )
-            print("Following files will be ignored (e. g. as it's a file not related to an entry or the file is not yet supported by APX)")
+            logger.info("Following files will be ignored (e. g. as it's a file not related to an entry or the file is not yet supported by APX)")
             for file in unknown_files:
-                print(f"\t{file}")
+                logger.info(f"\t{file}")
             confirm = input("Is this okay? Y/N: ")
 
             if confirm.lower() == "y":
@@ -199,7 +202,7 @@ class Command(BaseCommand):
                     Entry.objects.filter(component=entries.first()).delete()
                     EntryFile.objects.filter(entry__component=entries.first()).delete()
                 for number, files in file_groups.items():
-                    print(f"Processing matches for car {number}")
+                    logger.info(f"Processing matches for car {number}")
                     existing_entries = Entry.objects.filter(
                         component=entries.first(), vehicle_number=number
                     )
@@ -216,7 +219,7 @@ class Command(BaseCommand):
                         e.vehicle_number = parts[1]
                     e.save()
                     for file in files:
-                        print(f"Adding file {file} to entry of car {number}")
+                        logger.info(f"Adding file {file} to entry of car {number}")
                         e_f = EntryFile()
                         e_f.entry = e
                         source_path = join(BASE_DIR, "import", file)
@@ -225,6 +228,6 @@ class Command(BaseCommand):
                         )
                         e_f.file = file_name
                         target_path = join(BASE_DIR, "uploads", file_name)
-                        print(f"Copied {file} to {target_path}")
+                        logger.info(f"Copied {file} to {target_path}")
                         e_f.save()
                         copyfile(source_path, target_path)
