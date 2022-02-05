@@ -13,10 +13,13 @@ from wizard.settings import (
 )
 from json import dumps, loads
 import speedtest
+from configparser import ConfigParser
 
 threads = []
 
 opened_processes = []
+mariadb_folder = "mariadb-10.6.5-winx64"
+mariadb_config = join(BASE_DIR, "my.cnf")
 
 
 def do_speedtest():
@@ -60,6 +63,23 @@ def exit_handler(signum, frame):
     for process in opened_processes:
         print("Killing child process with ID{}".format(process.pid))
         process.kill()
+    # TODO: The mariaDB is actually dead before this point
+    if exists(mariadb_config):
+        print("Exiting the mariaDB server")
+        mysqladmin_path = join(BASE_DIR, mariadb_folder, "bin", "mysqladmin.exe")
+        config = ConfigParser()
+        config.read(mariadb_config)
+        port = config["client"]["port"]
+        user = config["client"]["user"]
+        password = config["client"]["password"]
+        commandline = [
+            mysqladmin_path,
+            f"-u{user}",
+            f"-p{password}",
+            f"--port={port}",
+            "shutdown"
+        ]
+        Popen(commandline, shell=True)
     print("See you next time!")
     exit(0)
 
@@ -92,6 +112,12 @@ start("python.exe manage.py children")
 start("python.exe manage.py collectstatic --noinput")
 start(f"python.exe -m http.server {STATIC_PORT} --directory ./static")
 start(f"python.exe -m http.server {MEDIA_PORT} --directory ./uploads")
+
+if exists(mariadb_config):
+    print("Starting mariaDB")
+    mysqld_path = join(BASE_DIR, mariadb_folder, "bin", "mysqld.exe")
+    Popen(mysqld_path, shell=True) 
+
 print("Ready")
 
 try:
