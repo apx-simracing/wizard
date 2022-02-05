@@ -58,6 +58,7 @@ class Command(BaseCommand):
                     else:
                         logger.info("There is an server running. This is not our job.")
                 except Exception as e:
+                    logger.error(str(e), exc_info=True)
                     pass  # there will be a lot of access denied messages
 
     def handle(self, *args, **options):
@@ -156,8 +157,8 @@ class Command(BaseCommand):
                                         stderr=subprocess.DEVNULL,
                                     )
                                 except Exception as e:
-                                    logger.error(str(e))
                                     logger.error(f"cmd={cmd} cwd={cwd}")
+                                    logger.error(str(e), exc_info=True)
                                     # Exceptions can't really handled at this point, so we are ignoring them
                                     pass
                             else:
@@ -222,6 +223,7 @@ class Command(BaseCommand):
                                     server_obj.state = "Done updating reciever"
                                     server_obj.save()
                                 except Exception as e:
+                                    logger.error(str(e), exc_info=True)
                                     server_obj.state = (
                                         "Download for reciever failed: {}".format(e)
                                     )
@@ -247,7 +249,7 @@ class Command(BaseCommand):
                                 try:
                                     process_path = process.exe()
                                     if process_path.startswith(path):
-                                        logger.info("killing", process_path)
+                                        logger.info(f"killing: {process_path}")
                                         process.kill()
                                     cmd_line = process.cwd()
                                     expected_path = join(
@@ -265,11 +267,7 @@ class Command(BaseCommand):
                             if exists(path):
                                 rmtree(path)
                         except:
-                            logger.error(
-                                "Server {} has a delete lock, but I failed".format(
-                                    secret
-                                )
-                            )
+                            logger.error(f"Server {secret} has a delete lock, but I failed")
         except KeyboardInterrupt:
             # kill child processes, if needed
             self.kill_children()

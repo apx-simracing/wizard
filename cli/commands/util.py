@@ -1,3 +1,4 @@
+from os.path import exists as file_exists
 from subprocess import check_output, Popen, PIPE
 from re import match
 import glob
@@ -8,6 +9,14 @@ from urllib.parse import urljoin
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+def validate_file_path(path):
+    if not file_exists(path):
+        msg = f'File not found: "{path}"'
+        logger.error(msg)
+        raise Exception(msg)
+    return True
 
 
 def http_api_helper(env: dict, route: str, data: dict, method=post) -> Union[bool, str]:

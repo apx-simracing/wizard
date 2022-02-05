@@ -45,7 +45,9 @@ class Command(BaseCommand):
                 selected_suffix = suffix
                 break
         if selected_suffix is None:
-            raise Exception(f"We can't identify that file purpose: {filename}")
+            msg = f"We can't identify that file purpose: {filename}"
+            logger.error(msg)
+            raise Exception(msg)
         if "#" in vehicle_number:
             vehicle_number = vehicle_number.split("#")[1]
         if not full_path:
@@ -80,9 +82,9 @@ class Command(BaseCommand):
             )
        
         if entries.count() != 1:
-            raise Exception(
-                f"Did not manage to find a component with key {short_name}."
-            )
+            msg = f"Did not manage to find a component with key {short_name}."
+            logger.error(msg)
+            raise Exception(msg)
         else:
             entry = entries.first()
             logger.info(
@@ -98,7 +100,9 @@ class Command(BaseCommand):
                 component=entries.first(), layout=layout
             ).first()
             if track is None:
-                raise Exception(f"No track found with layout {layout}")
+                msg = f"No track found with layout {layout}"
+                logger.error(msg)
+                raise Exception(msg)
             logger.info("Component {}, layout {}".format(entries.first(), layout))
             for file in files:
                 logger.info(f"\t File {file}")
@@ -207,7 +211,9 @@ class Command(BaseCommand):
                         component=entries.first(), vehicle_number=number
                     )
                     if existing_entries.count() == 1:
-                        raise Exception("The entry is already existing for this component")
+                        msg = "The entry is already existing for this component"
+                        logger.error(msg)
+                        raise Exception(msg)
                     e = Entry()
                     e.component = entries.first()
                     if "#" not in number:

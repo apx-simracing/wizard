@@ -1,13 +1,13 @@
 from requests import post
 
-from commands.env import (
+from .env import (
     stop_command,
     list_command,
     oneclick_start_command,
     update_command,
 )
-from commands.status import get_status_command, get_drivers_command, get_states_command
-from commands.chat import (
+from .status import get_status_command, get_drivers_command, get_states_command
+from .chat import (
     chat_command,
     kick_command,
     add_bot_command,
@@ -17,7 +17,7 @@ from commands.chat import (
     next_session_command,
     rejoin_driver_command,
 )
-from commands.deployment import (
+from .deployment import (
     deploy_command,
     install_command,
     unlock_command,
@@ -27,13 +27,13 @@ from commands.deployment import (
     get_thumbs_command,
     weather_update_command,
 )
-from commands.build import (
+from .build import (
     build_skin_command,
     build_track_command,
     get_config_command,
     get_ports_command,
 )
-from commands.util import (
+from .util import (
     get_rfcmp_info_command,
     get_components_in_directory_command,
     check_config_command,

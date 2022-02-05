@@ -755,15 +755,23 @@ class ServerAdmin(admin.ModelAdmin):
                     mkdir(server_thumbs_path)
 
                 # server may changed -> download thumbs
-                thumbs_command = run_apx_command(
-                    key,
-                    "--cmd thumbnails --args {}".format(
-                        join(server_thumbs_path, "thumbs.tar.gz")
-                    ),
+                # OLD thumbs_command = run_apx_command(
+                #     key,
+                #     "--cmd thumbnails --args {}".format(
+                #         join(server_thumbs_path, "thumbs.tar.gz")
+                #     ),
+                # )
+
+                run_apx_command(
+                    key=key,
+                    cmd="thumbnails",
+                    args=[join(server_thumbs_path, "thumbs.tar.gz")]
                 )
+
                 # unpack the livery thumbnails, if needed
                 if not exists(join(MEDIA_ROOT, "thumbs")):
                     mkdir(join(MEDIA_ROOT, "thumbs"))
+                
                 server_key_path = join(MEDIA_ROOT, "thumbs", key)
                 if not exists(server_key_path):
                     mkdir(server_key_path)
@@ -777,6 +785,7 @@ class ServerAdmin(admin.ModelAdmin):
                     unlink(server_pack_path)
             messages.success(request, "The thumbnails are saved")
         except Exception as e:
+            logger.error(str(e), exc_info=True)
             messages.error(request, e)
 
     get_thumbnails.short_description = "Get thumbnails"

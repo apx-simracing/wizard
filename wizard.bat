@@ -20,9 +20,9 @@ if not exist "%dir%\db.sqlite3" (
 	python.exe "%dir%\manage.py" migrate
 	"%dir%\runaddcommon.bat"
 	python.exe "%dir%\setup.py"
-	python.exe "%dir%\apx.py"
+	python.exe "%dir%\launcher.py"
 )
 
-python.exe "%dir%\apx.py"
+python.exe "%dir%\launcher.py"
 
 pause

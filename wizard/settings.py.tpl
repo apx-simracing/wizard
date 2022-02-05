@@ -56,7 +56,7 @@ LOGGING = {
     'disable_existing_loggers': False,
     'formatters': {
         'verbose': {
-            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'format': '{levelname} {asctime} [{module}|{funcName}] {message}',
             'style': '{',
         }
     },
@@ -72,14 +72,27 @@ LOGGING = {
         '': {
             'handlers': ['file'],
             'propagate': True,
+            'level': 'INFO',
         },
         'django': {
             'handlers': ['file'],
             'propagate': True,
+            'level': 'INFO',
+        },
+        'django.request': {
+            'handlers': ['file'],
+            'propagate': True,
+            'level': 'WARNING',
+        },
+        'django.server': {
+            'handlers': ['file'],
+            'propagate': True,
+            'level': 'WARNING',
         },
         'root': {
             'handlers': ['file'],
-            'propagate': True,
+            'propagate': False,
+            'level': 'INFO',
         },
     }
 }
@@ -178,8 +191,6 @@ FAILURE_THRESHOLD = 500
 MEDIA_ROOT = join(str(BASE_DIR), "uploads")
 
 APX_ROOT = join(str(BASE_DIR), "cli")
-
-APX_DIRECT = False
 
 PACKS_ROOT = join(str(BASE_DIR), "packs")
 

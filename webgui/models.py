@@ -1,15 +1,15 @@
 from django.db import models
 from django.core.exceptions import ValidationError
 from django.contrib.auth.models import User
-from django.conf import settings
-from django import forms
+# from django.conf import settings
+# from django import forms
 from django.dispatch import receiver
 from os.path import isfile, basename
-from shutil import copy, rmtree
+# from shutil import copy, rmtree
 from os import remove, linesep, unlink, system
 from collections import OrderedDict
 from json import loads
-from django.contrib import messages
+# from django.contrib import messages
 from django.core.validators import RegexValidator, MinValueValidator, MaxValueValidator
 from webgui.util import (
     livery_filename,
@@ -17,7 +17,7 @@ from webgui.util import (
     run_apx_command,
     get_server_hash,
     get_key_root_path,
-    get_logfile_root_path,
+    # get_logfile_root_path,
     get_conditions_file_root,
     get_update_filename,
     get_hash,
@@ -25,8 +25,8 @@ from webgui.util import (
     get_random_string,
     create_virtual_config,
     do_server_interaction,
-    get_component_file_root,
-    RECIEVER_COMP_INFO,
+    # get_component_file_root,
+    # RECIEVER_COMP_INFO,
     get_plugin_root_path,
     create_firewall_script,
     get_random_short_name,
@@ -34,7 +34,7 @@ from webgui.util import (
 )
 from wizard.settings import (
     BASE_DIR,
-    FAILURE_THRESHOLD,
+    # FAILURE_THRESHOLD,
     MEDIA_ROOT,
     STATIC_URL,
     BASE_DIR,
@@ -1701,6 +1701,7 @@ class Server(models.Model):
                     )
                     response = response + vehicle_text + "</br>"
             except Exception as e:
+                logger.error(str(e), exc_info=True)
                 response = str(e)
         return mark_safe(response)
 
@@ -1875,9 +1876,17 @@ def remove_server_children_thread(instance):
 def background_action_chat(chat):
     try:
         key = get_server_hash(chat.server.url)
-        run_apx_command(key, "--cmd chat --args {} ".format(chat.message))
+        
+        run_apx_command(
+            key=key,
+            cmd="chat",
+            args=[chat.message]
+        )
+        
+        # OLD run_apx_command(key, "--cmd chat --args {} ".format(chat.message))
         chat.success = True
     except Exception as e:
+        logger.error(str(e), exc_info=True)
         chat.success = False
     finally:
         chat.save()
@@ -2213,6 +2222,7 @@ class TickerMessage(models.Model):
                     data["driver"], data["nearby"]
                 )
         except Exception as e:
+            logger.error(str(e), exc_info=True)
             logger.error(e)
             pass
         return self.type

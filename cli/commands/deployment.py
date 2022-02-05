@@ -1,8 +1,7 @@
-from os import path
 from requests import post, get
-from os.path import exists, basename
+from os.path import basename
 from json import loads, dumps
-from .util import http_api_helper
+from .util import http_api_helper, validate_file_path
 import logging
 
 logger = logging.getLogger(__name__)
@@ -20,8 +19,13 @@ def deploy_command(env, *args, **kwargs) -> bool:
     status_json = loads(running_text)
     if status_json and "not_running" not in status_json:
         raise Exception("Server is running, deploy failed")
+    
     file_name = args[0][0]
+    validate_file_path(file_name)
+    
     rfm_filename = args[0][1]
+    validate_file_path(rfm_filename)
+
     result = False
     upload_files = {}
     with open(file_name, "r") as file:
@@ -57,15 +61,18 @@ def weather_update_command(env, *args, **kwargs) -> bool:
     status_json = loads(running_text)
     if status_json and "not_running" not in status_json:
         raise Exception("Server is running, deploy failed")
+    
     file_name = args[0][0]
+    validate_file_path(file_name)
 
     result = False
-    upload_files = {}
+    # upload_files = {}
     with open(file_name, "r") as file:
         data = file.read()
         # add grip, if possible
-        json_data = loads(data)
+        # json_data = loads(data)
 
+        # TODO: why not json_data?
         got = post(
             url + "/weather",
             headers={"authorization": secret},
@@ -85,6 +92,7 @@ def install_command(env, *args, **kwargs) -> bool:
     status_json = loads(running_text)
     if "not_running" not in status_json:
         raise Exception("Server is running, install failed")
+    
     got, text = http_api_helper(env, "install", {}, get)
     logger.info(text)
     return got
@@ -99,6 +107,7 @@ def unlock_command(env, *args, **kwargs):
         url = server_data["url"]
         secret = server_data["secret"]
         file = args[0][0]
+        validate_file_path(file)
         got = post(
             url + "/unlock",
             headers={"authorization": secret},
@@ -115,7 +124,7 @@ def install_plugins_command(env, *args, **kwargs):
         server_data = env["server_data"][server_key]
         url = server_data["url"]
         secret = server_data["secret"]
-        file = args[0][0]
+        # file = args[0][0]
         files = {}
         paths = {}
         for index, arg in enumerate(args[0]):
@@ -145,7 +154,9 @@ def get_lockfile_command(env, *args, **kwargs):
         server_data = env["server_data"][server_key]
         url = server_data["url"]
         secret = server_data["secret"]
+        
         target_file = args[0][0]
+        
         got = get(url + "/lockfile", headers={"authorization": secret})
         with open(target_file, "wb") as f:
             f.write(got.content)
@@ -161,6 +172,7 @@ def get_thumbs_command(env, *args, **kwargs):
         url = server_data["url"]
         secret = server_data["secret"]
         target_file = args[0][0]
+        
         got = get(url + "/thumbs", headers={"authorization": secret})
         with open(target_file, "wb") as f:
             f.write(got.content)

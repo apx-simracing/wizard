@@ -38,7 +38,9 @@ class Command(BaseCommand):
         maint_file = join(BASE_DIR, "maint")
         got_lock = False
         if exists(maint_file):
-            raise Exception("Instance is in maintenance mode, aborting")
+            msg = "Instance is in maintenance mode, aborting"
+            logger.warning(msg)
+            raise Exception(msg)
         try:
             cron_id = options["cron_id"]
             cron_job = ServerCron.objects.get(pk=cron_id)
@@ -67,7 +69,7 @@ class Command(BaseCommand):
                             message.save()
                             background_action_chat(message)
         except Exception as e:
-            logger.error(e)
+            logger.error(str(e), exc_info=True)
         finally:
             if got_lock:
                 lock_path = join(BASE_DIR, "cron.lock")
