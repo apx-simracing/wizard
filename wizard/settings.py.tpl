@@ -192,6 +192,10 @@ MEDIA_ROOT = join(str(BASE_DIR), "uploads")
 
 APX_ROOT = join(str(BASE_DIR), "cli")
 
+RECIEVER_ROOT = join(str(BASE_DIR), "reciever-2021R87")
+
+RECIEVER_USE_LOCAL = True
+
 PACKS_ROOT = join(str(BASE_DIR), "packs")
 
 USER_SIGNUP_ENABLED = False

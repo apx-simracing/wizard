@@ -158,6 +158,7 @@ def get_lockfile_command(env, *args, **kwargs):
         target_file = args[0][0]
         
         got = get(url + "/lockfile", headers={"authorization": secret})
+        
         with open(target_file, "wb") as f:
             f.write(got.content)
         return True

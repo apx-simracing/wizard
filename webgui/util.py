@@ -1,4 +1,6 @@
 from wizard.settings import (
+    RECIEVER_ROOT,
+    RECIEVER_USE_LOCAL,
     APX_ROOT,
     MEDIA_ROOT,
     PACKS_ROOT,
@@ -122,7 +124,7 @@ def run_apx_command(key=None, cmd=None, args=None):
     run_apx_package_command(key, cmd, args)
 
 
-def sanitize_subprocess_cmd(cmd):
+def sanitize_subprocess_path(cmd):
     if not isinstance(cmd, str):
         raise ValidationError(f"{str(cmd)} is not a valid subprocess command")
     if ' ' not in cmd:
@@ -305,16 +307,37 @@ def set_state(id, message):
     models.state_map[id] = message
 
 
+def run_subprocess_command_with_logging(cmd):
+    process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+
+    for line in iter(process.stdout.readline, b''):
+        logger.info(line.rstrip().decode("utf-8"))
+
+    return process.poll()
+
+
 def bootstrap_reciever(root_path, server_obj, port, secret):
-    try:
-        set_state(server_obj.pk, "Downloading reciever release")
-        r = get(RECIEVER_DOWNLOAD_FROM)
-        z = zipfile.ZipFile(io.BytesIO(r.content))
-        z.extractall(root_path)
-        set_state(server_obj.pk, "Extracted reciever release")
-    except:
-        set_state(server_obj.pk, "Extracted reciever release")
-        return False
+    
+    if not RECIEVER_USE_LOCAL:
+        try:
+            set_state(server_obj.pk, f"Downloading reciever from {RECIEVER_DOWNLOAD_FROM}")
+            r = get(RECIEVER_DOWNLOAD_FROM)
+            z = zipfile.ZipFile(io.BytesIO(r.content))
+            z.extractall(root_path)
+            set_state(server_obj.pk, f"Extracted reciever to {root_path}")
+        except:
+            set_state(server_obj.pk, "Failed to download and extract reciever")
+            return False
+
+    else:
+        from distutils.dir_util import copy_tree
+        
+        if not exists(RECIEVER_ROOT):
+            set_state(server_obj.pk, f"Can't find local recever in {RECIEVER_ROOT}")
+            return False
+
+        copy_tree(RECIEVER_ROOT, root_path)
+        set_state(server_obj.pk, f"Extracted local reciever to {root_path}")
 
     reciever_path = join(root_path, "reciever")
     config = {
@@ -331,15 +354,20 @@ def bootstrap_reciever(root_path, server_obj, port, secret):
         config["wine_root_path"] = WINE_DRIVE + \
             ":\\" + root_path.replace("/", "\\")
         config["abstractionlayer"] = WINE_IMPLEMENTATION
+    
     set_state(server_obj.pk, "Doing APX reciever bootstrap")
     
+    cmd = sanitize_subprocess_path(join(reciever_path, "reciever.bat"))
+    cwd = sanitize_subprocess_path(reciever_path)
+    logger.info(f"Running {cmd} cwd={cwd}")
+
     try:
         # TODO: find solution for admin issue
-        got = subprocess.check_output(
-            join(reciever_path, "reciever.bat"), cwd=reciever_path, shell=True
-        ).decode("utf-8")
+        # got = subprocess.check_output(cmd, cwd=cwd, shell=True).decode("utf-8")
+        got = run_subprocess_command_with_logging(cmd)
+        logger.info(f"Result: {got}")
     except Exception as e:
-        logger.error(str(e), exc_info=True)
+        logger.error(e, exc_info=True)
         # Exceptions can't really handled at this point, so we are ignoring them
         set_state(server_obj.pk, str(e))
 
@@ -403,10 +431,6 @@ def bootstrap_reciever(root_path, server_obj, port, secret):
             key_path = join(key_root_path, "ServerKeys.bin")
             relative_path = join("keys", key, "ServerKeys.bin")
 
-            # OLD run_apx_command(
-            #     key, '--cmd lockfile --args "{}"'.format(key_path)
-            # )
-
             run_apx_command(
                 key=key,
                 cmd='lockfile',
@@ -422,7 +446,7 @@ def bootstrap_reciever(root_path, server_obj, port, secret):
                 break
             sleep(2)
         except Exception as e:
-            logger.error(str(e), exc_info=True)
+            logger.error(str(e))
             set_state(server_obj.pk, f"Key collect try {i} of 10 failed: {e}")
 
 

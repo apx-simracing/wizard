@@ -129,6 +129,7 @@ dmypy.json
 .pyre/
 
 # axp specific
+reciever-2021R87/
 server_children/
 static/
 packs/

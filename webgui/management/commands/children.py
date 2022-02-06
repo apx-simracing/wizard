@@ -12,10 +12,10 @@ from wizard.settings import (
     CHILDREN_DIR
 )
 import subprocess
-from webgui.util import sanitize_subprocess_cmd, RECIEVER_DOWNLOAD_FROM
+from webgui.util import sanitize_subprocess_path, RECIEVER_DOWNLOAD_FROM
 from time import sleep
 import zipfile, io
-from psutil import process_iter
+from psutil import process_iter, AccessDenied
 from requests import get
 import logging
 
@@ -57,8 +57,8 @@ class Command(BaseCommand):
                             process.kill()
                     else:
                         logger.info("There is an server running. This is not our job.")
-                except Exception as e:
-                    logger.error(str(e), exc_info=True)
+                except AccessDenied as e:
+                    logger.warning(str(e))
                     pass  # there will be a lot of access denied messages
 
     def handle(self, *args, **options):
@@ -145,8 +145,8 @@ class Command(BaseCommand):
                                 # TODO: python win path with space issue
                                 # check if there is already something running within the directory
                                 logger.info("Server {} needs start".format(secret))
-                                cmd = sanitize_subprocess_cmd(batch_path)
-                                # cwd = sanitize_subprocess_cmd(batch_path_cwd)
+                                cmd = sanitize_subprocess_path(batch_path)
+                                # cwd = sanitize_subprocess_path(batch_path_cwd)
                                 # cmd = batch_path
                                 cwd = batch_path_cwd
                                 try:
