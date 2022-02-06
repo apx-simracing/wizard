@@ -24,5 +24,3 @@ if not exist "%dir%\db.sqlite3" (
 )
 
 python.exe "%dir%\launcher.py"
-
-pause

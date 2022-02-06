@@ -367,7 +367,7 @@ def bootstrap_reciever(root_path, server_obj, port, secret):
         got = run_subprocess_command_with_logging(cmd)
         logger.info(f"Result: {got}")
     except Exception as e:
-        logger.error(e, exc_info=True)
+        logger.error(e, exc_info=1)
         # Exceptions can't really handled at this point, so we are ignoring them
         set_state(server_obj.pk, str(e))
 
@@ -446,7 +446,7 @@ def bootstrap_reciever(root_path, server_obj, port, secret):
                 break
             sleep(2)
         except Exception as e:
-            logger.error(str(e))
+            logger.error(e, exc_info=1)
             set_state(server_obj.pk, f"Key collect try {i} of 10 failed: {e}")
 
 
@@ -1019,8 +1019,7 @@ def do_server_interaction(server):
                 cmd="new_weekend"
             )
         except Exception as e:
-            logger.error(str(e), exc_info=True)
-            logger.error(e)
+            logger.error(e, exc_info=1)
         finally:
             server.action = ""
             server.save()
@@ -1039,8 +1038,7 @@ def do_server_interaction(server):
             )
 
         except Exception as e:
-            logger.error(str(e), exc_info=True)
-            logger.error(e)
+            logger.error(e, exc_info=1)
             set_state(server.pk, str(e))
         finally:
             server.action = ""
@@ -1161,8 +1159,7 @@ def do_server_interaction(server):
             if not server.ignore_start_hook:
                 do_embed_post(json_blob, discord_url)
         except Exception as e:
-            logger.error(str(e), exc_info=True)
-            logger.error(e)
+            logger.error(e, exc_info=1)
             set_state(server.pk, str(e))
             server.save()
         finally:
@@ -1193,7 +1190,7 @@ def do_server_interaction(server):
             )
 
         except Exception as e:
-            logger.error(str(e), exc_info=True)
+            logger.error(e, exc_info=1)
             set_state(server.pk, str(e))
             server.save()
         finally:
@@ -1230,7 +1227,7 @@ def do_server_interaction(server):
             if not server.ignore_stop_hook:
                 do_embed_post(json_blob, discord_url)
         except Exception as e:
-            logger.error(str(e), exc_info=True)
+            logger.error(e, exc_info=1)
             set_state(server.pk, str(e))
             server.save()
         finally:
@@ -1361,8 +1358,7 @@ def do_server_interaction(server):
                 )
         
         except Exception as e:
-            logger.error(str(e), exc_info=True)
-            logger.error(str(e))
+            logger.error(e, exc_info=1)
             set_state(server.pk, str(e))
         
         finally:
@@ -1435,8 +1431,7 @@ def do_server_interaction(server):
 
             server.server_unlock_key = None
         except Exception as e:
-            logger.error(str(e), exc_info=True)
-            logger.error("{} unlock failed".format(server.pk))
+            logger.error(f"{server.pk} unlock failed, reason: {str(e)}", exc_info=1)
 
         finally:
             server.save()

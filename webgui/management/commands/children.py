@@ -58,7 +58,7 @@ class Command(BaseCommand):
                     else:
                         logger.info("There is an server running. This is not our job.")
                 except AccessDenied as e:
-                    logger.warning(str(e))
+                    logger.warning(e)
                     pass  # there will be a lot of access denied messages
 
     def handle(self, *args, **options):
@@ -157,8 +157,7 @@ class Command(BaseCommand):
                                         stderr=subprocess.DEVNULL,
                                     )
                                 except Exception as e:
-                                    logger.error(f"cmd={cmd} cwd={cwd}")
-                                    logger.error(str(e), exc_info=True)
+                                    logger.error(e, exc_info=1)
                                     # Exceptions can't really handled at this point, so we are ignoring them
                                     pass
                             else:
@@ -223,7 +222,7 @@ class Command(BaseCommand):
                                     server_obj.state = "Done updating reciever"
                                     server_obj.save()
                                 except Exception as e:
-                                    logger.error(str(e), exc_info=True)
+                                    logger.error(e, exc_info=1)
                                     server_obj.state = (
                                         "Download for reciever failed: {}".format(e)
                                     )

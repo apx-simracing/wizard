@@ -1701,7 +1701,7 @@ class Server(models.Model):
                     )
                     response = response + vehicle_text + "</br>"
             except Exception as e:
-                logger.error(str(e), exc_info=True)
+                logger.error(e, exc_info=1)
                 response = str(e)
         return mark_safe(response)
 
@@ -1886,7 +1886,7 @@ def background_action_chat(chat):
         # OLD run_apx_command(key, "--cmd chat --args {} ".format(chat.message))
         chat.success = True
     except Exception as e:
-        logger.error(str(e), exc_info=True)
+        logger.error(e, exc_info=1)
         chat.success = False
     finally:
         chat.save()
@@ -2068,7 +2068,7 @@ def add_cron_to_windows(sender, instance, **kwargs):
                 diff_hours = 24 + diff_hours
 
             if diff_minutes < 0:
-                diff_minutes = 60 - start_minutes + end_Minutes
+                diff_minutes = 60 - start_minutes + end_minutes
 
             schedule_part = (
                 schedule_part + f" /ri {modifier} /du {diff_hours}:{diff_minutes}"
@@ -2077,7 +2077,7 @@ def add_cron_to_windows(sender, instance, **kwargs):
         run_command = f"start /d '{BASE_DIR}' /b 'apx' '{python_path}' manage.py cron_run {id}"
         command_line = f'schtasks /create /tn {task_name} /st {start_time} /sc {schedule_part} /tr "cmd /c {run_command}"'
         logger.info(command_line)
-        logger.info(command_line)
+        system(command_line)
 
 
 class TickerMessageType(models.TextChoices):
@@ -2222,7 +2222,6 @@ class TickerMessage(models.Model):
                     data["driver"], data["nearby"]
                 )
         except Exception as e:
-            logger.error(str(e), exc_info=True)
-            logger.error(e)
+            logger.error(e, exc_info=1)
             pass
         return self.type

@@ -69,7 +69,7 @@ class Command(BaseCommand):
                             message.save()
                             background_action_chat(message)
         except Exception as e:
-            logger.error(str(e), exc_info=True)
+            logger.error(e, exc_info=1)
         finally:
             if got_lock:
                 lock_path = join(BASE_DIR, "cron.lock")

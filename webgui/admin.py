@@ -785,7 +785,7 @@ class ServerAdmin(admin.ModelAdmin):
                     unlink(server_pack_path)
             messages.success(request, "The thumbnails are saved")
         except Exception as e:
-            logger.error(str(e), exc_info=True)
+            logger.error(e, exc_info=1)
             messages.error(request, e)
 
     get_thumbnails.short_description = "Get thumbnails"
