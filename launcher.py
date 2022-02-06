@@ -94,9 +94,9 @@ print("We will start following processes:")
 
 start(f'python.exe "{PATH_MANAGE_PY}" runserver {LISTEN_IP}:{WIZARD_PORT}', log=False)
 start(f'python.exe "{PATH_MANAGE_PY}" children', log=False)
-start(f'python.exe "{PATH_MANAGE_PY}" collectstatic --noinput')
-start(f'python.exe -m http.server "{STATIC_PORT}" --directory "{STATIC_ROOT}"')
-start(f'python.exe -m http.server "{MEDIA_PORT}" --directory "{MEDIA_ROOT}"')
+start(f'python.exe "{PATH_MANAGE_PY}" collectstatic --noinput', log=False)
+start(f'python.exe -m http.server "{STATIC_PORT}" --directory "{STATIC_ROOT}"', log=False)
+start(f'python.exe -m http.server "{MEDIA_PORT}" --directory "{MEDIA_ROOT}"', log=False)
 print("Ready")
 
 try:
