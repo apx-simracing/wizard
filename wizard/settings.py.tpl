@@ -63,10 +63,12 @@ LOGGING = {
     'handlers': {
         'file': {
             'level': 'DEBUG',
-            'class': 'logging.FileHandler',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'maxBytes': 15728640,
+            'backupCount': 10,
             'filename': join(BASE_DIR, "apx.log"),
             'formatter': 'verbose'
-        },
+        }
     },
     'loggers': {
         '': {

@@ -103,7 +103,6 @@ start(f'python.exe "{PATH_MANAGE_PY}" children', log=False)
 start(f'python.exe "{PATH_MANAGE_PY}" collectstatic --noinput', log=False)
 start(f'python.exe -m http.server "{STATIC_PORT}" --directory "{STATIC_ROOT}"', log=False)
 start(f'python.exe -m http.server "{MEDIA_PORT}" --directory "{MEDIA_ROOT}"', log=False)
-print("Ready")
 
 try:
     while True:
