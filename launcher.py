@@ -49,14 +49,20 @@ def bit_to_mbit(value: float):
 
 
 def start(cmd_line, log=True):
-    log = open(PATH_LOGS, "a")
     print('Executing "{}"'.format(cmd_line))
-    child = Popen(
-        cmd_line,
-        shell=True,
-        stdout=log,
-        stderr=log,
-    )
+    if log:
+        log = open(PATH_LOGS, "a")
+        child = Popen(
+            cmd_line,
+            shell=True,
+            stdout=log,
+            stderr=log,
+        )
+    else:
+        child = Popen(
+            cmd_line,
+            shell=True
+        )        
     opened_processes.append(child)
 
 
