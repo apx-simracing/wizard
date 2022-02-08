@@ -1,5 +1,10 @@
 from django.core.management.base import BaseCommand
-from webgui.models import Server, ServerCron, Chat, background_action_chat, do_server_interaction
+from webgui.models import (
+    ServerCron,
+    Chat,
+    background_action_chat,
+    do_server_interaction,
+)
 from wizard.settings import BASE_DIR
 from os.path import join, exists
 from os import unlink
@@ -51,23 +56,24 @@ class Command(BaseCommand):
             server.action = cron_job.action
             only_when_practice = cron_job.apply_only_if_practice
             if (
-                            not only_when_practice
-                            or only_when_practice
-                            and server.status is not None
-                            and '"session": "PRACTICE1"' in server.status
-                ):
-                    if cron_job.event is not None:
-                        server.event = cron_job.event
-                    server.save()
-                    do_server_interaction(server)
-                    if cron_job.message is not None and cron_job.message != "":
-                        parts = cron_job.message.split(linesep)
-                        for part in parts:
-                            message = Chat()
-                            message.server = server
-                            message.message = part
-                            message.save()
-                            background_action_chat(message)
+                not only_when_practice
+                or only_when_practice
+                and server.status is not None
+                and '"session": "PRACTICE1"' in server.status
+            ):
+                if cron_job.event is not None:
+                    server.event = cron_job.event
+                server.save()
+                do_server_interaction(server)
+                if cron_job.message is not None and cron_job.message != "":
+                    # FIXME: "linesep" is not defined
+                    parts = cron_job.message.split(linesep)
+                    for part in parts:
+                        message = Chat()
+                        message.server = server
+                        message.message = part
+                        message.save()
+                        background_action_chat(message)
         except Exception as e:
             logger.error(e, exc_info=1)
         finally:

@@ -1,4 +1,4 @@
-from django.core.management.base import BaseCommand, CommandError
+from django.core.management.base import BaseCommand
 from webgui.models import Server
 from os.path import join, exists
 from shutil import rmtree
@@ -9,264 +9,270 @@ from wizard.settings import (
     # PACKS_ROOT,
     # FAILURE_THRESHOLD,
     # INSTANCE_NAME,
-    CHILDREN_DIR
+    CHILDREN_DIR,
 )
 import subprocess
 from webgui.util import sanitize_subprocess_path, RECIEVER_DOWNLOAD_FROM
 from time import sleep
-import zipfile, io
-from psutil import process_iter, AccessDenied
+import zipfile
+import io
+from psutil import process_iter, AccessDenied, NoSuchProcess
 from requests import get
 import logging
 
 logger = logging.getLogger(__name__)
 
+
+# FIXME: communication between wizard and recievers should happen via http
+# except the initial *.bat launch
+class Reciever:
+
+    CHILDREN_DIR = CHILDREN_DIR
+
+    def __init__(self, secret):
+        self.secret = secret
+        self.path = join(self.CHILDREN_DIR, secret)
+        self.delete_lock_path = join(self.path, "delete.lock")
+        self.update_lock_path = join(self.path, "update.lock")
+        self.download_lock_path = join(self.path, "download.lock")
+        self.keys_path = join(self.path, "server", "UserData", "ServerKeys.bin")
+        self.json_path = join(self.path, "reciever", "server.json")
+        self.bat_path = join(self.path, "reciever", "reciever.bat")
+
+    def set_db_status(self, status):
+        server_obj = Server.objects.filter(public_secret=self.secret).first()
+
+        if server_obj:
+            server_obj.status = status
+            server_obj.save()
+            logger.info(f"Receiver {self.secret} status set to {status}")
+        else:
+            logger.warning(
+                f"Receiver {self.secret} db object not found for {self.path}"
+            )
+
+    def _get_pids(self):
+        # TODO: get pids for kill() and is_running() methods
+        pass
+
+    def has_python_running(self):
+        for process in process_iter(["exe"]):
+            if join(self.path, "python.exe") == process.info["exe"]:
+                return True
+        return False
+
+    def has_delete_lock(self):
+        return exists(self.delete_lock_path)
+
+    def has_update_lock(self):
+        return exists(self.update_lock_path)
+
+    def has_download_lock(self):
+        return exists(self.download_lock_path)
+
+    def make_download_lock(self):
+        with open(self.download_lock_path, "w") as f:
+            f.write("download.lock")
+
+    def remove_update_lock(self):
+        return unlink(self.update_lock_path)
+
+    def remove_download_lock(self):
+        return unlink(self.delete_lock_path)
+
+    def is_ready(self):
+        if not exists(self.path):
+            logger.info(
+                f"Reciever {self.secret} is not ready, path {self.path} does not exist"
+            )
+            return False
+        if not exists(self.keys_path):
+            logger.info(
+                f"Reciever {self.secret} is not ready, keys in {self.keys_path} do not exist"
+            )
+            return False
+        if not exists(self.json_path):
+            logger.info(
+                f"Reciever {self.secret} is not ready, server.json in {self.json_path} does not exist"
+            )
+            return False
+        if self.has_update_lock():
+            logger.info(f"Reciever {self.secret} is not ready, update.lock found")
+            return False
+        return True
+
+    def start(self):
+        # TODO: when stable redirect stdout to file or NULL
+        # check if there is already something running within the directory
+        cmd = sanitize_subprocess_path(self.bat_path)
+
+        logger.info(f"Starting {self.secret} reciever server via {self.bat_path}")
+
+        self.set_db_status("Starting reciever")
+
+        try:
+            subprocess.Popen(
+                cmd,
+                # stdout=subprocess.DEVNULL,
+                # stderr=subprocess.DEVNULL,
+            )
+        except Exception as e:
+            logger.error(e, exc_info=1)
+            self.set_db_status(str(e))
+            pass
+
+    def update(self):
+        logger.info(
+            f"Reciever {self.secret} has a update lock, trying to kill reciever. Full path: {self.path}"
+        )
+
+        self.kill()
+
+        try:
+            self.set_db_status(f"Downloading from {RECIEVER_DOWNLOAD_FROM}")
+
+            r = get(RECIEVER_DOWNLOAD_FROM)
+            z = zipfile.ZipFile(io.BytesIO(r.content))
+
+            self.set_db_status(f"Extracting contents to {self.path}")
+
+            z.extractall(self.path)
+
+            self.set_db_status(f"Extracted reciever release to {self.path}")
+
+            self.remove_update_lock()
+            self.remove_download_lock()
+
+            self.set_db_status(f"Done updating reciever in {self.path}")
+
+        except Exception as e:
+            logger.error(e, exc_info=1)
+
+            self.set_db_status(f"Reciever update failed: {str(e)}")
+
+    def delete(self):
+        logger.info(f"Processing to delete reciever {self.secret} in {self.path}")
+
+        if not self.has_delete_lock():
+            msg = f"Reciever {self.secret} delete() called in {self.path}, but no delete.lock found"
+            logger.critical(msg)
+            raise Exception(msg)
+
+        self.kill()
+
+        if exists(self.path):
+            rmtree(self.path)
+            logger.info(f"Reciever {self.secret} deleted in {self.path}")
+        else:
+            logger.error(f"Reciever {self.secret} files not found in {self.path}")
+
+    def kill(self):
+        logger.info(f"Processing to kill reciever {self.secret} in {self.path}")
+
+        _killed = []
+
+        # https://psutil.readthedocs.io/en/latest/#find-process-by-name
+        for process in process_iter(["name", "exe", "cmdline", "cwd", "pid"]):
+
+            process_info = process.info
+            process_exe = process_info["exe"]
+            process_cmdline = (
+                " ".join(process_info["cmdline"])
+                if process_info["cmdline"] is not None
+                else None
+            )
+            process_cwd = process_info["cwd"]
+
+            try:
+
+                # TODO: probably process_cmdline check should be enough
+                if process_exe is not None and "rFactor2 Dedicated.exe" in process_exe:
+                    logger.info("Process is a rF2 dedicated server. Skip.")
+                    continue
+
+                elif process_exe is not None and process_exe.startswith(self.path):
+                    logger.info(f"Killing process {process} b/c of exe: {process_exe}")
+
+                elif process_cmdline is not None and self.path in process_cmdline:
+                    logger.info(
+                        f"Killing process {process} b/c of cmdline: {process_cmdline}"
+                    )
+
+                elif process_cwd is not None and self.path in process_cwd:
+                    logger.info(f"Killing process {process} b/c of cwd: {process_cwd}")
+                else:
+                    # No reason to kill a process
+                    continue
+
+                process.kill()
+
+                _killed.append(process.pid)
+
+                logger.info(f"Killed process: {process_info}")
+
+            except AccessDenied:
+                logger.critical(
+                    f"Tried to kill a process without permission: {process_info}"
+                )
+
+            except NoSuchProcess:
+                logger.warning(f"Reciever {self.secret} in {self.path} already dead?")
+
+        self.set_db_status(None)
+
+        if len(_killed) == 0:
+            # NOTE: adding this to know if we are doing something unnecessary
+            raise Exception(f"Failed to kill receiver {self.secret} in {self.path}")
+
+
 class Command(BaseCommand):
     help = "Makes sure client recievers are running"
 
-    def kill_children(self):
-
+    def kill_recievers(self):
         if not exists(CHILDREN_DIR):
             logger.info(f"Nothing to kill or servers not in {CHILDREN_DIR}. Exiting...")
             return
 
-        folders = listdir(CHILDREN_DIR)
-        for secret in folders:
-            logger.info("Processing {} to exit...".format(secret))
-            server_obj = Server.objects.filter(public_secret=secret).first()
-            if server_obj:
-                server_obj.status = None
-                server_obj.save()
-
-            expected_path = join(CHILDREN_DIR, secret)
-            # TODO: SOMETHING IS STILL STRANGE HERE
-            # something_running = False
-            for process in process_iter():
-                try:
-                    path = process.exe()
-                    if "rFactor2 Dedicated.exe" not in path:
-                        if path.startswith(expected_path):
-                            logger.info(
-                                "Killing process {} b/c of origin path".format(process)
-                            )
-                            process.kill()
-                        # find the cmd
-                        cmd_line = process.cwd()
-                        if expected_path in cmd_line:
-                            logger.info("Killing process {} b/c of cwd path".format(process))
-                            process.kill()
-                    else:
-                        logger.info("There is an server running. This is not our job.")
-                except AccessDenied as e:
-                    logger.warning(e)
-                    pass  # there will be a lot of access denied messages
+        for secret in listdir(CHILDREN_DIR):
+            Reciever(secret).kill()
 
     def handle(self, *args, **options):
         try:
+            # TODO: while loop is blocking, async flow could be necessary if many children
             while True:
-                
-                sleep(5)
 
                 if not exists(CHILDREN_DIR):
-                    # let's sleep a bit more
                     sleep(10)
                     continue
 
-                folders = listdir(CHILDREN_DIR)
-                for secret in folders:
-                    server_obj = Server.objects.filter(public_secret=secret).first()
-                    if server_obj:
-                        server_obj.status = None
-                        server_obj.save()
+                for secret in listdir(CHILDREN_DIR):
 
-                    expected_path = join(
-                        CHILDREN_DIR, secret, "python.exe"
-                    )
+                    reciever = Reciever(secret)
 
-                    path = join(CHILDREN_DIR, secret)
-                    # TODO: SOMETHING IS STILL STRANGE HERE
-                    something_running = False
+                    if reciever.has_delete_lock():
+                        reciever.delete()
+                        continue
 
-                    delete_lock = join(
-                        CHILDREN_DIR,
-                        secret,
-                        "delete.lock",
-                    )
-                    update_lock = join(
-                        CHILDREN_DIR,
-                        secret,
-                        "update.lock",
-                    )
-                    if not exists(delete_lock):
-                        for process in process_iter():
-                            try:
-                                process_path = process.exe()
-                                if expected_path == process_path:
-                                    something_running = True
-                                    break
-                            except:
-                                pass
-                        if something_running:
-                            logger.info(
-                                "Server {} has running something. Will not be altered.".format(
-                                    secret
-                                )
-                            )
+                    if reciever.has_update_lock():
+                        # TODO: update only if there is no download lock???
+                        # what if there is both locks, but the process failed?
+                        # another state necessary???
+                        if not reciever.has_download_lock():
+                            reciever.make_download_lock()
+                            reciever.update()
+                        continue
 
-                        if not something_running:
-                            keys = join(
-                                CHILDREN_DIR,
-                                secret,
-                                "server",
-                                "UserData",
-                                "ServerKeys.bin",
-                            )
-                            server_json = join(
-                                CHILDREN_DIR,
-                                secret,
-                                "reciever",
-                                "server.json",
-                            )
-                            batch_path_cwd = join(
-                                CHILDREN_DIR, secret, "reciever\\"
-                            )
-                            batch_path = join(
-                                CHILDREN_DIR,
-                                secret,
-                                "reciever",
-                                "reciever.bat",
-                            )
-                            if (
-                                exists(path)
-                                and exists(keys)
-                                and exists(server_json)
-                                and not exists(update_lock)
-                            ):
-                                # TODO: python win path with space issue
-                                # check if there is already something running within the directory
-                                logger.info("Server {} needs start".format(secret))
-                                cmd = sanitize_subprocess_path(batch_path)
-                                # cwd = sanitize_subprocess_path(batch_path_cwd)
-                                # cmd = batch_path
-                                cwd = batch_path_cwd
-                                try:
-                                    subprocess.Popen(
-                                        cmd,
-                                        cwd=cwd,
-                                        stdout=subprocess.DEVNULL,
-                                        stderr=subprocess.DEVNULL,
-                                    )
-                                except Exception as e:
-                                    logger.error(e, exc_info=1)
-                                    # Exceptions can't really handled at this point, so we are ignoring them
-                                    pass
-                            else:
-                                logger.info(
-                                    "Server {} needs start, but is not finished deploying".format(
-                                        secret
-                                    )
-                                )
-                    if exists(update_lock):
-                        download_lock = join(
-                            CHILDREN_DIR,
-                            secret,
-                            "download.lock",
+                    if reciever.has_python_running():
+                        logger.info(
+                            f"Reciever {reciever.secret} has python.exe running. Let it be."
                         )
-                        if not exists(download_lock):
-                            with open(download_lock, "w") as file:
-                                file.write("locking download")
-                            try:
-                                logger.info(
-                                    "Server {} has a update lock, trying to kill reciever. Full path: {}".format(
-                                        secret, path
-                                    )
-                                )
-                                for process in process_iter():
-                                    try:
-                                        process_path = process.exe()
-                                        if process_path.startswith(path):
-                                            logger.info("killing", process_path)
-                                            process.kill()
-                                        cmd_line = process.cwd()
-                                        expected_path = join(
-                                            CHILDREN_DIR, secret
-                                        )
-                                        if expected_path in cmd_line:
-                                            logger.info(
-                                                "Killing process {} b/c of cwd path".format(
-                                                    process
-                                                )
-                                            )
-                                            process.kill()
+                        continue
 
-                                    except:
-                                        pass
-                                # attempt update
-                                try:
-                                    server_obj.state = "Downloading {}".format(
-                                        RECIEVER_DOWNLOAD_FROM
-                                    )
-                                    server_obj.save()
-                                    r = get(RECIEVER_DOWNLOAD_FROM)
-                                    z = zipfile.ZipFile(io.BytesIO(r.content))
-                                    server_obj.state = (
-                                        f"Extracting contents to {path}"
-                                    )
-                                    logger.info(f"Extracting contents to {path}")
-                                    server_obj.save()
-                                    z.extractall(path)
-                                    server_obj.state = "Extracted reciever release"
-                                    server_obj.save()
-                                    unlink(update_lock)
-                                    unlink(download_lock)
-                                    server_obj.state = "Done updating reciever"
-                                    server_obj.save()
-                                except Exception as e:
-                                    logger.error(e, exc_info=1)
-                                    server_obj.state = (
-                                        "Download for reciever failed: {}".format(e)
-                                    )
-                                    server_obj.save()
-                            except Exception as e:
-                                logger.error(
-                                    "Server {} has a update lock, but I failed".format(
-                                        secret
-                                    )
-                                )
-                                server_obj.state = (
-                                    "Something went wrong: {}".format(e)
-                                )
-                                server_obj.save()
-                    if exists(delete_lock):
-                        try:
-                            logger.info(
-                                "Server {} has a delete lock. Full path: {}".format(
-                                    secret, path
-                                )
-                            )
-                            for process in process_iter():
-                                try:
-                                    process_path = process.exe()
-                                    if process_path.startswith(path):
-                                        logger.info(f"killing: {process_path}")
-                                        process.kill()
-                                    cmd_line = process.cwd()
-                                    expected_path = join(
-                                        CHILDREN_DIR, secret
-                                    )
-                                    if expected_path in cmd_line:
-                                        logger.info(
-                                            "Killing process {} b/c of cwd path".format(
-                                                process
-                                            )
-                                        )
-                                        process.kill()
-                                except:
-                                    pass
-                            if exists(path):
-                                rmtree(path)
-                        except:
-                            logger.error(f"Server {secret} has a delete lock, but I failed")
+                    if reciever.is_ready():
+                        reciever.start()
+
+                sleep(5)
+
         except KeyboardInterrupt:
             # kill child processes, if needed
-            self.kill_children()
+            self.kill_recievers()

@@ -1,5 +1,4 @@
-from threading import Thread
-from subprocess import Popen, PIPE
+from subprocess import Popen
 import signal
 from sys import exit
 from os import path
@@ -59,10 +58,7 @@ def start(cmd_line, log=True):
             stderr=log,
         )
     else:
-        child = Popen(
-            cmd_line,
-            shell=True
-        )        
+        child = Popen(cmd_line, shell=True)
     opened_processes.append(child)
 
 
@@ -101,7 +97,9 @@ print("We will start following processes:")
 start(f'python.exe "{PATH_MANAGE_PY}" runserver {LISTEN_IP}:{WIZARD_PORT}', log=False)
 start(f'python.exe "{PATH_MANAGE_PY}" children', log=False)
 start(f'python.exe "{PATH_MANAGE_PY}" collectstatic --noinput', log=False)
-start(f'python.exe -m http.server "{STATIC_PORT}" --directory "{STATIC_ROOT}"', log=False)
+start(
+    f'python.exe -m http.server "{STATIC_PORT}" --directory "{STATIC_ROOT}"', log=False
+)
 start(f'python.exe -m http.server "{MEDIA_PORT}" --directory "{MEDIA_ROOT}"', log=False)
 
 try:
