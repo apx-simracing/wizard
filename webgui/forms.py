@@ -1,9 +1,11 @@
 from django import forms
-from webgui.models import User, Entry, Component, Event
+from webgui.models import Entry, Component, Event
 from django.core.exceptions import ValidationError
 from django.db.models import Q
 import os
-from .util import get_hash
+
+# from .util import get_hash
+from django.contrib.auth.models import User
 
 
 class EntryRevokeForm(forms.Form):

@@ -1,14 +1,15 @@
 from django.db import models
 from django.core.exceptions import ValidationError
-from django.contrib.auth.models import User
+
 # from django.conf import settings
 # from django import forms
-from django.dispatch import receiver
-from os.path import isfile, basename
 # from shutil import copy, rmtree
-from os import remove, linesep, unlink, system
+from os import remove, linesep, unlink, system, mkdir
+from os.path import exists, join, basename, isfile
 from collections import OrderedDict
-from json import loads
+from json import loads, dumps
+from json.decoder import JSONDecodeError
+
 # from django.contrib import messages
 from django.core.validators import RegexValidator, MinValueValidator, MaxValueValidator
 from webgui.util import (
@@ -20,7 +21,7 @@ from webgui.util import (
     # get_logfile_root_path,
     get_conditions_file_root,
     get_update_filename,
-    get_hash,
+    # get_hash,
     get_livery_mask_root,
     get_random_string,
     create_virtual_config,
@@ -37,7 +38,6 @@ from wizard.settings import (
     # FAILURE_THRESHOLD,
     MEDIA_ROOT,
     STATIC_URL,
-    BASE_DIR,
     MAX_SERVERS,
     MAX_UPSTREAM_BANDWIDTH,
     MAX_DOWNSTREAM_BANDWIDTH,
@@ -49,19 +49,16 @@ from wizard.settings import (
 from webgui.storage import OverwriteStorage
 from django.utils.html import mark_safe
 import re
-from os.path import exists, join, basename
-from os import mkdir, linesep
+from re import match
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from datetime import datetime
-from json import dumps
+
+# from datetime import datetime
+from threading import Thread
+
 import logging
 
 logger = logging.getLogger(__name__)
-
-status_map = {}
-state_map = {}
-session_map = {}
 
 USE_WAND = True
 try:
@@ -72,16 +69,17 @@ except ImportError:
     USE_WAND = False
     logger.info("Wand will not be available.")
 
-from threading import Thread
-from croniter import croniter
-from re import match
+status_map = {}
+state_map = {}
+session_map = {}
+
 
 MOD_WARNINGS = {
-    "1737056846": "The Nordschleife DLC is more than 2.8 Gigabytes large. Due to steamcmd, downloads of these sizes tend to abort. Consider uploading this mod by hand to the server and use it as a file based item: https://wiki.apx.chmr.eu/doku.php?id=file_based_content",
-    "2141682966": "The Portland DLC is more than 1.2 Gigabytes large. Due to steamcmd, downloads of these sizes tend to abort. Consider uploading this mod by hand to the server and use it as a file based item: https://wiki.apx.chmr.eu/doku.php?id=file_based_content",
-    "2121171862": "The GDB files of this mod are flawed with the issue that slashes for comments and quotes are included within names. Some layouts might not work which affects the addition of grip settings.",
-    "788866138": "This mod is quite large (apparently 5 gigabytes). Steamcmd won't be able to download this reliable. Consider uploading this mod by hand to the server and use it as a file based item: https://wiki.apx.chmr.eu/doku.php?id=file_based_content",
-    "2188673436": "This mod has 4.2 Gigabyte download. Due to steamcmd, downloads of these sizes tend to abort. Consider uploading this mod by hand to the server and use it as a file based item: https://wiki.apx.chmr.eu/doku.php?id=file_based_content",
+    "1737056846": "The Nordschleife DLC is more than 2.8 Gigabytes large. Due to steamcmd, downloads of these sizes tend to abort. Consider uploading this mod by hand to the server and use it as a file based item: https://wiki.apx.chmr.eu/doku.php?id=file_based_content",  # noqa: E501
+    "2141682966": "The Portland DLC is more than 1.2 Gigabytes large. Due to steamcmd, downloads of these sizes tend to abort. Consider uploading this mod by hand to the server and use it as a file based item: https://wiki.apx.chmr.eu/doku.php?id=file_based_content",  # noqa: E501
+    "2121171862": "The GDB files of this mod are flawed with the issue that slashes for comments and quotes are included within names. Some layouts might not work which affects the addition of grip settings.",  # noqa: E501
+    "788866138": "This mod is quite large (apparently 5 gigabytes). Steamcmd won't be able to download this reliable. Consider uploading this mod by hand to the server and use it as a file based item: https://wiki.apx.chmr.eu/doku.php?id=file_based_content",  # noqa: E501
+    "2188673436": "This mod has 4.2 Gigabyte download. Due to steamcmd, downloads of these sizes tend to abort. Consider uploading this mod by hand to the server and use it as a file based item: https://wiki.apx.chmr.eu/doku.php?id=file_based_content",  # noqa: E501
 }
 
 
@@ -180,7 +178,7 @@ class Component(models.Model):
     )
     is_official = models.BooleanField(
         default=False,
-        help_text="Is official content which follows the even version and uneven version scheme (APX will select versions for you). If not checked, we will use the version you've selected.",
+        help_text="Is official content which follows the even version and uneven version scheme (APX will select versions for you). If not checked, we will use the version you've selected.",  # noqa: E501
     )
     short_name = models.CharField(
         default=get_random_short_name,
@@ -245,7 +243,7 @@ class Component(models.Model):
             raise ValidationError("Only vehicle components can get an Update.ini file")
 
     def save(self, *args, **kwargs):
-        needles = ["number", "name", "description"]
+        # needles = ["number", "name", "description"]
         root_path = join(MEDIA_ROOT, "templates")
         if not exists(root_path):
             mkdir(root_path)
@@ -274,7 +272,7 @@ class Component(models.Model):
             for line in templateLines:
                 hadReplacement = False
                 for key, value in replacementMap.items():
-                    pattern = r"(" + key + '\s{0,}=\s{0,}"?([^"^\n^\r]+)"?)'
+                    pattern = rf'({key}\s{0,}=\s{0,}"?([^"^\n^\r]+)"?)'
                     matches = re.match(pattern, line, re.MULTILINE)
                     replacement = "{}={}\n".format(key, value)
                     if matches:
@@ -327,7 +325,7 @@ class RaceSessions(models.Model):
         null=True,
         blank=True,
         max_length=100,
-        help_text="If you want to use the mod provided grip, add a filename/ and or part of the rrbin filename. You can also add 'autosave' to use the autosave file, which must be existing (also keep settings folder in the server options). If found, the uploaded grip file will be ignored. You can also use the constants 'natural' or 'green' to define grip levels",
+        help_text="If you want to use the mod provided grip, add a filename/ and or part of the rrbin filename. You can also add 'autosave' to use the autosave file, which must be existing (also keep settings folder in the server options). If found, the uploaded grip file will be ignored. You can also use the constants 'natural' or 'green' to define grip levels",  # noqa: E501
     )
     start = models.TimeField(
         blank=True,
@@ -380,13 +378,16 @@ class RaceSessions(models.Model):
 
         if self.grip:
             str = str + ", gripfile: {}".format(basename(self.grip.name))
+
         if self.grip_needle:
             str = str + ", preset grip: {}".format(self.grip_needle)
 
         if self.grip or self.grip_needle:
             str = str + " " + self.real_road_time_scale + "x grip"
+
         if self.start:
             return str + ", start: {}".format(self.start)
+
         else:
             return str
 
@@ -465,7 +466,7 @@ class Entry(models.Model):
         null=True,
         blank=True,
         max_length=200,
-        help_text="On which class is the car based? If empty, APX will pick the first car as a basis. If the mod does not have multiple classes, you don't need this."
+        help_text="On which class is the car based? If empty, APX will pick the first car as a basis. If the mod does not have multiple classes, you don't need this."  # noqa: E501
         if EASY_MODE
         else "If no component template is used, name the class of the car suitable to be used as a base. Otherwise the first veh file will be used.",
     )
@@ -698,18 +699,11 @@ class ServerPlugin(models.Model):
     def clean(self):
         try:
             loads(self.overwrites)
-        except:
-            raise ValidationError("This JSON is not valid.")
+        except JSONDecodeError as e:
+            raise ValidationError(f"This JSON is not valid. Reason: {str(e)}")
 
         if ".dll" not in self.plugin_file.path.lower() and self.overwrites != "{}":
             raise ValidationError("The overwrites are only valid for DLL files.")
-
-
-class EventRejoinRules(models.TextChoices):
-    N = "0", "No rejoin"
-    F = "1", "yes with fresh vehicle"
-    S = "2", "yes with vehicle in same physical condition"
-    SI = "3", "yes including setup"
 
 
 class EventRejoinRules(models.TextChoices):
@@ -726,9 +720,10 @@ class EventFlagRules(models.TextChoices):
     EDQ = "3", "Everything except DQs"
 
 
+# NOTE: https://github.com/scipy/scipy/issues/8389
 class QualyMode(models.TextChoices):
     A = "0", "all cars qualify visibly on track together"
-    O = "1", "only one car is visible at a time"
+    O = "1", "only one car is visible at a time"  # noqa: #741
     R = "2", "use default from RFM, season, or track entry"
 
 
@@ -757,13 +752,13 @@ class EventFailureRates(models.TextChoices):
 
 
 class QualyJoinMode(models.TextChoices):
-    O = "0", "Open to all"
+    O = "0", "Open to all"  # noqa: #741
     P = "1", "Open but drivers will be pending an open session"
     C = "2", "closed"
 
 
 class ParcFermeMode(models.TextChoices):
-    O = "0", "Off"
+    O = "0", "Off"  # noqa: #741
     P = (
         "1",
         "no setup changes allowed between qual and race except for 'Free Settings')",
@@ -846,7 +841,7 @@ class Event(models.Model):
 
     real_weather = models.BooleanField(
         default=False,
-        help_text="Decides if real weather should be used. This will be using https://forum.studio-397.com/index.php?threads/weatherplugin.58614/ in the background.",
+        help_text="Decides if real weather should be used. This will be using https://forum.studio-397.com/index.php?threads/weatherplugin.58614/ in the background.",  # noqa: E501
     )
     weather_api = models.CharField(
         max_length=20,
@@ -1178,7 +1173,7 @@ class Event(models.Model):
     delay_between_sessions = models.IntegerField(
         default=30,
         validators=[MinValueValidator(0)],
-        help_text="Dedicated server delay before switching sessions automatically (after hotlaps are completed, if option is enabled), previously hardcoded to 45",
+        help_text="Dedicated server delay before switching sessions automatically (after hotlaps are completed, if option is enabled), previously hardcoded to 45",  # noqa: E501
     )
 
     collision_fade_threshold = models.FloatField(
@@ -1194,7 +1189,7 @@ class Event(models.Model):
 
     skip_all_session_unless_configured = models.BooleanField(
         default=False,
-        help_text="Instead of using default values from the player.JSON/ multiplayer.JSON, skip all sessions unless the ones configured with the conditions pack in APX.",
+        help_text="Instead of using default values from the player.JSON/ multiplayer.JSON, skip all sessions unless the ones configured with the conditions pack in APX.",  # noqa: E501
     )
 
     parc_ferme = models.CharField(
@@ -1209,7 +1204,7 @@ class Event(models.Model):
     free_settings = models.IntegerField(
         default=-1,
         validators=[MinValueValidator(-1), MaxValueValidator(1000000)],
-        help_text="Use only if Parc Ferme is used: -1=use RFM/season/GDB default, or add to allow minor changes with fixed\/parc ferme setups: 1=steering lock, 2=brake pressure, 4=starting fuel, 8=fuel strategy 16=tire compound, 32=brake bias, 64=front wing, 128=engine settings",
+        help_text="Use only if Parc Ferme is used: -1=use RFM/season/GDB default, or add to allow minor changes with fixed/parc ferme setups: 1=steering lock, 2=brake pressure, 4=starting fuel, 8=fuel strategy 16=tire compound, 32=brake bias, 64=front wing, 128=engine settings",  # noqa: E501
     )
 
     enable_auto_downloads = models.BooleanField(
@@ -1599,13 +1594,11 @@ class Server(models.Model):
         help_text="APX Session Id",
     )
 
-    
     ignore_start_hook = models.BooleanField(
         default=True,
         help_text="Don't fire the Discord messages when the server starts",
     )
 
-        
     ignore_stop_hook = models.BooleanField(
         default=True,
         help_text="Don't fire the Discord messages when the server stops",
@@ -1782,7 +1775,7 @@ class Server(models.Model):
             amount = Server.objects.count()
             if amount >= MAX_SERVERS:
                 raise ValidationError(
-                    "You exceeded the maximum amount of available servers. You are allowed to use {} server instances. You won't be able to deploy until you not exceed that limit anymore".format(
+                    "You exceeded the maximum amount of available servers. You are allowed to use {} server instances. You won't be able to deploy until you not exceed that limit anymore".format(  # noqa: E501
                         MAX_SERVERS
                     )
                 )
@@ -1876,13 +1869,9 @@ def remove_server_children_thread(instance):
 def background_action_chat(chat):
     try:
         key = get_server_hash(chat.server.url)
-        
-        run_apx_command(
-            key=key,
-            cmd="chat",
-            args=[chat.message]
-        )
-        
+
+        run_apx_command(key=key, cmd="chat", args=[chat.message])
+
         # OLD run_apx_command(key, "--cmd chat --args {} ".format(chat.message))
         chat.success = True
     except Exception as e:
@@ -2042,7 +2031,7 @@ def add_cron_to_windows(sender, instance, **kwargs):
             else "python.exe"
         )
 
-        today = datetime.today().strftime("%Y-%m-%d")
+        # today = datetime.today().strftime("%Y-%m-%d")
         schedule_part = ""
         start_time = instance.start_time
         end_time = instance.end_time
@@ -2074,7 +2063,9 @@ def add_cron_to_windows(sender, instance, **kwargs):
                 schedule_part + f" /ri {modifier} /du {diff_hours}:{diff_minutes}"
             )
         # https://stackoverflow.com/questions/6814075/windows-start-b-command-problem#6814111
-        run_command = f"start /d '{BASE_DIR}' /b 'apx' '{python_path}' manage.py cron_run {id}"
+        run_command = (
+            f"start /d '{BASE_DIR}' /b 'apx' '{python_path}' manage.py cron_run {id}"
+        )
         command_line = f'schtasks /create /tn {task_name} /st {start_time} /sc {schedule_part} /tr "cmd /c {run_command}"'
         logger.info(command_line)
         system(command_line)

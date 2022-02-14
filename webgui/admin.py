@@ -17,29 +17,25 @@ from webgui.models import (
     TrackFile,
     background_action_server,
 )
-from wizard.settings import OPENWEATHERAPI_KEY, RECIEVER_PORT_RANGE, EASY_MODE
+from wizard.settings import RECIEVER_PORT_RANGE, EASY_MODE  # , OPENWEATHERAPI_KEY
 from django.contrib import messages
-from django.utils.html import mark_safe
+from django.contrib.admin.views.main import ChangeList
+
+# from django.utils.html import mark_safe
 from django.contrib.auth.models import Group, User
-from django import forms
-from django.contrib import admin
 from webgui.util import (
     get_server_hash,
     run_apx_command,
     get_random_string,
     get_secret,
-    RECIEVER_DOWNLOAD_FROM,
+    # RECIEVER_DOWNLOAD_FROM,
     get_free_tcp_port,
     bootstrap_reciever,
 )
-from json import loads
-from datetime import datetime, timedelta
-import pytz
 import tarfile
-from os import unlink, mkdir, linesep
+from os import unlink, mkdir
 from os.path import join, exists
 from wizard.settings import MEDIA_ROOT, BASE_DIR
-from math import floor
 from django.urls import path
 from django.http import HttpResponseRedirect
 from pydng import generate_name
@@ -107,9 +103,6 @@ class ComponentAdmin(admin.ModelAdmin):
                 "template",
             )
         return fieldsets
-
-
-from django.contrib.admin.views.main import ChangeList
 
 
 class TrackChangelist(ChangeList):
@@ -579,6 +572,7 @@ class RaceConditionsAdmin(admin.ModelAdmin):
         return form
 
 
+# TODO: move as much logic as possible to Reciever class in recievers.py
 @admin.register(Server)
 class ServerAdmin(admin.ModelAdmin):
     ordering = ["name"]
@@ -586,7 +580,7 @@ class ServerAdmin(admin.ModelAdmin):
         "admin/server_list.html" if not EASY_MODE else "admin/server_list_easy.html"
     )
     actions = [
-        # "get_thumbnails", this is disabled  until work on the timing resumes.
+        # "get_thumbnails", this is disabled until work on the timing resumes.
         "apply_reciever_update",
         "delete_chats_and_messages",
         "start_server",
@@ -604,8 +598,6 @@ class ServerAdmin(admin.ModelAdmin):
 
     def run_wizard(self, request):
         root = BASE_DIR
-        from os.path import exists, join
-        from json import dumps
 
         server_children = join(root, "server_children")
         if not exists(server_children):
@@ -765,13 +757,13 @@ class ServerAdmin(admin.ModelAdmin):
                 run_apx_command(
                     key=key,
                     cmd="thumbnails",
-                    args=[join(server_thumbs_path, "thumbs.tar.gz")]
+                    args=[join(server_thumbs_path, "thumbs.tar.gz")],
                 )
 
                 # unpack the livery thumbnails, if needed
                 if not exists(join(MEDIA_ROOT, "thumbs")):
                     mkdir(join(MEDIA_ROOT, "thumbs"))
-                
+
                 server_key_path = join(MEDIA_ROOT, "thumbs", key)
                 if not exists(server_key_path):
                     mkdir(server_key_path)

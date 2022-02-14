@@ -5,6 +5,14 @@ from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 from django.contrib.auth.models import User, Group
 from django.db.models import Q
+from collections import OrderedDict
+import zipfile
+import tempfile
+from json import loads
+from json.decoder import JSONDecodeError
+from os import listdir, mkdir, unlink, linesep
+from os.path import join, exists
+from django.core.files import File
 from .forms import (
     SignupForm,
     EntryTokenForm,
@@ -24,21 +32,11 @@ from .models import (
     Entry,
     Chat,
     Server,
-    User,
     Event,
-    Component,
     TickerMessage,
     state_map,
-    status_map
+    status_map,
 )
-import pathlib
-import zipfile
-import tempfile
-from json import loads, dumps
-from django.core import serializers
-from os import listdir, mkdir, unlink, linesep
-from os.path import join, basename, exists
-from django.core.files import File
 from .util import (
     get_hash,
     get_random_string,
@@ -49,9 +47,11 @@ from .util import (
     FILE_NAME_SUFFIXES_MEANINGS,
 )
 from django.views.decorators.csrf import csrf_exempt
-import tarfile
-from math import floor, ceil
+from math import floor
 from django.views.decorators.cache import cache_page
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def get_status(request, secret: str):
@@ -337,8 +337,8 @@ def get_signup_form(request):
             user = form.cleaned_data.get("username")
             email = form.cleaned_data.get("email")
             password = form.cleaned_data.get("password")
-            password_repeat = form.cleaned_data.get("password_repeat")
-            rules_accept = form.cleaned_data.get("rules_accept")
+            # password_repeat = form.cleaned_data.get("password_repeat")
+            # rules_accept = form.cleaned_data.get("rules_accept")
 
             new_user = User(username=user, email=email, is_staff=True, is_active=True)
             new_user.set_password(password)
@@ -386,16 +386,12 @@ def get_entry_signup_form(request, entry: int):
     pass
 
 
-from datetime import date
-from collections import OrderedDict
-
-
 def get_ticker(request, secret: str):
     server = Server.objects.get(public_secret=secret)
 
     messages = TickerMessage.objects.filter(server__public_secret=secret)
 
-    session_id = server.session_id
+    # session_id = server.session_id
 
     last_status = server.status
     vehicles = {}
@@ -552,11 +548,14 @@ def add_status(request, secret: str):
     try:
         parsed_text = loads(got)
         if "session_id" in parsed_text and parsed_text["session_id"] is not None:
-            old_id = server.session_id
+            # old_id = server.session_id
             server.session_id = parsed_text["session_id"]
-            text.session_id = server.session_id
-    except:
+            # FIXME: ???
+            # text.session_id = server.session_id
+    except JSONDecodeError as e:
+        logger.error(f"Status parsing error. Reason: {str(e)}")
         pass
+
     status_map[server.pk] = got
     return HttpResponse("OK")
 
@@ -573,8 +572,8 @@ def live(request, secret: str):
     if not server:
         raise Http404()
     session_id = server.session_id
-    url = server.url
-    key = get_server_hash(url)
+    # url = server.url
+    # key = get_server_hash(url)
     is_full = request.GET.get("full", None) is not None
     status = loads(server.status)
     raw_messages = (
@@ -629,7 +628,8 @@ def live(request, secret: str):
             section_end = None
             try:
                 section_end = int(parts[2])
-            except:
+            except Exception as e:
+                logger.log(e, exc_info=1)
                 pass
             sections[section_name] = [section_start, section_end]
     ticker = []
@@ -638,7 +638,7 @@ def live(request, secret: str):
         .filter(session_id=session_id)
         .order_by("event_time")
     )
-    current_time = status["currentEventTime"]
+    # current_time = status["currentEventTime"]
     # we have only vlow atm
     for message in ticker_messages_raw:
         message_content = loads(message.message)
@@ -648,14 +648,16 @@ def live(request, secret: str):
         if "new_driver" in message_content:
             driver = message_content["new_driver"]
         laps = message_content["laps"]
-        event_time = message_content["event_time"]
+        # event_time = message_content["event_time"]
 
+        # FIXME: driver_vehicle is not used
         # find vehicle the driver is in
-        driver_vehicle = None
-        for vehicle in status["vehicles"]:
-            if vehicle["driverName"] == driver:
-                driver_vehicle = vehicle
-                break
+        # driver_vehicle = None
+        # for vehicle in status["vehicles"]:
+        #     if vehicle["driverName"] == driver:
+        #         driver_vehicle = vehicle
+        #         break
+
         message_content["vehicle"] = {
             "slotID": vehicle["slotID"],
             "vehicleName": vehicle["vehicleName"],
