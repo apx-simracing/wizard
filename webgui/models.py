@@ -7,12 +7,13 @@ from django.core.exceptions import ValidationError
 from os import remove, linesep, unlink, system, mkdir
 from os.path import exists, join, basename, isfile
 from collections import OrderedDict
-from json import loads, dumps
+import json
 from json.decoder import JSONDecodeError
 
 # from django.contrib import messages
 from django.core.validators import RegexValidator, MinValueValidator, MaxValueValidator
 from webgui.util import (
+    merge_dicts,
     livery_filename,
     track_filename,
     run_apx_command,
@@ -603,7 +604,7 @@ class EntryFile(models.Model):
 
             numberplate_template_r.compression = "dxt5"
             numberplate_template_l.compression = "dxt5"
-            numberplates = loads(self.entry.component.mask_positions)
+            numberplates = json.loads(self.entry.component.mask_positions)
             if numberplates is not None:
                 for numberplate in numberplates:
                     side = numberplate["side"]
@@ -698,7 +699,7 @@ class ServerPlugin(models.Model):
 
     def clean(self):
         try:
-            loads(self.overwrites)
+            json.loads(self.overwrites)
         except JSONDecodeError as e:
             raise ValidationError(f"This JSON is not valid. Reason: {str(e)}")
 
@@ -1221,8 +1222,22 @@ class Event(models.Model):
         help_text="Versioning scheme",
     )
 
-    @property
-    def multiplayer_json(self):
+    player_overwrites = models.TextField(
+        default="{}",
+        help_text="Additional player.JSON overwrites (values here will get a priority, don't leave trailing commas).",
+        blank=True,
+        verbose_name="Player.JSON overwrites",
+    )
+
+    multiplayer_overwrites = models.TextField(
+        default="{}",
+        help_text="Additional multiplayer.JSON overwrites (values here will get a priority, don't leave trailing commas).",
+        blank=True,
+        verbose_name="Multiplayer.JSON overwrites",
+    )
+
+    def get_multiplayer_json_dict(self):
+        # TODO: why OrderedDict?
         blob = OrderedDict()
         blob["Multiplayer Server Options"] = OrderedDict()
         blob["Multiplayer Server Options"]["Join Password"] = self.password
@@ -1314,10 +1329,16 @@ class Event(models.Model):
             self.forced_driving_view
         )
 
-        return dumps(blob)
+        result = json.loads(json.dumps(blob))
 
-    @property
-    def player_json(self):
+        if self.multiplayer_overwrites != "{}":
+            ow = json.loads(self.multiplayer_overwrites)
+            result = merge_dicts(result, ow)
+
+        return result
+
+    def get_player_json_dict(self):
+        # TODO: why OrderedDict?
         blob = OrderedDict()
         blob["Game Options"] = OrderedDict()
         blob["Game Options"]["MULTI Damage Multiplier"] = self.damage
@@ -1412,12 +1433,32 @@ class Event(models.Model):
         blob["Game Options"]["RPLAY AI Driver Strength"] = int(self.ai_strength)
         blob["Game Options"]["CHAMP AI Driver Strength"] = int(self.ai_strength)
 
-        return dumps(blob)
+        result = json.loads(json.dumps(blob))
+
+        if self.player_overwrites != "{}":
+            ow = json.loads(self.player_overwrites)
+            result = merge_dicts(result, ow)
+
+        return result
 
     def __str__(self):
         return "{}".format(self.name)
 
     def clean(self, *args, **kwargs):
+
+        for ow_field in ["player_overwrites", "multiplayer_overwrites"]:
+
+            ow_value = getattr(self, ow_field)
+
+            if not ow_value:
+                setattr(self, ow_field, "{}")
+
+            elif ow_value != "{}":
+                try:
+                    json.loads(ow_value)
+                except JSONDecodeError:
+                    raise ValidationError(f'"{ow_field}" is not a valid JSON.')
+
         if (
             self.real_weather
             and not self.weather_api
@@ -1425,8 +1466,10 @@ class Event(models.Model):
             and not self.weather_key
         ):
             raise ValidationError("Check your weather settings")
+
         if self.admin_password == "apx":
             raise ValidationError("Please set the admin password.")
+
         if self.upstream == 0 and self.downstream == 0:
             got = get_speedtest_result()
             if got is not None:
@@ -1680,7 +1723,7 @@ class Server(models.Model):
                 STATIC_URL
             )
             try:
-                content = loads(status.replace("'", '"'))
+                content = json.loads(status.replace("'", '"'))
                 for vehicle in content["vehicles"]:
                     vehicle_text = (
                         "[{}, Pit {}] {}: {} (SteamID:{}), penalties: {}".format(
@@ -1693,7 +1736,7 @@ class Server(models.Model):
                         )
                     )
                     response = response + vehicle_text + "</br>"
-            except Exception as e:
+            except JSONDecodeError as e:
                 logger.error(e, exc_info=1)
                 response = str(e)
         return mark_safe(response)
@@ -2136,7 +2179,7 @@ class TickerMessage(models.Model):
 
     def __str__(self):
         try:
-            data = loads(self.message)
+            data = json.loads(self.message)
             if self.type == "P+":
                 return "Penalty added for {}".format(data["driver"])
 

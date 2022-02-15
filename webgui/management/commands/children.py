@@ -47,7 +47,7 @@ class Command(BaseCommand):
                         continue
 
                     if reciever.has_python_running():
-                        logger.info(
+                        logger.debug(
                             f"Reciever {reciever.secret} has python.exe running. Let it be."
                         )
                         continue

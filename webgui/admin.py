@@ -1,3 +1,4 @@
+import json
 from django.contrib import admin
 from django.core import management
 from django.shortcuts import redirect
@@ -39,7 +40,7 @@ from wizard.settings import MEDIA_ROOT, BASE_DIR
 from django.urls import path
 from django.http import HttpResponseRedirect
 from pydng import generate_name
-from django.forms.widgets import CheckboxSelectMultiple
+from django.forms.widgets import CheckboxSelectMultiple, Textarea
 from threading import Thread
 import logging
 
@@ -333,6 +334,19 @@ class EntryFileAdmin(admin.ModelAdmin):
         return fieldsets
 
 
+class PrettyJSONWidget(Textarea):
+    def format_value(self, value):
+        try:
+            value = json.dumps(json.loads(value), indent=2, sort_keys=True)
+            row_lengths = [len(r) for r in value.split("\n")]
+            self.attrs["rows"] = min(max(len(row_lengths) + 2, 10), 30)
+            self.attrs["cols"] = min(max(max(row_lengths) + 2, 40), 120)
+            return value
+        except Exception as e:
+            logger.warning("Error while formatting JSON: {}".format(e))
+            return super(PrettyJSONWidget, self).format_value(value)
+
+
 @admin.register(Event)
 class EventAdmin(admin.ModelAdmin):
     ordering = ["name"]
@@ -360,6 +374,11 @@ class EventAdmin(admin.ModelAdmin):
         pass
 
     copy.short_description = "Copy event"
+
+    def formfield_for_dbfield(self, db_field, **kwargs):
+        if db_field.name in ["player_overwrites", "multiplayer_overwrites"]:
+            kwargs["widget"] = PrettyJSONWidget
+        return super(EventAdmin, self).formfield_for_dbfield(db_field, **kwargs)
 
     def get_form(self, request, obj=None, **kwargs):
         form = super(EventAdmin, self).get_form(request, obj=None, **kwargs)
@@ -524,6 +543,10 @@ class EventAdmin(admin.ModelAdmin):
                     "free_settings",
                 )
             },
+        ),
+        (
+            "Additional overwrites",
+            {"fields": ("player_overwrites", "multiplayer_overwrites")},
         ),
     )
 

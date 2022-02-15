@@ -118,6 +118,22 @@ RECIEVER_DOWNLOAD_FROM = "https://github.com/apx-simracing/reciever/releases/dow
 #     return got
 
 
+def merge_dicts(dict1, dict2):
+    for key, val in dict1.items():
+        if type(val) == dict:
+            if key in dict2 and type(dict2[key] == dict):
+                merge_dicts(dict1[key], dict2[key])
+        else:
+            if key in dict2:
+                dict1[key] = dict2[key]
+
+    for key, val in dict2.items():
+        if key not in dict1:
+            dict1[key] = val
+
+    return dict1
+
+
 def run_apx_command(key=None, cmd=None, args=None):
     run_apx_package_command(key, cmd, args)
 
@@ -293,7 +309,7 @@ def get_free_tcp_port(
             s.connect(("localhost", int(port)))
             s.shutdown(2)
             port = random.randint(port, maximum)
-        except:
+        except Exception:
             break
     return port
 
@@ -323,7 +339,8 @@ def bootstrap_reciever(root_path, server_obj, port, secret):
             z = zipfile.ZipFile(io.BytesIO(r.content))
             z.extractall(root_path)
             set_state(server_obj.pk, f"Extracted reciever to {root_path}")
-        except:
+        except Exception as e:
+            logger.error(str(e), exc_info=1)
             set_state(server_obj.pk, "Failed to download and extract reciever")
             return False
 
@@ -331,13 +348,16 @@ def bootstrap_reciever(root_path, server_obj, port, secret):
         from distutils.dir_util import copy_tree
 
         if not exists(RECIEVER_ROOT):
-            set_state(server_obj.pk, f"Can't find local recever in {RECIEVER_ROOT}")
+            msg = f"Can't find local recever in {RECIEVER_ROOT}"
+            set_state(server_obj.pk, msg)
+            logger.error(msg, exc_info=1)
             return False
 
         copy_tree(RECIEVER_ROOT, root_path)
         set_state(server_obj.pk, f"Extracted local reciever to {root_path}")
 
     reciever_path = join(root_path, "reciever")
+
     config = {
         "auth": secret,
         "debug": False,
@@ -455,9 +475,9 @@ def get_server_hash(url):
 
 
 def get_event_config(event_id: int):
-    server = models.Event.objects.get(pk=event_id)
-    ungrouped_vehicles = server.entries.all()
-    signup_components = server.signup_components.all()
+    event = models.Event.objects.get(pk=event_id)
+    ungrouped_vehicles = event.entries.all()
+    signup_components = event.signup_components.all()
     vehicle_groups = {}
     # entry_based_components_seen = []
     for vehicle in ungrouped_vehicles:
@@ -534,9 +554,9 @@ def get_event_config(event_id: int):
                     "numberplates": [],
                 },
             }
-    tracks = server.tracks.all().order_by("-id")
+    tracks = event.tracks.all().order_by("-id")
 
-    conditions = server.conditions
+    conditions = event.conditions
 
     track_groups = OrderedDict()
     for track in tracks:
@@ -560,10 +580,10 @@ def get_event_config(event_id: int):
                 "official": track_component.is_official,
             },
         }
-    if not server.mod_name or len(server.mod_name) == 0:
-        mod_name = "apx_{}".format(get_server_hash(server.name)[:8])
+    if not event.mod_name or len(event.mod_name) == 0:
+        mod_name = "apx_{}".format(get_server_hash(event.name)[:8])
     else:
-        mod_name = server.mod_name
+        mod_name = event.mod_name
     # grip settings
 
     sessions = conditions.sessions.all()
@@ -596,50 +616,57 @@ def get_event_config(event_id: int):
         session_list = None
 
     start_type = 0
-    if server.start_type == models.EvenStartType.FLS:
+    if event.start_type == models.EvenStartType.FLS:
         start_type = 1
-    if server.start_type == models.EvenStartType.SCR:
+    if event.start_type == models.EvenStartType.SCR:
         start_type = 2
-    if server.start_type == models.EvenStartType.FR:
+    if event.start_type == models.EvenStartType.FR:
         start_type = 4
     plugins = {}
-    for plugin in server.plugins.all():
+    for plugin in event.plugins.all():
         name = basename(str(plugin.plugin_file))
         plugins[name] = loads(plugin.overwrites)
     mod_version = (
-        server.event_mod_version
-        if server.event_mod_version
+        event.event_mod_version
+        if event.event_mod_version
         else "1.0.{}".format(get_random_string(5))
     )
+
+    multiplayer_json = event.get_multiplayer_json_dict()
+    player_json = event.get_player_json_dict()
+
     result = {
         "server": {
             "overwrites": {
-                "Multiplayer.JSON": loads(server.multiplayer_json),
-                "Player.JSON": loads(server.player_json),
+                "Multiplayer.JSON": multiplayer_json,
+                "Player.JSON": player_json,
             }
         },
-        "include_stock_skins": server.include_stock_skins,
-        "skip_all_session_unless_configured": server.skip_all_session_unless_configured,
+        "include_stock_skins": event.include_stock_skins,
+        "skip_all_session_unless_configured": event.skip_all_session_unless_configured,
         "conditions": session_list,
         "sessions": session_setting_list,
         "cars": vehicle_groups,
         "track": track_groups,
         "start_type": start_type,
-        "real_weather": server.real_weather,
-        "weather_api": server.weather_api,
-        "weather_key": server.weather_key,
-        "weather_uid": server.pk,
-        "temp_offset": server.temp_offset,
+        "real_weather": event.real_weather,
+        "weather_api": event.weather_api,
+        "weather_key": event.weather_key,
+        "weather_uid": event.pk,
+        "temp_offset": event.temp_offset,
         "comp": RECIEVER_COMP_INFO,
         "plugins": plugins,
         "race_finish_criteria": race_finish_criteria,
-        "welcome_message": server.welcome_message,
-        "force_versions": int(server.force_versions),
+        "welcome_message": event.welcome_message,
+        "force_versions": int(event.force_versions),
         "mod": {
             "name": mod_name,
             "version": mod_version,
         },
     }
+
+    logger.critical(result)
+
     return result
 
 
@@ -1355,7 +1382,8 @@ def do_server_interaction(server):
             if exists(key_path):
                 server.server_key = relative_path
                 server.save()
-        except:
+        except Exception as e:
+            logger.error(str(e))
             logger.error("{} does not offer a key".format(server.pk))
 
     # if an unlock key is present - attempt unlock!
