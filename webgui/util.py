@@ -665,8 +665,6 @@ def get_event_config(event_id: int):
         },
     }
 
-    logger.critical(result)
-
     return result
 
 

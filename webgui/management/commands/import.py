@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
 from django.db.models import Q
-from os.path import exists, join, isfile
+from os.path import exists, join
 from os import mkdir, listdir
 from wizard.settings import BASE_DIR, MEDIA_ROOT
 from webgui.models import Component, Entry, EntryFile, TrackFile, Track
@@ -66,21 +66,18 @@ class Command(BaseCommand):
         short_name = input(
             "Name a valid short name, steam id or component name to identify the files: "
         )
-        clear_old = input(
-            "Do you want to clear old entries referred to this component? Y/N: "
-        ).lower() == "y"
-        entries = Component.objects.filter(
-            Q(short_name=str(short_name))
+        clear_old = (
+            input(
+                "Do you want to clear old entries referred to this component? Y/N: "
+            ).lower()
+            == "y"
         )
+        entries = Component.objects.filter(Q(short_name=str(short_name)))
         if entries.count() == 0:
-            entries = Component.objects.filter(
-              Q(component_name=str(short_name))
-            )
+            entries = Component.objects.filter(Q(component_name=str(short_name)))
         if entries.count() == 0:
-            entries = Component.objects.filter(
-              Q(steam_id=int(short_name))
-            )
-       
+            entries = Component.objects.filter(Q(steam_id=int(short_name)))
+
         if entries.count() != 1:
             msg = f"Did not manage to find a component with key {short_name}."
             logger.error(msg)
@@ -196,7 +193,9 @@ class Command(BaseCommand):
                             f"\t File {file}: "
                             + "({})".format(self.get_file_meaning(file))
                         )
-            logger.info("Following files will be ignored (e. g. as it's a file not related to an entry or the file is not yet supported by APX)")
+            logger.info(
+                "Following files will be ignored (e. g. as it's a file not related to an entry or the file is not yet supported by APX)"
+            )
             for file in unknown_files:
                 logger.info(f"\t{file}")
             confirm = input("Is this okay? Y/N: ")
@@ -230,7 +229,10 @@ class Command(BaseCommand):
                         e_f.entry = e
                         source_path = join(BASE_DIR, "import", file)
                         file_name = self.get_vehicle_filename(
-                            file, e.component.component_name, e.component.short_name, number
+                            file,
+                            e.component.component_name,
+                            e.component.short_name,
+                            number,
                         )
                         e_f.file = file_name
                         target_path = join(BASE_DIR, "uploads", file_name)
