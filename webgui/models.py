@@ -1705,6 +1705,7 @@ class Server(models.Model):
         if not self.pk or self.pk not in status_map:
             return "-"
         status = status_map[self.pk]
+        status = json.loads(status.replace("'", '"'))
         # no status to report (e. g. new server)
         response = '<img src="{}admin/img/icon-no.svg" alt="Not Running"> Server is not running</br>'.format(
             STATIC_URL
@@ -1714,17 +1715,20 @@ class Server(models.Model):
             response = '<img src="{}admin/img/icon-no.svg" alt="Not Running"> Server did not return a status yet</br>'.format(
                 STATIC_URL
             )
-        elif status and "in_deploy" in status:
+        elif status and status["in_deploy"] is True:
             response = '<img src="{}admin/img/icon-no.svg" alt="Not Running"> The server is deploying</br>'.format(
                 STATIC_URL
             )
-        elif status and "not_running" not in status:
+        elif status and status["running"] is False:
+            response = '<img src="{}admin/img/icon-no.svg" alt="Not Running"> Server is not running</br>'.format(
+                STATIC_URL
+            )
+        elif status and status["running"] is True:
             response = '<img src="{}admin/img/icon-yes.svg" alt="Running"> Server is running</br>'.format(
                 STATIC_URL
             )
             try:
-                content = json.loads(status.replace("'", '"'))
-                for vehicle in content["vehicles"]:
+                for vehicle in status.get("vehicles", []):
                     vehicle_text = (
                         "[{}, Pit {}] {}: {} (SteamID:{}), penalties: {}".format(
                             vehicle["carClass"],
@@ -1744,34 +1748,35 @@ class Server(models.Model):
     def __str__(self):
         return self.url if not self.name else self.name
 
+    # TODO: too many checks here
     def clean(self):
         status = status_map[self.pk] if self.pk and self.pk in status_map else None
         if not self.server_key and self.action:
             raise ValidationError(
                 "The server was not processed yet. Wait a short time until the key is present."
             )
-        if status is not None and "not_running" in status and self.action == "R-":
+        if status is not None and status["running"] is False and self.action == "R-":
             raise ValidationError("The server is not running")
 
-        if status is not None and "not_running" not in status and self.action == "D":
+        if status is not None and status["running"] is True and self.action == "D":
             raise ValidationError("Stop the server first")
 
-        if status is not None and "not_running" not in status and self.action == "S+":
+        if status is not None and status["running"] is True and self.action == "S+":
             raise ValidationError("Stop the server first")
 
         if self.action == "D" and not self.event:
             raise ValidationError("You have to add an event before deploying")
 
-        if status and "in_deploy" in status:
+        if status and status["in_deploy"] in True:
             raise ValidationError("Wait until deployment is over")
 
-        if self.action == "W" and status and "in_deploy" in status:
+        if self.action == "W" and status and status["in_deploy"] is True:
             raise ValidationError("Wait until deployment is over")
 
-        if self.action == "W" and status and "not_running" in status:
+        if self.action == "W" and status and status["running"] is False:
             raise ValidationError("Start the server first")
 
-        if status is not None and "not_running" not in status and self.action == "WU":
+        if status is not None and status["running"] is False and self.action == "WU":
             raise ValidationError("Start the server first")
 
         if not str(self.url).endswith("/"):

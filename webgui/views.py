@@ -397,7 +397,7 @@ def get_ticker(request, secret: str):
     vehicles = {}
     raw_status = loads(last_status.replace("'", '"')) if last_status else None
     if raw_status:
-        for vehicle in raw_status["vehicles"]:
+        for vehicle in raw_status.get("vehicles", []):
             position = vehicle["position"]
             vehicles[position] = vehicle
     vehicles = OrderedDict(sorted(vehicles.items()))
@@ -601,7 +601,7 @@ def live(request, secret: str):
             if new_driver not in drivers[slot_id]:
                 drivers[slot_id].append(new_driver)
 
-    status["vehicles"] = sorted(status["vehicles"], key=lambda x: x["position"])
+    status["vehicles"] = sorted(status.get("vehicles", []), key=lambda x: x["position"])
     status["ticker_classes"] = (
         loads(server.event.timing_classes) if server.event else {}
     )

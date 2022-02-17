@@ -15,6 +15,7 @@ questions = [
         "key": "easy_mode",
         "values": ["yes", "no"],
         "is_hidden": False,
+        "skip": True,
     },
     {
         "text": "Name your username to be used",
@@ -36,6 +37,7 @@ questions = [
         "key": "global_steam",
         "values": ["yes", "no"],
         "is_hidden": False,
+        "skip": True,
     },
     {
         "text": "Do you want to support the project with adding the prefix '[APX]' to the server names?",
@@ -50,6 +52,7 @@ questions = [
         "key": "add_prefix",
         "values": ["sqlite", "mariadb"],
         "is_hidden": False,
+        "skip": True,
     },
     {
         "text": "Is APX allowed to speedtest to identify the bandwith (will be done once on startup). Uses speedtest.net in the background.",
@@ -68,8 +71,11 @@ for question in questions:
     values = question["values"]
     question_text = question["text"] + ": "
     is_hidden = question["is_hidden"]
+    skip = question.get("skip", False)
 
     reinsert_needed = False
+    if skip:
+        got = default
     if len(values) > 0:
         got = input(question["text"] + f" {values}: ")
     else:
@@ -137,8 +143,8 @@ with open(settings_tpl_path, "r", encoding="utf-8") as file:
                 '"', ""
             )  # make sure we have no string delimiters in there
             line = f'SECRET_KEY = "{random_key}"\n'
-        if "DEBUG" in line and not "'DEBUG'" in line:
-            line = f"DEBUG = False\n"
+        if "DEBUG" in line and "'DEBUG'" not in line:
+            line = "DEBUG = False\n"
         if "EASY_MODE" in line:
             line = f"EASY_MODE = {easy_mode}\n"
         if "USE_GLOBAL_STEAMCMD" in line:
