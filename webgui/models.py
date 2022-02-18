@@ -1910,8 +1910,10 @@ def remove_server_children_thread(instance):
     server_children = join(BASE_DIR, "server_children", id)
     # lock the path to prevent the children management module to start stuff again
     lock_path = join(server_children, "delete.lock")
-    with open(lock_path, "w") as file:
-        file.write("bye")
+    # folder could be already removed
+    if exists(server_children):
+        with open(lock_path, "w") as file:
+            file.write("bye")
 
 
 def background_action_chat(chat):

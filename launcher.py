@@ -1,4 +1,4 @@
-from subprocess import Popen
+import subprocess
 import signal
 from sys import exit
 from os import path
@@ -17,7 +17,7 @@ import speedtest
 
 PATH_MANAGE_PY = path.join(BASE_DIR, "manage.py")
 PATH_SPEED_TEST = path.join(BASE_DIR, "networkspeed.txt")
-PATH_LOGS = path.join(BASE_DIR, "wizard.log")
+# PATH_LOGS = path.join(BASE_DIR, "wizard.log")
 
 threads = []
 
@@ -50,15 +50,12 @@ def bit_to_mbit(value: float):
 def start(cmd_line, log=True):
     print('Executing "{}"'.format(cmd_line))
     if log:
-        log = open(PATH_LOGS, "a")
-        child = Popen(
-            cmd_line,
-            shell=True,
-            stdout=log,
-            stderr=log,
-        )
+        child = subprocess.Popen(cmd_line, shell=True)
     else:
-        child = Popen(cmd_line, shell=True)
+        child = subprocess.Popen(
+            cmd_line, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT
+        )
+
     opened_processes.append(child)
 
 
@@ -81,26 +78,31 @@ print("   /_\ | _ \ \/ /")
 print("  / _ \|  _/>  < ")
 print(" /_/ \_\_| /_/\_\\")
 print("stop debugging, start racing!")
+print("")
 if SPEEDTEST_ALLOWED:
     results = do_speedtest()
     print(
-        "Downstream: {} mbit/s, Upstream: {} mbit/s".format(
+        "Downstream: {} mbit/s, Upstream: {} mbit/s \n".format(
             results["downstream"], results["upstream"]
         )
     )
 else:
     print("No network speed available.")
 print("ALWAYS EXIT THIS WINDOW WITH CTRL+C!")
+print("")
 print("We will start following processes:")
 
 
-start(f'python.exe "{PATH_MANAGE_PY}" runserver {LISTEN_IP}:{WIZARD_PORT}', log=False)
-start(f'python.exe "{PATH_MANAGE_PY}" children', log=False)
+start(f'python.exe "{PATH_MANAGE_PY}" runserver {LISTEN_IP}:{WIZARD_PORT}', log=True)
+start(f'python.exe "{PATH_MANAGE_PY}" children', log=True)
 start(f'python.exe "{PATH_MANAGE_PY}" collectstatic --noinput', log=False)
 start(
     f'python.exe -m http.server "{STATIC_PORT}" --directory "{STATIC_ROOT}"', log=False
 )
-start(f'python.exe -m http.server "{MEDIA_PORT}" --directory "{MEDIA_ROOT}"', log=False)
+start(f'python.exe -m http.server "{MEDIA_PORT}" --directory "{MEDIA_ROOT}"', log=True)
+print("")
+print(f"Visit {LISTEN_IP}:{WIZARD_PORT} via your browser")
+print("")
 
 try:
     while True:

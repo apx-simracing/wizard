@@ -52,7 +52,14 @@ class Command(BaseCommand):
                         )
                         continue
 
+                    if reciever.has_bat_running():
+                        logger.debug(
+                            f"Reciever {reciever.secret} has reciever.bat running. Let it be."
+                        )
+                        continue
+
                     if reciever.is_ready():
+                        # TODO: revisit keys logic
                         reciever.start()
 
                 sleep(5)

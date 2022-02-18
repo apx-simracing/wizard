@@ -1051,6 +1051,11 @@ def do_server_interaction(server):
 
     if server.action == "S+":
         set_state(server.pk, "Start requested")
+
+        if server.event is None:
+            set_state(server.pk, "Event not set for server. Start failed.")
+            return
+
         try:
             # update weather, if needed
             if server.event and server.event.real_weather:
@@ -1226,6 +1231,9 @@ def do_server_interaction(server):
 
     if server.action == "D" or server.action == "D+F":
         set_state(server.pk, "Attempting to create event configuration")
+        if server.event is None:
+            set_state(server.pk, "Event not set for server. Update failed.")
+            return
         # save event json
         event_config = get_event_config(server.event.pk)
         # add ports

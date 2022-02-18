@@ -14,10 +14,9 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-# TODO:
-# - communication between wizard and recievers should happen via http except the initial *.bat launch
-# - db_object as init param for better decoupling
-# - for future improvements http -> websockets
+# TODO: communication between wizard and recievers should happen via http except the initial *.bat launch
+# TODO: db_object as init param for better decoupling
+# NOTE: for future improvements http -> websockets
 class Reciever:
 
     CHILDREN_DIR = CHILDREN_DIR
@@ -51,6 +50,12 @@ class Reciever:
     def has_python_running(self):
         for process in process_iter(["exe"]):
             if join(self.path, "python.exe") == process.info["exe"]:
+                return True
+        return False
+
+    def has_bat_running(self):
+        for process in process_iter(["cmdline"]):
+            if process.info["cmdline"] is not None and self.bat_path in process.info["cmdline"]:
                 return True
         return False
 
