@@ -12,34 +12,24 @@ from webgui.models import (
     Chat,
     RaceSessions,
     ServerCron,
-    TickerMessage,
     ServerPlugin,
     TrackFile,
     background_action_server,
 )
 from wizard.settings import OPENWEATHERAPI_KEY, RECIEVER_PORT_RANGE, EASY_MODE
 from django.contrib import messages
-from django.utils.html import mark_safe
 from django.contrib.auth.models import Group, User
-from django import forms
 from django.contrib import admin
 from webgui.util import (
-    get_server_hash,
-    run_apx_command,
     get_random_string,
     get_secret,
     RECIEVER_DOWNLOAD_FROM,
     get_free_tcp_port,
     bootstrap_reciever,
 )
-from json import loads
-from datetime import datetime, timedelta
-import pytz
-import tarfile
-from os import unlink, mkdir, linesep
-from os.path import join, exists
+from os import mkdir
+from os.path import join
 from wizard.settings import MEDIA_ROOT, BASE_DIR
-from math import floor
 from django.urls import path
 from django.http import HttpResponseRedirect
 from pydng import generate_name
@@ -653,13 +643,12 @@ class ServerAdmin(admin.ModelAdmin):
 
     def delete_chats_and_messages(self, request, queryset):
         for server in queryset:
-            TickerMessage.objects.filter(server=server).delete()
             Chat.objects.filter(server=server).delete()
             messages.success(
                 request, f"messages and chats are deleted for server {server}"
             )
 
-    delete_chats_and_messages.short_description = "Delete all chat and messages"
+    delete_chats_and_messages.short_description = "Delete all chat messages"
 
     def start_server(self, request, queryset):
         for server in queryset:
@@ -737,47 +726,6 @@ class ServerAdmin(admin.ModelAdmin):
                     ),
                 )
 
-    def get_thumbnails(self, request, queryset):
-        try:
-            for server in queryset:
-
-                url = server.url
-                key = get_server_hash(url)
-                media_thumbs_root = join(MEDIA_ROOT, "thumbs")
-                if not exists(media_thumbs_root):
-                    mkdir(media_thumbs_root)
-
-                server_thumbs_path = join(media_thumbs_root, key)
-                if not exists(server_thumbs_path):
-                    mkdir(server_thumbs_path)
-
-                # server may changed -> download thumbs
-                thumbs_command = run_apx_command(
-                    key,
-                    "--cmd thumbnails --args {}".format(
-                        join(server_thumbs_path, "thumbs.tar.gz")
-                    ),
-                )
-                # unpack the livery thumbnails, if needed
-                if not exists(join(MEDIA_ROOT, "thumbs")):
-                    mkdir(join(MEDIA_ROOT, "thumbs"))
-                server_key_path = join(MEDIA_ROOT, "thumbs", key)
-                if not exists(server_key_path):
-                    mkdir(server_key_path)
-
-                server_pack_path = join(server_key_path, "thumbs.tar.gz")
-                if exists(server_pack_path):
-                    # unpack liveries
-                    file = tarfile.open(server_pack_path)
-                    file.extractall(path=server_key_path)
-                    file.close()
-                    unlink(server_pack_path)
-            messages.success(request, "The thumbnails are saved")
-        except Exception as e:
-            messages.error(request, e)
-
-    get_thumbnails.short_description = "Get thumbnails"
-
     list_display = (
         "name",
         "event",
@@ -838,6 +786,8 @@ class ServerAdmin(admin.ModelAdmin):
         if obj.is_created_by_apx:
             fieldsets[0][1]["fields"] = [
                 "name",
+                "secret",
+                "url",
                 "public_secret",
                 "session_id",
                 "sim_port",
@@ -900,12 +850,6 @@ class ServerAdmin(admin.ModelAdmin):
     def get_status(self, obj):
         return obj.status_info
 
-
-@admin.register(TickerMessage)
-class TickerMessageAdmin(admin.ModelAdmin):
-    list_display = ["date", "type", "session_id", "event_time", "session", "__str__"]
-
-
 @admin.register(ServerPlugin)
 class ServerPluginAdmin(admin.ModelAdmin):
     pass
@@ -924,4 +868,3 @@ admin.site.unregister(User)
 
 if EASY_MODE:
     admin.site.unregister(Component)
-    admin.site.unregister(TickerMessage)

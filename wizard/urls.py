@@ -22,14 +22,9 @@ from webgui.views import (
     get_files_form,
     get_team_signup_form,
     get_team_revoke_form,
-    add_penalty,
     get_status,
-    get_ticker,
-    add_message,
     add_status,
     add_log,
-    get_weather,
-    live,
     index_view,
 )
 from wizard.settings import ENTRY_SIGNUP_ENABLED
@@ -44,16 +39,9 @@ if ENTRY_SIGNUP_ENABLED:
         path("files/", get_files_form),
         path("team/<event>", get_team_signup_form),
         path("revoke/", get_team_revoke_form),
-        path(
-            "penalty/<str:secret>/<str:driver>/<int:penalty>/<str:reason>", add_penalty
-        ),
         path("status/<str:secret>", get_status),
-        path("ticker/<str:secret>", get_ticker),
-        path("addmessage/<str:secret>", add_message),
         path("addstatus/<str:secret>", add_status),
         path("addlog/<str:secret>", add_log),
-        path("live/<str:secret>", live),
-        path("weather/<str:secret>", get_weather),
     ]
 else:
     urlpatterns = [
@@ -61,14 +49,7 @@ else:
         path("admin/", admin.site.urls),
         path("signup/", get_signup_form),
         path("rules/", get_rules_page),
-        path(
-            "penalty/<str:secret>/<str:driver>/<int:penalty>/<str:reason>", add_penalty
-        ),
         path("status/<str:secret>", get_status),
-        path("ticker/<str:secret>", get_ticker),
-        path("addmessage/<str:secret>", add_message),
         path("addstatus/<str:secret>", add_status),
         path("addlog/<str:secret>", add_log),
-        path("live/<str:secret>", live),
-        path("weather/<str:secret>", get_weather),
     ]
