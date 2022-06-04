@@ -79,7 +79,7 @@ jobs:
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: /home/runner/work/wizard/apx-build/release.zip
-          asset_name: wizard-2021R80p8.zip
+          asset_name: wizard-2022R80p8.zip
           asset_content_type: application/zip
 
       - name: Remove old releases
