@@ -1396,12 +1396,12 @@ class Event(models.Model):
         blob["Race Conditions"]["CHAMP ParcFerme"] = int(self.parc_ferme)
         blob["Race Conditions"]["CURNT ParcFerme"] = int(self.parc_ferme)
         blob["Race Conditions"]["GPRIX ParcFerme"] = int(self.parc_ferme)
-
-        blob["Race Conditions"]["MULTI FreeSettings"] = int(self.free_settings)
-        blob["Race Conditions"]["RPLAY FreeSettings"] = int(self.free_settings)
-        blob["Race Conditions"]["CHAMP FreeSettings"] = int(self.free_settings)
-        blob["Race Conditions"]["CURNT FreeSettings"] = int(self.free_settings)
-        blob["Race Conditions"]["GPRIX FreeSettings"] = int(self.free_settings)
+        
+        blob["Game Options"]["MULTI FreeSettings"] = int(self.free_settings)
+        blob["Game Options"]["RPLAY FreeSettings"] = int(self.free_settings)
+        blob["Game Options"]["CHAMP FreeSettings"] = int(self.free_settings)
+        blob["Game Options"]["CURNT FreeSettings"] = int(self.free_settings)
+        blob["Game Options"]["GPRIX FreeSettings"] = int(self.free_settings)
 
         blob["Race Conditions"]["MULTI Formation Lap"] = int(self.start_type)
         blob["Race Conditions"]["RPLAY Formation Lap"] = int(self.start_type)
