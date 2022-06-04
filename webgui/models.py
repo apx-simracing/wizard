@@ -325,7 +325,6 @@ class RaceSessions(models.Model):
     length = models.IntegerField(
         default=0, help_text="Target length of the session in minutes"
     )
-    weather = models.TextField(blank=True, null=True, default=None)
     track = models.ForeignKey("Track", on_delete=models.CASCADE, blank=True, null=True)
     race_finish_criteria = models.CharField(
         max_length=3,

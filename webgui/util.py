@@ -524,7 +524,6 @@ def get_event_config(event_id: int):
                     "length": session.length,
                     "laps": session.laps,
                     "start": str(session.start) if session.start is not None else None,
-                    "weather": session.weather,
                     "grip_needle": session.grip_needle,
                     "grip_scale": grip_scale,
                 }
