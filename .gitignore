@@ -127,3 +127,10 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+uploads/
+steamcmd*
+static/*
+server_children/*
+firewall_rules/*
+dump/*
+mariadb*
