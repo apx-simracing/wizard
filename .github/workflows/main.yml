@@ -65,8 +65,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: R80p7
-          release_name: R80p7 (${{ github.sha }})
+          tag_name: R80p8
+          release_name: R80p8 (${{ github.sha }})
           draft: false
           prerelease: true
           body: For a changelog, see https://wiki.apx.chmr.eu/doku.php?id=releases:80
@@ -79,7 +79,7 @@ jobs:
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: /home/runner/work/wizard/apx-build/release.zip
-          asset_name: wizard-2021R80p7.zip
+          asset_name: wizard-2021R80p8.zip
           asset_content_type: application/zip
 
       - name: Remove old releases
