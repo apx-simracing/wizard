@@ -855,31 +855,6 @@ def update_weather(session):
         session.save()
 
 
-def create_firewall_script(server):
-    content = 'Remove-NetFirewallRule -DisplayName "APX RULE {}*"'.format(
-        server.public_secret
-    )
-
-    content = content + "\n" + server.firewall_rules
-    firewall_paths = join(BASE_DIR, "firewall_rules")
-    if not exists(firewall_paths):
-        mkdir(firewall_paths)
-    path = join(BASE_DIR, firewall_paths, "firewall" + server.public_secret + ".ps1")
-    with open(path, "w") as file:
-        file.write(content)
-
-    path = join(
-        BASE_DIR, firewall_paths, "invoke_firewall" + server.public_secret + ".bat"
-    )
-    with open(path, "w") as file:
-        content = (
-            "@echo off\npowershell .\\firewall"
-            + server.public_secret
-            + ".ps1\necho Done adding rules\npause"
-        )
-        file.write(content)
-
-
 def get_component_blob_for_discord(
     entry, is_vehicle, is_update=False, additional_text=""
 ):

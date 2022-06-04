@@ -20,7 +20,6 @@ from webgui.util import (
     create_virtual_config,
     do_server_interaction,
     get_plugin_root_path,
-    create_firewall_script,
     get_random_short_name,
     get_speedtest_result,
 )
@@ -1509,7 +1508,7 @@ class Server(models.Model):
         blank=True,
         max_length=500,
         default=get_random_string(20),
-        help_text="The secret for the communication with the APX race control",
+        help_text="Used for internal purposes.",
     )
     event = models.ForeignKey(
         Event,
@@ -1618,23 +1617,6 @@ class Server(models.Model):
     def is_created_by_apx(self):
         path = join(BASE_DIR, "server_children", self.public_secret)
         return exists(path)
-
-    @property
-    def firewall_rules(self):
-        rules = ""
-
-        name = self.public_secret
-        for port in [self.sim_port, self.http_port]:
-            rules = (
-                rules
-                + f'New-NetFirewallRule -DisplayName "APX RULE {name} ({port} TCP)" -Direction Inbound -LocalPort {port} -Protocol TCP -Action Allow\n'
-            )
-        for port in [self.sim_port, self.http_port + 1, self.http_port + 2]:
-            rules = (
-                rules
-                + f'New-NetFirewallRule -DisplayName "APX RULE {name} ({port} UDP)" -Direction Inbound -LocalPort {port} -Protocol UDP -Action Allow\n'
-            )
-        return rules
 
     @property
     def ports(self):
@@ -1835,9 +1817,6 @@ class Server(models.Model):
                 target=background_action_server, args=(self,), daemon=True
             )
             background_thread.start()
-
-        create_firewall_script(self)
-
 
 def background_action_server(server):
     do_server_interaction(server)
