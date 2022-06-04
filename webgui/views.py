@@ -1,49 +1,25 @@
-from django.http import HttpResponse, Http404, JsonResponse, HttpResponseBadRequest
-from django.shortcuts import render, redirect
-from django.core.exceptions import ValidationError
-from django.core.files.storage import default_storage
-from django.core.files.base import ContentFile
-from django.contrib.auth.models import User, Group
-from django.db.models import Q
-from .forms import (
-    SignupForm,
-    EntryTokenForm,
-    EntryFileForm,
-    EntrySignupForm,
-    EntryRevokeForm,
-)
-from wizard.settings import (
-    USER_SIGNUP_ENABLED,
-    USER_SIGNUP_RULE_TEXT,
-    INSTANCE_NAME,
-    MEDIA_ROOT,
-    MEDIA_URL,
-)
-from .models import (
-    EntryFile,
-    Entry,
-    Server,
-    User,
-    Event,
-    status_map
-)
-from collections import OrderedDict
-import zipfile
 import tempfile
+import zipfile
 from json import loads
-from os import listdir, mkdir, unlink, linesep
-from os.path import join, exists
+from os import listdir, mkdir, unlink
+from os.path import exists, join
+
+from django.contrib.auth.models import Group, User
+from django.core.exceptions import ValidationError
 from django.core.files import File
-from .util import (
-    get_hash,
-    get_random_string,
-    do_post,
-    get_server_hash,
-    FILE_NAME_SUFFIXES,
-    FILE_NAME_SUFFIXES_MEANINGS,
-)
+from django.core.files.base import ContentFile
+from django.core.files.storage import default_storage
+from django.http import Http404, HttpResponse, HttpResponseBadRequest
+from django.shortcuts import redirect, render
 from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.cache import cache_page
+from wizard.settings import (INSTANCE_NAME, MEDIA_ROOT, MEDIA_URL,
+                             USER_SIGNUP_ENABLED, USER_SIGNUP_RULE_TEXT)
+
+from .forms import (EntryFileForm, EntryRevokeForm, EntrySignupForm,
+                    EntryTokenForm, SignupForm)
+from .models import Entry, EntryFile, Event, Server, User, status_map
+from .util import (FILE_NAME_SUFFIXES, FILE_NAME_SUFFIXES_MEANINGS, do_post,
+                   get_hash, get_random_string, get_server_hash)
 
 
 def get_status(request, secret: str):
@@ -344,7 +320,6 @@ def add_status(request, secret: str):
         if "session_id" in parsed_text and parsed_text["session_id"] is not None:
             old_id = server.session_id
             server.session_id = parsed_text["session_id"]
-            text.session_id = server.session_id
     except:
         pass
     status_map[server.pk] = got

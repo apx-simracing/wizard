@@ -16,20 +16,19 @@ from webgui.models import (
     TrackFile,
     background_action_server,
 )
-from wizard.settings import OPENWEATHERAPI_KEY, RECIEVER_PORT_RANGE, EASY_MODE
+from wizard.settings import RECIEVER_PORT_RANGE, EASY_MODE
 from django.contrib import messages
 from django.contrib.auth.models import Group, User
 from django.contrib import admin
 from webgui.util import (
     get_random_string,
     get_secret,
-    RECIEVER_DOWNLOAD_FROM,
     get_free_tcp_port,
     bootstrap_reciever,
 )
 from os import mkdir
 from os.path import join
-from wizard.settings import MEDIA_ROOT, BASE_DIR
+from wizard.settings import BASE_DIR
 from django.urls import path
 from django.http import HttpResponseRedirect
 from pydng import generate_name

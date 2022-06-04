@@ -1,15 +1,11 @@
 from django.db import models
 from django.core.exceptions import ValidationError
 from django.contrib.auth.models import User
-from django.conf import settings
-from django import forms
 from django.dispatch import receiver
 from os.path import isfile, basename
-from shutil import copy, rmtree
 from os import remove, linesep, unlink, system
 from collections import OrderedDict
 from json import loads
-from django.contrib import messages
 from django.core.validators import RegexValidator, MinValueValidator, MaxValueValidator
 from webgui.util import (
     livery_filename,
@@ -17,16 +13,12 @@ from webgui.util import (
     run_apx_command,
     get_server_hash,
     get_key_root_path,
-    get_logfile_root_path,
     get_conditions_file_root,
     get_update_filename,
-    get_hash,
     get_livery_mask_root,
     get_random_string,
     create_virtual_config,
     do_server_interaction,
-    get_component_file_root,
-    RECIEVER_COMP_INFO,
     get_plugin_root_path,
     create_firewall_script,
     get_random_short_name,
@@ -34,7 +26,6 @@ from webgui.util import (
 )
 from wizard.settings import (
     BASE_DIR,
-    FAILURE_THRESHOLD,
     MEDIA_ROOT,
     STATIC_URL,
     BASE_DIR,
@@ -53,8 +44,7 @@ from os.path import exists, join, basename
 from os import mkdir, linesep
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from datetime import datetime, timedelta, time, date
-import pytz
+from datetime import datetime
 from json import dumps
 
 status_map = {}
@@ -2057,7 +2047,7 @@ def add_cron_to_windows(sender, instance, **kwargs):
                 diff_hours = 24 + diff_hours
 
             if diff_minutes < 0:
-                diff_minutes = 60 - start_minutes + end_Minutes
+                diff_minutes = 60 - start_minutes + end_minutes
 
             schedule_part = (
                 schedule_part + f" /ri {modifier} /du {diff_hours}:{diff_minutes}"

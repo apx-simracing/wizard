@@ -1,50 +1,34 @@
-from wizard.settings import (
-    APX_ROOT,
-    MEDIA_ROOT,
-    PACKS_ROOT,
-    DISCORD_WEBHOOK,
-    DISCORD_WEBHOOK_NAME,
-    DISCORD_RACE_CONTROL_WEBHOOK,
-    DISCORD_RACE_CONTROL_WEBHOOK_NAME,
-    OPENWEATHERAPI_KEY,
-    BASE_DIR,
-    PUBLIC_URL,
-    BASE_DIR,
-    MAX_STEAMCMD_BANDWIDTH,
-    WEBUI_PORT_RANGE,
-    HTTP_PORT_RANGE,
-    SIM_PORT_RANGE,
-    MSG_LOGO,
-    USE_GLOBAL_STEAMCMD,
-    NON_WORKSHOP_PAYLOAD_TEXT,
-    WINE_DRIVE,
-    WINE_IMPLEMENTATION
-)
 import hashlib
-import subprocess
-from urllib.parse import urlparse
-from re import match
-from django.dispatch import receiver
-from os.path import join, exists, basename
-from os import mkdir, listdir, unlink, linesep
-from shutil import copyfile
-from . import models
-from json import loads, dumps
-import random
-from django.core.exceptions import ValidationError
-from django.db.models.signals import post_save
-import socket
-import discord
-from requests import post, get
-import secrets
-import string
-import socket
-import random
+import io
 import logging
-import zipfile, io
-from time import sleep
+import random
+import secrets
+import socket
+import string
+import subprocess
+import zipfile
 from collections import OrderedDict
+from json import dumps, loads
+from os import linesep, listdir, mkdir, unlink
+from os.path import basename, exists, join
+from re import match
+from shutil import copyfile
 from sys import platform
+from time import sleep
+from urllib.parse import urlparse
+
+from django.core.exceptions import ValidationError
+from requests import get, post
+from wizard.settings import (APX_ROOT, BASE_DIR, DISCORD_RACE_CONTROL_WEBHOOK,
+                             DISCORD_RACE_CONTROL_WEBHOOK_NAME,
+                             DISCORD_WEBHOOK, DISCORD_WEBHOOK_NAME,
+                             HTTP_PORT_RANGE, MEDIA_ROOT, MSG_LOGO,
+                             NON_WORKSHOP_PAYLOAD_TEXT, OPENWEATHERAPI_KEY,
+                             PACKS_ROOT, PUBLIC_URL, SIM_PORT_RANGE,
+                             USE_GLOBAL_STEAMCMD, WEBUI_PORT_RANGE, WINE_DRIVE,
+                             WINE_IMPLEMENTATION)
+
+from . import models
 
 logger = logging.getLogger(__name__)
 
@@ -749,9 +733,10 @@ def get_clouds(raw, rain=False):
 
 
 def update_weather(session):
-    from requests import get
     import datetime
     from math import floor
+
+    from requests import get
 
     if session.start and session.track:
         forecast = get(

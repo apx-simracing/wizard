@@ -3,7 +3,6 @@ from webgui.models import User, Entry, Component, Event
 from django.core.exceptions import ValidationError
 from django.db.models import Q
 import os
-from .util import get_hash
 
 
 class EntryRevokeForm(forms.Form):
