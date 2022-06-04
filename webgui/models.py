@@ -1555,10 +1555,6 @@ class Server(models.Model):
         default=False,
         help_text="Decides if APX will call dedicated server update when refreshing the content",
     )
-    update_weather_on_start = models.BooleanField(
-        default=False,
-        help_text="Decides if APX will update the weather data on start if real weather is enabled",
-    )
     collect_results_replays = models.BooleanField(
         default=False,
         help_text="Decides if APX will allow the server to persist the result and replay files",
