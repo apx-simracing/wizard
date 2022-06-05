@@ -22,7 +22,6 @@ from webgui.views import (
     get_files_form,
     get_team_signup_form,
     get_team_revoke_form,
-    get_status,
     add_status,
     add_log,
     index_view,
@@ -39,7 +38,6 @@ if ENTRY_SIGNUP_ENABLED:
         path("files/", get_files_form),
         path("team/<event>", get_team_signup_form),
         path("revoke/", get_team_revoke_form),
-        path("status/<str:secret>", get_status),
         path("addstatus/<str:secret>", add_status),
         path("addlog/<str:secret>", add_log),
     ]
@@ -49,7 +47,6 @@ else:
         path("admin/", admin.site.urls),
         path("signup/", get_signup_form),
         path("rules/", get_rules_page),
-        path("status/<str:secret>", get_status),
         path("addstatus/<str:secret>", add_status),
         path("addlog/<str:secret>", add_log),
     ]

@@ -27,7 +27,7 @@ class Command(BaseCommand):
         folders = listdir(root_path)
         for secret in folders:
             print("Processing {} to exit...".format(secret))
-            server_obj = Server.objects.filter(public_secret=secret).first()
+            server_obj = Server.objects.filter(local_path=secret).first()
             if server_obj:
                 server_obj.status = None
                 server_obj.save()
@@ -62,7 +62,7 @@ class Command(BaseCommand):
                 if exists(root_path):
                     folders = listdir(root_path)
                     for secret in folders:
-                        server_obj = Server.objects.filter(public_secret=secret).first()
+                        server_obj = Server.objects.filter(local_path=secret).first()
                         if server_obj:
                             server_obj.status = None
                             server_obj.save()

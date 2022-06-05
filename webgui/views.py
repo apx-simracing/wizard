@@ -21,20 +21,6 @@ from .models import Entry, EntryFile, Event, Server, User, status_map
 from .util import (FILE_NAME_SUFFIXES, FILE_NAME_SUFFIXES_MEANINGS, do_post,
                    get_hash, get_random_string, get_server_hash)
 
-
-def get_status(request, secret: str):
-    server = Server.objects.filter(public_secret=secret).first()
-    if not server:
-        raise Http404()
-    response = HttpResponse(server.status)
-    response["Access-Control-Allow-Origin"] = "*"
-    response["Access-Control-Allow-Methods"] = "GET, OPTIONS"
-    response["Access-Control-Max-Age"] = "1000"
-    response["Access-Control-Allow-Headers"] = "X-Requested-With, Content-Type"
-    response["Content-Type"] = "application/json"
-    return response
-
-
 def get_team_revoke_form(request):
     if request.method == "POST":
         form = EntryRevokeForm(request.POST)

@@ -1502,11 +1502,10 @@ class Server(models.Model):
         default="",
         help_text="The secret for the communication with the APX reciever",
     )
-    public_secret = models.CharField(
+    local_path = models.CharField(
         blank=True,
-        max_length=500,
-        default=get_random_string(20),
-        help_text="Used for internal purposes.",
+        max_length=255,
+        help_text="The path where an APX created server is located inside server_children",
     )
     event = models.ForeignKey(
         Event,
@@ -1617,7 +1616,7 @@ class Server(models.Model):
 
     @property
     def is_created_by_apx(self):
-        path = join(BASE_DIR, "server_children", self.public_secret)
+        path = join(BASE_DIR, "server_children", self.local_path)
         return exists(path)
 
     @property
@@ -1834,7 +1833,7 @@ def remove_server_children(sender, instance, **kwargs):
 
 
 def remove_server_children_thread(instance):
-    id = instance.public_secret
+    id = instance.local_path
     server_children = join(BASE_DIR, "server_children", id)
     # lock the path to prevent the children management module to start stuff again
     lock_path = join(server_children, "delete.lock")

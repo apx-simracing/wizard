@@ -584,7 +584,7 @@ class ServerAdmin(admin.ModelAdmin):
         if not exists(server_children):
             mkdir(server_children)
 
-        public_secret = get_random_string(20)
+        local_path = generate_name()
         secret = get_secret(20)
         servers = Server.objects.all()
         taken_ports = []
@@ -603,14 +603,14 @@ class ServerAdmin(admin.ModelAdmin):
             )
             return HttpResponseRedirect("../")
 
-        server_path = join(server_children, public_secret)
+        server_path = join(server_children, local_path)
         if not exists(server_path):
             mkdir(server_path)
             new_server = Server()
-            new_server.public_secret = public_secret
+            new_server.local_path = local_path
             new_server.secret = secret
             new_server.url = "http://localhost:{}/".format(port)
-            new_server.name = generate_name()
+            new_server.name = local_path
             new_server.state = "Created server element"
             new_server.save()
 
@@ -685,7 +685,7 @@ class ServerAdmin(admin.ModelAdmin):
                     )
                 else:
                     path = join(
-                        BASE_DIR, "server_children", server.public_secret, "update.lock"
+                        BASE_DIR, "server_children", server.local_path, "update.lock"
                     )
                     with open(path, "w") as file:
                         file.write("update")
@@ -724,7 +724,7 @@ class ServerAdmin(admin.ModelAdmin):
                         "ignore_stop_hook",
                         "ignore_updates_hook",
                         "secret",
-                        "public_secret",
+                        "local_path",
                         "session_id",
                         "sim_port",
                         "http_port",
@@ -771,7 +771,7 @@ class ServerAdmin(admin.ModelAdmin):
                 "name",
                 "secret",
                 "url",
-                "public_secret",
+                "local_path",
                 "session_id",
                 "sim_port",
                 "http_port",
@@ -783,7 +783,7 @@ class ServerAdmin(admin.ModelAdmin):
             fieldsets[0][1]["fields"].remove("remove_unused_mods")
             fieldsets[0][1]["fields"].remove("steamcmd_bandwidth")
             fieldsets[0][1]["fields"].remove("session_id")
-            fieldsets[0][1]["fields"].remove("public_secret")
+            fieldsets[0][1]["fields"].remove("local_path")
             fieldsets[0][1]["fields"].remove("webui_port")
             if "heartbeat_only" in fieldsets[0][1]["fields"]:
                 fieldsets[0][1]["fields"].remove("heartbeat_only")
@@ -810,7 +810,7 @@ class ServerAdmin(admin.ModelAdmin):
             "status_info",
             "is_created_by_apx",
             "state",
-            "public_secret",
+            "local_path",
             "logfile",
         )
 
