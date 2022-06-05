@@ -47,7 +47,6 @@ from datetime import datetime
 from json import dumps
 
 status_map = {}
-state_map = {}
 session_map = {}
 
 USE_WAND = True
@@ -1624,16 +1623,12 @@ class Server(models.Model):
         )
 
     @property
-    def state_info(self):
-        if not self.pk or self.pk not in state_map:
-            return "-"
-        return state_map[self.pk]
-
-    @property
     def status_info(self):
         if not self.pk or self.pk not in status_map:
             return "-"
         status = status_map[self.pk]
+        if status and "is_deploying" in status:
+            return "{0}: {1}".format(status["status"], status["args"]) if status["args"] is not None else status["status"]
         # no status to report (e. g. new server)
         response = '<img src="{}admin/img/icon-no.svg" alt="Not Running"> Server is not running</br>'.format(
             STATIC_URL
@@ -1647,10 +1642,11 @@ class Server(models.Model):
             response = '<img src="{}admin/img/icon-no.svg" alt="Not Running"> The server is deploying</br>'.format(
                 STATIC_URL
             )
-        elif status and "not_running" not in status:
+        elif status and "not_running" not in status and "vehicles" in status:
             response = '<img src="{}admin/img/icon-yes.svg" alt="Running"> Server is running</br>'.format(
                 STATIC_URL
             )
+        elif status and "vehicles" in status:
             try:
                 content = loads(status.replace("'", '"'))
                 for vehicle in content["vehicles"]:
@@ -1681,10 +1677,10 @@ class Server(models.Model):
         if status is not None and "not_running" in status and self.action == "R-":
             raise ValidationError("The server is not running")
 
-        if status is not None and "not_running" not in status and self.action == "D":
+        if status is not None and ("not_running" not in status or "is_deploying" in status) and self.action == "D":
             raise ValidationError("Stop the server first")
 
-        if status is not None and "not_running" not in status and self.action == "S+":
+        if status is not None and ("not_running" not in status or "is_deploying" in status) and self.action == "S+":
             raise ValidationError("Stop the server first")
 
         if self.action == "D" and not self.event:

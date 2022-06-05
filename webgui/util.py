@@ -255,7 +255,11 @@ def get_free_tcp_port(
 
 
 def set_state(id, message):
-    models.state_map[id] = message
+    models.status_map[id] = {
+        "status": message,
+        "args": None,
+        "is_deploying": True
+    }
 
 
 def bootstrap_reciever(root_path, server_obj, port, secret):
@@ -900,7 +904,7 @@ def do_server_interaction(server):
             event_config["branch"] = server.branch
             event_config["update_on_build"] = server.update_on_build
             event_config["callback_target"] = (
-                "{}addmessage/{}".format(PUBLIC_URL, server.public_secret)
+                "{}addstatus/{}".format(PUBLIC_URL, server.secret)
                 if PUBLIC_URL
                 else None
             )
@@ -976,7 +980,7 @@ def do_server_interaction(server):
         event_config["heartbeat_only"] = server.heartbeat_only
         event_config["update_on_build"] = server.update_on_build
         event_config["callback_target"] = (
-            "{}addmessage/{}".format(PUBLIC_URL, server.public_secret)
+            "{}addstatus/{}".format(PUBLIC_URL, server.secret)
             if PUBLIC_URL
             else None
         )

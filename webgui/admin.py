@@ -728,7 +728,6 @@ class ServerAdmin(admin.ModelAdmin):
     list_display = (
         "name",
         "event",
-        "state_info",
         "status_info",
         "is_created_by_apx",
         "ports",
@@ -768,7 +767,6 @@ class ServerAdmin(admin.ModelAdmin):
                     "fields": [
                         "action",
                         "status_info",
-                        "state_info",
                         "is_created_by_apx",
                         "update_on_build",
                         "remove_cbash_shaders",
@@ -806,7 +804,6 @@ class ServerAdmin(admin.ModelAdmin):
             fieldsets[2][1]["fields"] = [
                 "action",
                 "status_info",
-                "state_info",
                 "is_created_by_apx",
                 "update_on_build",
                 "collect_results_replays",
@@ -818,16 +815,13 @@ class ServerAdmin(admin.ModelAdmin):
             return self.readonly_fields + (
                 "event",
                 "status_info",
-                "state_info",
                 "is_created_by_apx",
                 "state",
-                "public_secret",
                 "logfile",
             )
         return self.readonly_fields + (
             "is_running",
             "status_info",
-            "state_info",
             "is_created_by_apx",
             "state",
             "public_secret",

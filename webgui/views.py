@@ -315,14 +315,14 @@ def add_status(request, secret: str):
     if not server:
         raise Http404()
     got = request.body.decode("utf-8")
+    parsed_text = None
     try:
         parsed_text = loads(got)
         if "session_id" in parsed_text and parsed_text["session_id"] is not None:
-            old_id = server.session_id
             server.session_id = parsed_text["session_id"]
     except:
         pass
-    status_map[server.pk] = got
+    status_map[server.pk] = parsed_text
     return HttpResponse("OK")
 
 
