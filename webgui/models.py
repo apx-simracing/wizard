@@ -1596,6 +1596,14 @@ class Server(models.Model):
         default=True,
         help_text="Don't fire the Discord messages when the server was updated",
     )
+    
+    message = models.CharField(
+        blank=True,
+        null=True,
+        default=None,
+        max_length=50,
+        help_text="Submits a message or a command to the given server. Can't be longer than 50 chars",
+    )
 
     @property
     def logfile(self):
@@ -1669,145 +1677,149 @@ class Server(models.Model):
         return self.url if not self.name else self.name
 
     def clean(self):
-        status = status_map[self.pk] if self.pk and self.pk in status_map else None
-        if not self.server_key and self.action:
-            raise ValidationError(
-                "The server was not processed yet. Wait a short time until the key is present."
+        if self.message:
+            if self.action:
+                raise ValidationError("Please deselect any action before writing chat messages")
+            # do only the message
+            background_thread = Thread(
+                target=background_action_chat, args=(self.url, self.message, ), daemon=True
             )
-        if status is not None and "not_running" in status and self.action == "R-":
-            raise ValidationError("The server is not running")
-
-        if status is not None and ("not_running" not in status or "is_deploying" in status) and self.action == "D":
-            raise ValidationError("Stop the server first")
-
-        if status is not None and ("not_running" not in status or "is_deploying" in status) and self.action == "S+":
-            raise ValidationError("Stop the server first")
-
-        if self.action == "D" and not self.event:
-            raise ValidationError("You have to add an event before deploying")
-
-        if status and "in_deploy" in status:
-            raise ValidationError("Wait until deployment is over")
-
-        if self.action == "W" and status and "in_deploy" in status:
-            raise ValidationError("Wait until deployment is over")
-
-        if self.action == "W" and status and "not_running" in status:
-            raise ValidationError("Start the server first")
-
-        if status is not None and "not_running" not in status and self.action == "WU":
-            raise ValidationError("Start the server first")
-
-        if not str(self.url).endswith("/"):
-            raise ValidationError("The server url must end with a slash!")
-
-        if self.remove_unused_mods and USE_GLOBAL_STEAMCMD:
-            raise ValidationError(
-                "You use a global steamcmd installation. Enabling this option will cause servers to remove the content for other servers."
-            )
-
-        other_servers = Server.objects.exclude(pk=self.pk)
-        occupied_ports_tcp = []
-        occupied_ports_udp = []
-
-        from urllib.parse import urlparse
-
-        server_url_parts = urlparse(self.url)
-        server_parts = server_url_parts.netloc.split(":")
-        server_host = server_parts[0]
-
-        for server in other_servers:
-            # locate host
-            url_parts = urlparse(server.url)
-            parts = url_parts.netloc.split(":")
-            host = parts[0]
-
-            if host == server_host:
-                occupied_ports_tcp.append(server.http_port)
-                occupied_ports_tcp.append(server.webui_port)
-                occupied_ports_udp.append(server.sim_port)
-
-        if (
-            self.http_port in occupied_ports_tcp
-            or self.webui_port in occupied_ports_tcp
-            or self.sim_port in occupied_ports_udp
-        ):
-            raise ValidationError(
-                "The ports of this server are already taken. TCP ports taken: {}, UDP ports taken: {}".format(
-                    occupied_ports_tcp, occupied_ports_tcp
-                )
-            )
-
-        if MAX_SERVERS is not None:
-            amount = Server.objects.count()
-            if amount >= MAX_SERVERS:
+            background_thread.start()
+            self.message = ""
+        else:
+            status = status_map[self.pk] if self.pk and self.pk in status_map else None
+            if not self.server_key and self.action:
                 raise ValidationError(
-                    "You exceeded the maximum amount of available servers. You are allowed to use {} server instances. You won't be able to deploy until you not exceed that limit anymore".format(
-                        MAX_SERVERS
-                    )
+                    "The server was not processed yet. Wait a short time until the key is present."
                 )
-        steamcmd_bandwidth = 0
-        other_servers = Server.objects.all()
-        for server in other_servers:
-            if server.event:
-                if self.pk != server.pk:
-                    steamcmd_bandwidth = steamcmd_bandwidth + server.steamcmd_bandwidth
+            if status is not None and "not_running" in status and self.action == "R-":
+                raise ValidationError("The server is not running")
 
-        steamcmd_bandwidth = steamcmd_bandwidth + self.steamcmd_bandwidth
+            if self.action == "D" and not self.event:
+                raise ValidationError("You have to add an event before deploying")
 
-        if MAX_STEAMCMD_BANDWIDTH is not None:
-            if self.steamcmd_bandwidth == 0:
+            if status and "in_deploy" in status:
+                raise ValidationError("Wait until deployment is over")
+
+            if self.action == "W" and status and "in_deploy" in status:
+                raise ValidationError("Wait until deployment is over")
+
+            if self.action == "W" and status and "not_running" in status:
+                raise ValidationError("Start the server first")
+
+            if status is not None and "not_running" not in status and self.action == "WU":
+                raise ValidationError("Start the server first")
+
+            if not str(self.url).endswith("/"):
+                raise ValidationError("The server url must end with a slash!")
+
+            if self.remove_unused_mods and USE_GLOBAL_STEAMCMD:
                 raise ValidationError(
-                    "Steamcmd bandwidth limits are enforced. Please set a limit for the steamcmd bandith. Available bandwidth: {} kbit/s".format(
-                        MAX_STEAMCMD_BANDWIDTH - steamcmd_bandwidth
-                    )
+                    "You use a global steamcmd installation. Enabling this option will cause servers to remove the content for other servers."
                 )
-            if steamcmd_bandwidth > MAX_STEAMCMD_BANDWIDTH:
+
+            other_servers = Server.objects.exclude(pk=self.pk)
+            occupied_ports_tcp = []
+            occupied_ports_udp = []
+
+            from urllib.parse import urlparse
+
+            server_url_parts = urlparse(self.url)
+            server_parts = server_url_parts.netloc.split(":")
+            server_host = server_parts[0]
+
+            for server in other_servers:
+                # locate host
+                url_parts = urlparse(server.url)
+                parts = url_parts.netloc.split(":")
+                host = parts[0]
+
+                if host == server_host:
+                    occupied_ports_tcp.append(server.http_port)
+                    occupied_ports_tcp.append(server.webui_port)
+                    occupied_ports_udp.append(server.sim_port)
+
+            if (
+                self.http_port in occupied_ports_tcp
+                or self.webui_port in occupied_ports_tcp
+                or self.sim_port in occupied_ports_udp
+            ):
                 raise ValidationError(
-                    "Steamcmd bandwidth limits are enforced. You exceeded the available bandwidth by {} kbit/s".format(
-                        (MAX_STEAMCMD_BANDWIDTH - steamcmd_bandwidth) * -1
+                    "The ports of this server are already taken. TCP ports taken: {}, UDP ports taken: {}".format(
+                        occupied_ports_tcp, occupied_ports_tcp
                     )
                 )
 
-        if self.event:
-            upstream_sum = 0
-            downstream_sum = 0
+            if MAX_SERVERS is not None:
+                amount = Server.objects.count()
+                if amount >= MAX_SERVERS:
+                    raise ValidationError(
+                        "You exceeded the maximum amount of available servers. You are allowed to use {} server instances. You won't be able to deploy until you not exceed that limit anymore".format(
+                            MAX_SERVERS
+                        )
+                    )
+            steamcmd_bandwidth = 0
             other_servers = Server.objects.all()
             for server in other_servers:
                 if server.event:
                     if self.pk != server.pk:
-                        upstream_sum = upstream_sum + server.event.upstream
-                        downstream_sum = downstream_sum + server.event.downstream
+                        steamcmd_bandwidth = steamcmd_bandwidth + server.steamcmd_bandwidth
 
-            upstream_sum = upstream_sum + self.event.upstream
-            downstream_sum = downstream_sum + self.event.downstream
-            if (
-                MAX_DOWNSTREAM_BANDWIDTH is not None
-                and MAX_DOWNSTREAM_BANDWIDTH <= downstream_sum
-            ):
-                raise ValidationError(
-                    "You exceeded the maximum downstream bandwidth. You are allowed to use {} kbit/s, you requested {} kbit/s".format(
-                        MAX_DOWNSTREAM_BANDWIDTH, downstream_sum
+            steamcmd_bandwidth = steamcmd_bandwidth + self.steamcmd_bandwidth
+
+            if MAX_STEAMCMD_BANDWIDTH is not None:
+                if self.steamcmd_bandwidth == 0:
+                    raise ValidationError(
+                        "Steamcmd bandwidth limits are enforced. Please set a limit for the steamcmd bandith. Available bandwidth: {} kbit/s".format(
+                            MAX_STEAMCMD_BANDWIDTH - steamcmd_bandwidth
+                        )
                     )
-                )
-            if (
-                MAX_UPSTREAM_BANDWIDTH is not None
-                and MAX_UPSTREAM_BANDWIDTH <= upstream_sum
-            ):
-                raise ValidationError(
-                    "You exceeded the maximum upstream bandwidth. You are allowed to use {} kbit/s, you requested {} kbit/s".format(
-                        MAX_UPSTREAM_BANDWIDTH, upstream_sum
+                if steamcmd_bandwidth > MAX_STEAMCMD_BANDWIDTH:
+                    raise ValidationError(
+                        "Steamcmd bandwidth limits are enforced. You exceeded the available bandwidth by {} kbit/s".format(
+                            (MAX_STEAMCMD_BANDWIDTH - steamcmd_bandwidth) * -1
+                        )
                     )
+
+            if self.event:
+                upstream_sum = 0
+                downstream_sum = 0
+                other_servers = Server.objects.all()
+                for server in other_servers:
+                    if server.event:
+                        if self.pk != server.pk:
+                            upstream_sum = upstream_sum + server.event.upstream
+                            downstream_sum = downstream_sum + server.event.downstream
+
+                upstream_sum = upstream_sum + self.event.upstream
+                downstream_sum = downstream_sum + self.event.downstream
+                if (
+                    MAX_DOWNSTREAM_BANDWIDTH is not None
+                    and MAX_DOWNSTREAM_BANDWIDTH <= downstream_sum
+                ):
+                    raise ValidationError(
+                        "You exceeded the maximum downstream bandwidth. You are allowed to use {} kbit/s, you requested {} kbit/s".format(
+                            MAX_DOWNSTREAM_BANDWIDTH, downstream_sum
+                        )
+                    )
+                if (
+                    MAX_UPSTREAM_BANDWIDTH is not None
+                    and MAX_UPSTREAM_BANDWIDTH <= upstream_sum
+                ):
+                    raise ValidationError(
+                        "You exceeded the maximum upstream bandwidth. You are allowed to use {} kbit/s, you requested {} kbit/s".format(
+                            MAX_UPSTREAM_BANDWIDTH, upstream_sum
+                        )
+                    )
+            if (
+                self.action != ""
+                or self.server_key is None
+                or self.server_unlock_key is not None
+            ):
+                background_thread = Thread(
+                    target=background_action_server, args=(self,), daemon=True
                 )
-        if (
-            self.action != ""
-            or self.server_key is None
-            or self.server_unlock_key is not None
-        ):
-            background_thread = Thread(
-                target=background_action_server, args=(self,), daemon=True
-            )
-            background_thread.start()
+                background_thread.start()
 
 def background_action_server(server):
     do_server_interaction(server)
@@ -1830,45 +1842,17 @@ def remove_server_children_thread(instance):
         file.write("bye")
 
 
-def background_action_chat(chat):
+def background_action_chat(server_url, message):
     try:
-        key = get_server_hash(chat.server.url)
-        run_apx_command(key, "--cmd chat --args {} ".format(chat.message))
-        chat.success = True
+        key = get_server_hash(server_url)
+        run_apx_command(key, "--cmd chat --args {} ".format(message))
     except Exception as e:
-        chat.success = False
-    finally:
-        chat.save()
+        print(e)
 
 
 @receiver(post_save, sender=Server)
 def my_handler(sender, instance, **kwargs):
     create_virtual_config()
-
-
-class Chat(models.Model):
-    server = models.ForeignKey(Server, on_delete=models.CASCADE)
-    message = models.TextField(
-        blank=True,
-        null=True,
-        default=None,
-        max_length=50,
-        help_text="Submits a message or a command to the given server. Can't be longer than 50 chars",
-    )
-    success = models.BooleanField(default=False)
-    date = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return "{}@{}: {}".format(
-            self.server, self.date.strftime("%m/%d/%Y, %H:%M:%S"), self.message
-        )
-
-    def clean(self):
-        background_thread = Thread(
-            target=background_action_chat, args=(self,), daemon=True
-        )
-        background_thread.start()
-
 
 class ServerCron(models.Model):
     class Meta:

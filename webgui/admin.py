@@ -9,7 +9,6 @@ from webgui.models import (
     Event,
     RaceConditions,
     Server,
-    Chat,
     RaceSessions,
     ServerCron,
     ServerPlugin,
@@ -220,18 +219,6 @@ class EntryAdmin(admin.ModelAdmin):
         if EASY_MODE:
             fieldsets[1][1]["fields"] = ("team_name", "vehicle_number", "base_class")
         return fieldsets
-
-
-@admin.register(Chat)
-class ChatAdmin(admin.ModelAdmin):
-    readonly_fields = ("success", "date")
-    list_display = (
-        "server",
-        "message",
-        "success",
-        "date",
-    )
-
 
 @admin.register(ServerCron)
 class ServerCronAdmin(admin.ModelAdmin):
@@ -640,15 +627,6 @@ class ServerAdmin(admin.ModelAdmin):
             )
         return HttpResponseRedirect("../")
 
-    def delete_chats_and_messages(self, request, queryset):
-        for server in queryset:
-            Chat.objects.filter(server=server).delete()
-            messages.success(
-                request, f"messages and chats are deleted for server {server}"
-            )
-
-    delete_chats_and_messages.short_description = "Delete all chat messages"
-
     def start_server(self, request, queryset):
         for server in queryset:
             server.action = "S+"
@@ -772,6 +750,14 @@ class ServerAdmin(admin.ModelAdmin):
                         "remove_cbash_shaders",
                         "remove_settings",
                         "collect_results_replays",
+                    ]
+                },
+            ),
+            (
+                "Chatting and commands",
+                {
+                    "fields": [
+                        "message"
                     ]
                 },
             ),
