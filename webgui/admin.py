@@ -821,7 +821,7 @@ class ServerAdmin(admin.ModelAdmin):
         if not status or status == "-":
             return False
         return (
-            "Server is not running" not in status
+            "Server is running" not in status
         )  # get_stauts returns the display text, not the status anymore.
 
     is_running.short_description = "Running"

@@ -1,3 +1,7 @@
+from csv import excel_tab
+from posixpath import pathsep
+from shutil import copyfile
+from black import E
 from django.db import models
 from django.core.exceptions import ValidationError
 from django.contrib.auth.models import User
@@ -23,6 +27,7 @@ from webgui.util import (
     get_random_short_name,
     get_speedtest_result,
 )
+from webgui.utils.rFm import rF2RfM
 from wizard.settings import (
     BASE_DIR,
     MEDIA_ROOT,
@@ -391,8 +396,55 @@ class RaceConditions(models.Model):
         help_text="An rFm file to overwrite standards, speeds, pit boxes etc.",
     )
 
-    sessions = models.ManyToManyField(RaceSessions, blank=True)
+    settings = models.TextField(
+        default=None,
+        null=True,
+        blank=True,
+        help_text="See https://wiki.apx.chmr.eu/doku.php?id=rfm_settings for details"
+    )
 
+    sessions = models.ManyToManyField(RaceSessions, blank=True)
+    def save(self, *args, **kwargs):
+        template_path = join(BASE_DIR, "default.rfm")
+        rfm_file = rF2RfM(template_path)
+        relative_path = join("conditions", get_random_string(10) + ".rfm") if not self.rfm else self.rfm.name
+        target_path = join(join(MEDIA_ROOT,  relative_path))
+        
+        if self.settings:
+            lines = self.settings.split(linesep)
+            for section_name, section_content in rfm_file.sections.items():
+                for index, item in enumerate(section_content):
+                    key = item["key"]
+                    for line in lines:
+                        if line.startswith(key) and "PitGroup" not in line:
+                            parts = line.split("=")
+                            new_value = parts[1].strip()
+                            rfm_file.sections[section_name][index] = {
+                                "key": key,
+                                "value": new_value
+                            }
+            for line in lines:
+                if "Group" in line:
+                    parts = line.split("=")
+                    group_number = parts[0].replace("Group", "")
+                    new_value = parts[1].strip()
+                    for index, item in enumerate(rfm_file.sections["PitGroupOrder"]):
+                        key = item["key"]
+                        value = item["value"]
+                        if f"Group{group_number}" in value:
+                            rfm_file.sections["PitGroupOrder"][index] = {
+                                "key": key,
+                                "value": f"{new_value}, Group{group_number}"
+                            }
+
+            rfm_file.write(target_path)
+        
+            self.rfm = relative_path
+
+
+
+        
+        super(RaceConditions, self).save(*args, **kwargs)
     def __str__(self):
         sessions = self.sessions.all()
         sessions_list = []
