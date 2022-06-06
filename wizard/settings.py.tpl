@@ -133,6 +133,8 @@ STATIC_ROOT = join(str(BASE_DIR), "static")
 
 STATIC_URL = f"http://localhost:{STATIC_PORT}/"
 
+LIBRARY_PATH = None
+
 MEDIA_PORT = 8282
 
 MEDIA_URL = f"http://localhost:{MEDIA_PORT}/"

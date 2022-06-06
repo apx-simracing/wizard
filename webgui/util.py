@@ -26,7 +26,7 @@ from wizard.settings import (APX_ROOT, BASE_DIR, DISCORD_RACE_CONTROL_WEBHOOK,
                              NON_WORKSHOP_PAYLOAD_TEXT, OPENWEATHERAPI_KEY,
                              PACKS_ROOT, PUBLIC_URL, SIM_PORT_RANGE,
                              USE_GLOBAL_STEAMCMD, WEBUI_PORT_RANGE, WINE_DRIVE,
-                             WINE_IMPLEMENTATION)
+                             WINE_IMPLEMENTATION, LIBRARY_PATH)
 
 from . import models
 
@@ -581,6 +581,7 @@ def get_event_config(event_id: int):
             "name": mod_name,
             "version": mod_version,
         },
+        "library_path": LIBRARY_PATH
     }
     return result
 
