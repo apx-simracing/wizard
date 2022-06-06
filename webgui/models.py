@@ -699,7 +699,7 @@ class EvenStartType(models.TextChoices):
     FR = "4", "Fast rolling start"
 
 
-class ServerPlugin(models.Model):
+class ServerFile(models.Model):
     plugin_file = models.FileField(
         upload_to=get_plugin_root_path,
         help_text="The plugin file",
@@ -708,7 +708,7 @@ class ServerPlugin(models.Model):
         null=False,
     )
 
-    plugin_path = models.CharField(
+    target_file_path = models.CharField(
         blank=True,
         max_length=500,
         default=None,
@@ -948,7 +948,7 @@ class Event(models.Model):
         default=False, help_text="Disable any other voting"
     )
 
-    plugins = models.ManyToManyField(ServerPlugin, blank=True)
+    files = models.ManyToManyField(ServerFile, blank=True)
 
     timing_classes = models.TextField(
         default="{}",

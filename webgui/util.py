@@ -542,8 +542,9 @@ def get_event_config(event_id: int):
         start_type = 2
     if server.start_type == models.EvenStartType.FR:
         start_type = 4
+    # plugins are used here aswell as for DLL's as also for other files
     plugins = {}
-    for plugin in server.plugins.all():
+    for plugin in server.files.all():
         name = basename(str(plugin.plugin_file))
         if  ".dll" in name: # don't use it for other files
             plugins[name] = loads(plugin.overwrites)
@@ -1031,9 +1032,9 @@ def do_server_interaction(server):
             run_apx_command(key, command_line)
             # push plugins, if needed
             plugin_args = ""
-            for plugin in server.event.plugins.all():
+            for plugin in server.event.files.all():
                 plugin_path = plugin.plugin_file.path
-                target_path = plugin.plugin_path
+                target_path = plugin.target_file_path
                 additional_path_arg = '"|' + target_path + '"' if target_path else ""
                 plugin_args = plugin_args + " " + plugin_path + additional_path_arg
             if len(plugin_args) > 0:

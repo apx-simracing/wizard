@@ -11,7 +11,7 @@ from webgui.models import (
     Server,
     RaceSessions,
     ServerCron,
-    ServerPlugin,
+    ServerFile,
     TrackFile,
     background_action_server,
 )
@@ -329,7 +329,7 @@ class EventAdmin(admin.ModelAdmin):
         "tracks",
         "entries",
         "signup_components",
-        "plugins",
+        "files",
     )
 
     def copy(self, request, queryset):
@@ -447,7 +447,7 @@ class EventAdmin(admin.ModelAdmin):
                     "upstream",
                     "collision_fade_threshold",
                     "enable_auto_downloads",
-                    "plugins",
+                    "files",
                     "force_versions",
                 ),
             },
@@ -830,8 +830,8 @@ class ServerAdmin(admin.ModelAdmin):
     def get_status(self, obj):
         return obj.status_info
 
-@admin.register(ServerPlugin)
-class ServerPluginAdmin(admin.ModelAdmin):
+@admin.register(ServerFile)
+class ServerFileAdmin(admin.ModelAdmin):
     pass
 
 
