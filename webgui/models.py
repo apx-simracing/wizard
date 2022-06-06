@@ -1249,6 +1249,11 @@ class Event(models.Model):
         help_text="Use only if Parc Ferme is used: -1=use RFM/season/GDB default, or add to allow minor changes with fixed\/parc ferme setups: 1=steering lock, 2=brake pressure, 4=starting fuel, 8=fuel strategy 16=tire compound, 32=brake bias, 64=front wing, 128=engine settings",
     )
 
+    fixed_setups = models.BooleanField(
+        default=False,
+        help_text="Enforce to use fixed setups. You might need to use this to enforce a Parc Ferme setting even without uploading a fixed setup.",
+    )
+
     enable_auto_downloads = models.BooleanField(
         default=True,
         help_text="Whether to allow clients to autodownload files that they are missing.",
@@ -1441,6 +1446,12 @@ class Event(models.Model):
         blob["Game Options"]["CHAMP FreeSettings"] = int(self.free_settings)
         blob["Game Options"]["CURNT FreeSettings"] = int(self.free_settings)
         blob["Game Options"]["GPRIX FreeSettings"] = int(self.free_settings)
+        
+        blob["Game Options"]["Fixed Setups"] = self.fixed_setups
+        blob["Game Options"]["Fixed Setups"] = self.fixed_setups
+        blob["Game Options"]["Fixed Setups"] = self.fixed_setups
+        blob["Game Options"]["Fixed Setups"] = self.fixed_setups
+        blob["Game Options"]["Fixed Setups"] = self.fixed_setups
 
         blob["Race Conditions"]["MULTI Formation Lap"] = int(self.start_type)
         blob["Race Conditions"]["RPLAY Formation Lap"] = int(self.start_type)

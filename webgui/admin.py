@@ -502,6 +502,7 @@ class EventAdmin(admin.ModelAdmin):
                 "fields": (
                     "parc_ferme",
                     "free_settings",
+                    "fixed_setups",
                 )
             },
         ),
