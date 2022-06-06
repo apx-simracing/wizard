@@ -545,7 +545,8 @@ def get_event_config(event_id: int):
     plugins = {}
     for plugin in server.plugins.all():
         name = basename(str(plugin.plugin_file))
-        plugins[name] = loads(plugin.overwrites)
+        if  ".dll" in name: # don't use it for other files
+            plugins[name] = loads(plugin.overwrites)
     mod_version = (
         server.event_mod_version
         if server.event_mod_version
