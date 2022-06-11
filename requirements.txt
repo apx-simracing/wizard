@@ -9,3 +9,4 @@ psutil==5.9.1
 pydng==1.1.2
 pwinput==1.0.2
 speedtest-cli==2.1.3
+termcolor==1.1.0
