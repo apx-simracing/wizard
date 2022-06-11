@@ -16,37 +16,14 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path
 from webgui.views import (
-    get_signup_form,
-    get_rules_page,
-    get_token_form,
-    get_files_form,
-    get_team_signup_form,
-    get_team_revoke_form,
     add_status,
     add_log,
     index_view,
 )
-from wizard.settings import ENTRY_SIGNUP_ENABLED
 
-if ENTRY_SIGNUP_ENABLED:
-    urlpatterns = [
-        path("", index_view),
-        path("admin/", admin.site.urls),
-        path("signup/", get_signup_form),
-        path("rules/", get_rules_page),
-        path("entry/", get_token_form),
-        path("files/", get_files_form),
-        path("team/<event>", get_team_signup_form),
-        path("revoke/", get_team_revoke_form),
-        path("addstatus/<str:secret>", add_status),
-        path("addlog/<str:secret>", add_log),
-    ]
-else:
-    urlpatterns = [
-        path("", index_view),
-        path("admin/", admin.site.urls),
-        path("signup/", get_signup_form),
-        path("rules/", get_rules_page),
-        path("addstatus/<str:secret>", add_status),
-        path("addlog/<str:secret>", add_log),
-    ]
+urlpatterns = [
+    path("", index_view),
+    path("admin/", admin.site.urls),
+    path("addstatus/<str:secret>", add_status),
+    path("addlog/<str:secret>", add_log),
+]
