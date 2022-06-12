@@ -557,7 +557,7 @@ class RaceConditionsAdmin(admin.ModelAdmin):
 class ServerAdmin(admin.ModelAdmin):
     ordering = ["name"]
     change_list_template = (
-        "admin/server_list.html" if not EASY_MODE else "admin/server_list_easy.html"
+        "admin/server_list.html"
     )
     actions = [
         # "get_thumbnails", this is disabled  until work on the timing resumes.
@@ -798,34 +798,13 @@ class ServerAdmin(admin.ModelAdmin):
         return fieldsets
 
     def get_readonly_fields(self, request, obj):
-        if self.is_running(obj):
-            return self.readonly_fields + (
-                "event",
-                "status_info",
-                "is_created_by_apx",
-                "state",
-                "logfile",
-            )
         return self.readonly_fields + (
-            "is_running",
             "status_info",
             "is_created_by_apx",
             "state",
             "local_path",
             "logfile",
         )
-
-    def is_running(self, obj):
-        if not obj:
-            return False
-        status = self.get_status(obj)
-        if not status or status == "-":
-            return False
-        return (
-            "Server is running" not in status
-        )  # get_stauts returns the display text, not the status anymore.
-
-    is_running.short_description = "Running"
 
     def get_status(self, obj):
         return obj.status_info

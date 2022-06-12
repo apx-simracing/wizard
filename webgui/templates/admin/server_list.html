@@ -14,3 +14,34 @@
   </li>
 </ul>
 {% endblock %}
+
+{% block extrahead %}
+<script>
+  function refresh() {
+    return fetch(location.href)
+    .then(function(response) {
+      return response.text()
+    })
+    .then(function(body) {
+      var checkboxes = document.querySelectorAll(".action-select")
+
+      var check_states = {}
+      checkboxes.forEach((checkbox) => {
+        var value = checkbox.value
+        check_states[value] = checkbox.checked
+      })
+      
+      var el = document.createElement( 'html' );
+      el.innerHTML = body
+      document.querySelector("#result_list").innerHTML =el.querySelector("#result_list").innerHTML
+
+      var new_checkboxes = document.querySelectorAll(".action-select")
+      new_checkboxes.forEach((checkbox) => {
+        checkbox.checked = check_states[checkbox.value]
+      })
+
+    });
+  }
+  setInterval(refresh, 1000);
+  </script>
+{% endblock %}
