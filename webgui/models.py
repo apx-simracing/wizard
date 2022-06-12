@@ -1765,12 +1765,13 @@ class Server(models.Model):
                         flag_text = flag_map["YELLOW"]
                     pit_text = " Ⓟ " if vehicle["pitting"] else ""
                     garage_text = " Ⓖ " if vehicle["inGarageStall"] else ""
-                    vehicle_entry_text = "<div>{}{}<b>P{}</b> (class: P{})@{}L: {} {} {}</br>".format(
+                    vehicle_entry_text = "<div>{}{}<b>P{}</b> (class: P{})@{}L|{}S: {} {} {}</br>".format(
                         flag_text,
                         pit_text if not garage_text else garage_text,
                         vehicle["position"],
                         index + 1,
                         vehicle["lapsCompleted"],
+                        vehicle["pitstops"],
                         vehicle["vehicleName"],
                         vehicle["driverName"],
                         "<span style='color: darkred;'>{} PENALTIES</span>".format(vehicle["penalties"]) if vehicle["penalties"] > 0 else ""
