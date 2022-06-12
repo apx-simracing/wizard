@@ -1723,6 +1723,11 @@ class Server(models.Model):
             return f"Server is running {status}"
 
         if status and "startEventTime" in status["status"]:
+            flag_map = {
+                "GREEN": "🟩",
+                "BLUE": "🟦",
+                "YELLOW": "🟨"
+            }
             session = status["status"]["session"]
             vehicle_text = ""
             max_laps = status["status"]["maxLaps"]
@@ -1742,7 +1747,7 @@ class Server(models.Model):
                         lead_lap = vehicle["lapsCompleted"]
                         break
 
-                return "{}: {}/{}".format(session, lead_lap, max_laps)
+                progress = "{}: {}/{}".format(session, lead_lap, max_laps)
             vehicle_text = f"{progress}<br>"
             vehicles = sorted(status["status"]["vehicles"], key=lambda x: x["position"])
             vehicle_classes = {}
@@ -1754,21 +1759,34 @@ class Server(models.Model):
             for car_class, vehicles in vehicle_classes.items():
                 vehicle_text += f"<span style='text-transform: uppercase; font-weight: bold; border-top: 1px solid black;'>{car_class}</span><br>"
                 for index, vehicle in enumerate(vehicles):
-                    vehicle_entry_text = "<div><b>P{}</b> (class: P{}): {} {} {}L</br>".format(
+                    flag = vehicle["flag"]
+                    flag_text = flag_map[flag] if flag in flag_map else ""
+                    if flag_text == "" and vehicle["underYellow"]:
+                        flag_text = flag_map["YELLOW"]
+                    pit_text = " Ⓟ " if vehicle["pitting"] else ""
+                    garage_text = " Ⓖ " if vehicle["inGarageStall"] else ""
+                    vehicle_entry_text = "<div>{}{}<b>P{}</b> (class: P{})@{}L: {} {} {}</br>".format(
+                        flag_text,
+                        pit_text if not garage_text else garage_text,
                         vehicle["position"],
                         index + 1,
+                        vehicle["lapsCompleted"],
                         vehicle["vehicleName"],
-                        "<span style='color: darkred;'>{} PENALTIES</span>".format(vehicle["penalties"]) if vehicle["penalties"] > 0 else "",
-                        vehicle["lapsCompleted"]
+                        vehicle["driverName"],
+                        "<span style='color: darkred;'>{} PENALTIES</span>".format(vehicle["penalties"]) if vehicle["penalties"] > 0 else ""
                     )
                     best_lap = vehicle["bestLapTime"]
                     last_lap = vehicle["lastLapTime"]
-                    driver = vehicle["driverName"]
                     best_laps_text = ""
                     if best_lap > 0 and last_lap > 0:
-                        best_laps_text = "-Last/ Best: {}/{}</br>".format(str(timedelta(seconds=best_lap)).strip("0:"), str(timedelta(seconds=last_lap)).strip("0:"))
+                        delta_lap = round(last_lap - best_lap,3)
+                        delta_lap_text = str(timedelta(seconds=delta_lap)).strip("0:")
+                        if delta_lap == 0:
+                            best_laps_text = "Last: {}</br>".format(str(timedelta(seconds=last_lap)).strip("0:"))
+                        else:
+                            best_laps_text = "Last: {} ({}{})</br>".format(str(timedelta(seconds=last_lap)).strip("0:"), "+" if delta_lap > 0 else "-", delta_lap_text)
                     
-                    vehicle_text += f"{vehicle_entry_text}{best_laps_text}-Driver: {driver}</br></div>"
+                    vehicle_text += f"{vehicle_entry_text}{best_laps_text}</div>"
                 
             return mark_safe(vehicle_text)
 
