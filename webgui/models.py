@@ -48,7 +48,7 @@ from os.path import exists, join, basename
 from os import mkdir, linesep
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from datetime import datetime
+from datetime import datetime, timedelta
 from json import dumps
 
 status_map = {}
@@ -400,16 +400,21 @@ class RaceConditions(models.Model):
         default=None,
         null=True,
         blank=True,
-        help_text="See https://wiki.apx.chmr.eu/doku.php?id=rfm_settings for details"
+        help_text="See https://wiki.apx.chmr.eu/doku.php?id=rfm_settings for details",
     )
 
     sessions = models.ManyToManyField(RaceSessions, blank=True)
+
     def save(self, *args, **kwargs):
         template_path = join(BASE_DIR, "default.rfm")
         rfm_file = rF2RfM(template_path)
-        relative_path = join("conditions", get_random_string(10) + ".rfm") if not self.rfm else self.rfm.name
-        target_path = join(join(MEDIA_ROOT,  relative_path))
-        
+        relative_path = (
+            join("conditions", get_random_string(10) + ".rfm")
+            if not self.rfm
+            else self.rfm.name
+        )
+        target_path = join(join(MEDIA_ROOT, relative_path))
+
         if self.settings:
             lines = self.settings.split(linesep)
             for section_name, section_content in rfm_file.sections.items():
@@ -421,7 +426,7 @@ class RaceConditions(models.Model):
                             new_value = parts[1].strip()
                             rfm_file.sections[section_name][index] = {
                                 "key": key,
-                                "value": new_value
+                                "value": new_value,
                             }
             for line in lines:
                 if "Group" in line:
@@ -434,17 +439,15 @@ class RaceConditions(models.Model):
                         if f"Group{group_number}" in value:
                             rfm_file.sections["PitGroupOrder"][index] = {
                                 "key": key,
-                                "value": f"{new_value}, Group{group_number}"
+                                "value": f"{new_value}, Group{group_number}",
                             }
 
             rfm_file.write(target_path)
-        
+
             self.rfm = relative_path
 
-
-
-        
         super(RaceConditions, self).save(*args, **kwargs)
+
     def __str__(self):
         sessions = self.sessions.all()
         sessions_list = []
@@ -1440,13 +1443,13 @@ class Event(models.Model):
         blob["Race Conditions"]["CHAMP ParcFerme"] = int(self.parc_ferme)
         blob["Race Conditions"]["CURNT ParcFerme"] = int(self.parc_ferme)
         blob["Race Conditions"]["GPRIX ParcFerme"] = int(self.parc_ferme)
-        
+
         blob["Game Options"]["MULTI FreeSettings"] = int(self.free_settings)
         blob["Game Options"]["RPLAY FreeSettings"] = int(self.free_settings)
         blob["Game Options"]["CHAMP FreeSettings"] = int(self.free_settings)
         blob["Game Options"]["CURNT FreeSettings"] = int(self.free_settings)
         blob["Game Options"]["GPRIX FreeSettings"] = int(self.free_settings)
-        
+
         blob["Game Options"]["Fixed Setups"] = self.fixed_setups
         blob["Game Options"]["Fixed Setups"] = self.fixed_setups
         blob["Game Options"]["Fixed Setups"] = self.fixed_setups
@@ -1642,13 +1645,11 @@ class Server(models.Model):
         help_text="APX Session Id",
     )
 
-    
     ignore_start_hook = models.BooleanField(
         default=True,
         help_text="Don't fire the Discord messages when the server starts",
     )
 
-        
     ignore_stop_hook = models.BooleanField(
         default=True,
         help_text="Don't fire the Discord messages when the server stops",
@@ -1658,7 +1659,7 @@ class Server(models.Model):
         default=True,
         help_text="Don't fire the Discord messages when the server was updated",
     )
-    
+
     message = models.CharField(
         blank=True,
         null=True,
@@ -1694,11 +1695,99 @@ class Server(models.Model):
 
     @property
     def status_info(self):
+        # case 1: NO status (nothing running)
         if not self.pk or self.pk not in status_map:
-            return "-"
+            return "No status"
         status = status_map[self.pk]
+        if not status:
+            return "No status"
+
+        #  case 2: Status, but not running and not deploying
+        if (
+            not status["is_deploying"]
+            and "not_running" in status
+            and status["not_running"]
+        ):
+            return "Server is not running"
+
+        if "returned non-zero exit status 1" in status:
+            return status
+
+        if (
+            not status["is_deploying"]
+            and "not_running" not in status
+            and not status["is_deploying"]
+        ):
+            if "status" in status and status["status"] == "-":
+                return "No status"
+            return f"Server is running {status}"
+
+        if status and "startEventTime" in status["status"]:
+            session = status["status"]["session"]
+            vehicle_text = ""
+            max_laps = status["status"]["maxLaps"]
+            current_time = str(
+                timedelta(seconds=int(status["status"]["currentEventTime"]))
+            )  # no ms, please
+            end_time = str(timedelta(seconds=status["status"]["endEventTime"]))
+
+            progress = None
+            if max_laps == 2147483647:
+                progress = "{}: {}/{}".format(session, current_time, end_time)
+            else:
+                lead_lap = None
+                for vehicle in status["status"]["vehicles"]:
+                    behind_leader = vehicle["lapsBehindLeader"]
+                    if behind_leader == 0:
+                        lead_lap = vehicle["lapsCompleted"]
+                        break
+
+                return "{}: {}/{}".format(session, lead_lap, max_laps)
+            vehicle_text = f"{progress}<br>"
+            vehicles = sorted(status["status"]["vehicles"], key=lambda x: x["position"])
+            vehicle_classes = {}
+            for vehicle in vehicles:
+                car_class = vehicle["carClass"]
+                if car_class not in vehicle_classes:
+                    vehicle_classes[car_class] = []
+                vehicle_classes[car_class].append(vehicle)
+            for car_class, vehicles in vehicle_classes.items():
+                vehicle_text += f"<span style='text-transform: uppercase; font-weight: bold; border-top: 1px solid black;'>{car_class}</span><br>"
+                for index, vehicle in enumerate(vehicles):
+                    vehicle_entry_text = "<div><b>P{}</b> (class: P{}): {} {} {}L</br>".format(
+                        vehicle["position"],
+                        index + 1,
+                        vehicle["vehicleName"],
+                        "<span style='color: darkred;'>{} PENALTIES</span>".format(vehicle["penalties"]) if vehicle["penalties"] > 0 else "",
+                        vehicle["lapsCompleted"]
+                    )
+                    best_lap = vehicle["bestLapTime"]
+                    last_lap = vehicle["lastLapTime"]
+                    driver = vehicle["driverName"]
+                    best_laps_text = ""
+                    if best_lap > 0 and last_lap > 0:
+                        best_laps_text = "-Last/ Best: {}/{}</br>".format(str(timedelta(seconds=best_lap)).strip("0:"), str(timedelta(seconds=last_lap)).strip("0:"))
+                    
+                    vehicle_text += f"{vehicle_entry_text}{best_laps_text}-Driver: {driver}</br></div>"
+                
+            return mark_safe(vehicle_text)
+
+        if status and status["is_deploying"]:
+            if status["args"] is None:
+                return "Working: {}".format(status["status"])
+            else:
+                return "Working: {} {}".format(status["status"], status["args"])
+        # case 3: Status, Running
+
+        # case 4: Deploying at any stage
+        print(status)
+        return status
         if status and "is_deploying" in status:
-            return "{0}: {1}".format(status["status"], status["args"]) if status["args"] is not None else status["status"]
+            return (
+                "{0}: {1}".format(status["status"], status["args"])
+                if status["args"] is not None
+                else status["status"]
+            )
         # no status to report (e. g. new server)
         response = '<img src="{}admin/img/icon-no.svg" alt="Not Running"> Server is not running</br>'.format(
             STATIC_URL
@@ -1741,10 +1830,17 @@ class Server(models.Model):
     def clean(self):
         if self.message:
             if self.action:
-                raise ValidationError("Please deselect any action before writing chat messages")
+                raise ValidationError(
+                    "Please deselect any action before writing chat messages"
+                )
             # do only the message
             background_thread = Thread(
-                target=background_action_chat, args=(self.url, self.message, ), daemon=True
+                target=background_action_chat,
+                args=(
+                    self.url,
+                    self.message,
+                ),
+                daemon=True,
             )
             background_thread.start()
             self.message = ""
@@ -1769,7 +1865,11 @@ class Server(models.Model):
             if self.action == "W" and status and "not_running" in status:
                 raise ValidationError("Start the server first")
 
-            if status is not None and "not_running" not in status and self.action == "WU":
+            if (
+                status is not None
+                and "not_running" not in status
+                and self.action == "WU"
+            ):
                 raise ValidationError("Start the server first")
 
             if not str(self.url).endswith("/"):
@@ -1825,7 +1925,9 @@ class Server(models.Model):
             for server in other_servers:
                 if server.event:
                     if self.pk != server.pk:
-                        steamcmd_bandwidth = steamcmd_bandwidth + server.steamcmd_bandwidth
+                        steamcmd_bandwidth = (
+                            steamcmd_bandwidth + server.steamcmd_bandwidth
+                        )
 
             steamcmd_bandwidth = steamcmd_bandwidth + self.steamcmd_bandwidth
 
@@ -1883,6 +1985,7 @@ class Server(models.Model):
                 )
                 background_thread.start()
 
+
 def background_action_server(server):
     do_server_interaction(server)
 
@@ -1915,6 +2018,7 @@ def background_action_chat(server_url, message):
 @receiver(post_save, sender=Server)
 def my_handler(sender, instance, **kwargs):
     create_virtual_config()
+
 
 class ServerCron(models.Model):
     class Meta:
@@ -2069,8 +2173,9 @@ def add_cron_to_windows(sender, instance, **kwargs):
                 schedule_part + f" /ri {modifier} /du {diff_hours}:{diff_minutes}"
             )
         # https://stackoverflow.com/questions/6814075/windows-start-b-command-problem#6814111
-        run_command = f"start /d '{BASE_DIR}' /b 'apx' '{python_path}' manage.py cron_run {id}"
+        run_command = (
+            f"start /d '{BASE_DIR}' /b 'apx' '{python_path}' manage.py cron_run {id}"
+        )
         command_line = f'schtasks /create /tn {task_name} /st {start_time} /sc {schedule_part} /tr "cmd /c {run_command}"'
         print(command_line)
         system(command_line)
-

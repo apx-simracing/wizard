@@ -1,3 +1,4 @@
+from ast import parse
 from json import loads
 from os import mkdir, unlink
 from os.path import exists, join
@@ -48,6 +49,8 @@ def add_status(request, secret: str):
     parsed_text = None
     try:
         parsed_text = loads(got)
+        if parsed_text and "is_deploying" not in parsed_text:
+            parsed_text["is_deploying"] = False
         if "session_id" in parsed_text and parsed_text["session_id"] is not None:
             server.session_id = parsed_text["session_id"]
     except:
