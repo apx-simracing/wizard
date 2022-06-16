@@ -1,6 +1,7 @@
 from csv import excel_tab
+from pathlib import Path
 from posixpath import pathsep
-from shutil import copyfile
+from shutil import copyfile, move
 from black import E
 from django.db import models
 from django.core.exceptions import ValidationError
@@ -50,7 +51,7 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from datetime import datetime, timedelta
 from json import dumps
-
+from django.core.files import File
 status_map = {}
 session_map = {}
 
@@ -548,6 +549,25 @@ class Entry(models.Model):
                             line
                         )
                     )
+
+        # move the files of a entry if the entry component is being changed
+        if self.pk:
+            component_name = self.component.component_name
+            files = EntryFile.objects.filter(entry=self.pk)
+            for entry_file in files:
+                file_name = str(entry_file.file)
+                file_path_obj = Path(file_name)
+                expected = f"liveries/{component_name}/{file_path_obj.name}"
+                full_livery_path = join(MEDIA_ROOT, "liveries", component_name)
+                if not exists(full_livery_path):
+                    mkdir(full_livery_path)
+                full_src_file_path = join(MEDIA_ROOT, file_name)
+                full_file_path = join(full_livery_path, file_path_obj.name)
+                move(full_src_file_path, full_file_path)
+                entry_file.file = expected
+                entry_file.save()
+
+
 
     def __str__(self):
         return "[{}] {}#{}".format(self.component, self.team_name, self.vehicle_number)
