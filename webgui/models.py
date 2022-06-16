@@ -381,7 +381,7 @@ class RaceSessions(models.Model):
             return str
 
 
-class RaceConditions(models.Model):
+class RaceWeekend(models.Model):
     class Meta:
         verbose_name = "Race weekend"
 
@@ -446,7 +446,7 @@ class RaceConditions(models.Model):
 
             self.rfm = relative_path
 
-        super(RaceConditions, self).save(*args, **kwargs)
+        super(RaceWeekend, self).save(*args, **kwargs)
 
     def __str__(self):
         sessions = self.sessions.all()
@@ -861,7 +861,7 @@ class Event(models.Model):
         validators=[event_name_validator],
     )
     conditions = models.ForeignKey(
-        RaceConditions,
+        RaceWeekend,
         on_delete=models.CASCADE,
         verbose_name="race weekend",
         help_text="Conditions is a bundle of session definitions, containing session lengths and grip information.",
@@ -1728,6 +1728,11 @@ class Server(models.Model):
                 "BLUE": "🟦",
                 "YELLOW": "🟨"
             }
+            sector_map = {
+                "SECTOR1": "①",
+                "SECTOR2": "②",
+                "SECTOR3": "③"
+            }
             session = status["status"]["session"]
             vehicle_text = ""
             max_laps = status["status"]["maxLaps"]
@@ -1765,14 +1770,17 @@ class Server(models.Model):
                         flag_text = flag_map["YELLOW"]
                     pit_text = " Ⓟ " if vehicle["pitting"] else ""
                     garage_text = " Ⓖ " if vehicle["inGarageStall"] else ""
-                    vehicle_entry_text = "<div>{}{}<b>P{}</b> (class: P{})@{}L|{}S: {} {} {}</br>".format(
+                    sector_text = sector_map[vehicle["sector"]]
+                    vehicle_entry_text = "<div>{}{}<b>P{}</b> (class: P{})@L{}-S{}|{}S: <b>{}</b> <code>#{}</code> - <i>{}</i> {}</br>".format(
                         flag_text,
                         pit_text if not garage_text else garage_text,
                         vehicle["position"],
                         index + 1,
                         vehicle["lapsCompleted"],
+                        sector_text,
                         vehicle["pitstops"],
-                        vehicle["vehicleName"],
+                        vehicle["fullTeamName"],
+                        vehicle["carNumber"],
                         vehicle["driverName"],
                         "<span style='color: darkred;'>{} PENALTIES</span>".format(vehicle["penalties"]) if vehicle["penalties"] > 0 else ""
                     )

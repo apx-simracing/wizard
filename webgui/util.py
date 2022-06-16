@@ -12,7 +12,7 @@ from json import dumps, loads
 from os import linesep, listdir, mkdir, unlink
 from os.path import basename, exists, join
 from re import match
-from shutil import copyfile
+from shutil import copyfile, copytree
 from sys import platform
 from time import sleep
 from urllib.parse import urlparse
@@ -26,7 +26,7 @@ from wizard.settings import (APX_ROOT, BASE_DIR, DISCORD_RACE_CONTROL_WEBHOOK,
                              NON_WORKSHOP_PAYLOAD_TEXT, OPENWEATHERAPI_KEY,
                              PACKS_ROOT, PUBLIC_URL, SIM_PORT_RANGE,
                              USE_GLOBAL_STEAMCMD, WEBUI_PORT_RANGE, WINE_DRIVE,
-                             WINE_IMPLEMENTATION, LIBRARY_PATH)
+                             WINE_IMPLEMENTATION, LIBRARY_PATH, RECIEVER_DOWNLOAD_FROM)
 
 from . import models
 
@@ -85,7 +85,6 @@ FILE_NAME_SUFFIXES_MEANINGS = [
 ]
 
 RECIEVER_COMP_INFO = open(join(BASE_DIR, "release")).read()
-RECIEVER_DOWNLOAD_FROM = "https://github.com/apx-simracing/reciever/releases/download/R89/reciever-2021R89.zip"
 
 
 def get_update_filename(instance, filename):
@@ -254,21 +253,25 @@ def get_free_tcp_port(
     return port
 
 
-def set_state(id, message):
+def set_state(id, message, is_deploying=False):
     models.status_map[id] = {
         "status": message,
         "args": None,
-        "is_deploying": True
+        "is_deploying": is_deploying
     }
 
 
 def bootstrap_reciever(root_path, server_obj, port, secret):
     try:
-        set_state(server_obj.pk, "Downloading reciever release")
-        r = get(RECIEVER_DOWNLOAD_FROM)
-        z = zipfile.ZipFile(io.BytesIO(r.content))
-        z.extractall(root_path)
-        set_state(server_obj.pk, "Extracted reciever release")
+        if exists(RECIEVER_DOWNLOAD_FROM):
+            set_state(server_obj.pk, "Copying reciever release")
+            copytree(RECIEVER_DOWNLOAD_FROM, root_path)
+        else:
+            set_state(server_obj.pk, "Downloading reciever release")
+            r = get(RECIEVER_DOWNLOAD_FROM)
+            z = zipfile.ZipFile(io.BytesIO(r.content))
+            z.extractall(root_path)
+            set_state(server_obj.pk, "Extracted reciever release")
     except:
         set_state(server_obj.pk, "Extracted reciever release")
         return False
@@ -806,7 +809,7 @@ def do_server_interaction(server):
     if server.action == "U":
         try:
 
-            set_state(server.pk, "Steam update requested")
+            set_state(server.pk, "Steam update requested", True)
             run_apx_command(key, "--cmd update --args {}".format(server.branch))
         except Exception as e:
             print(e)
@@ -957,7 +960,7 @@ def do_server_interaction(server):
             set_state(server.pk, "-")
 
     if server.action == "D" or server.action == "D+F":
-        set_state(server.pk, "Attempting to create event configuration")
+        set_state(server.pk, "Attempting to create event configuration", True)
         # save event json
         event_config = get_event_config(server.event.pk)
         # add ports
@@ -1016,19 +1019,19 @@ def do_server_interaction(server):
                     files_to_attach.append(file_name)
                 # only add skin files if needed
                 if len(files_to_attach) > 0:
-                    set_state(server.pk, "Pushing track update to the server")
+                    set_state(server.pk, "Pushing track update to the server", True)
                     command_line = "--cmd build_track --args {} {}".format(
                         track.component.component_name, " ".join(files_to_attach)
                     )
                     run_apx_command(key, command_line)
 
-            set_state(server.pk, "Pushing skins (if any) to the server")
+            set_state(server.pk, "Pushing skins (if any) to the server", True)
             command_line = "--cmd build_skins --args {} {}".format(
                 config_path, rfm_path
             )
             run_apx_command(key, command_line)
 
-            set_state(server.pk, "Asking server for deployment")
+            set_state(server.pk, "Asking server for deployment", True)
             command_line = "--cmd deploy --args {} {}".format(config_path, rfm_path)
             run_apx_command(key, command_line)
             # push plugins, if needed
@@ -1039,12 +1042,13 @@ def do_server_interaction(server):
                 additional_path_arg = '"|' + target_path + '"' if target_path else ""
                 plugin_args = plugin_args + " " + plugin_path + additional_path_arg
             if len(plugin_args) > 0:
-                set_state(server.pk, "Installing plugins")
+                set_state(server.pk, "Installing plugins", True)
                 run_apx_command(key, "--cmd plugins --args " + plugin_args)
         except Exception as e:
             set_state(server.pk, str(e))
         finally:
             # build the discord embed message
+            set_state(server.pk, "Deployment finished", True)
             json_blob = {
                 "avatar_url": MSG_LOGO,
                 "embeds": [

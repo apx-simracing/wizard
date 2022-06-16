@@ -7,7 +7,7 @@ from webgui.models import (
     Entry,
     EntryFile,
     Event,
-    RaceConditions,
+    RaceWeekend,
     Server,
     RaceSessions,
     ServerCron,
@@ -545,10 +545,10 @@ class RaceSessionsAdmin(admin.ModelAdmin):
     )
 
 
-@admin.register(RaceConditions)
-class RaceConditionsAdmin(admin.ModelAdmin):
+@admin.register(RaceWeekend)
+class RaceWeekendAdmin(admin.ModelAdmin):
     def get_form(self, request, obj=None, **kwargs):
-        form = super(RaceConditionsAdmin, self).get_form(request, obj=None, **kwargs)
+        form = super(RaceWeekendAdmin, self).get_form(request, obj=None, **kwargs)
         form.base_fields["sessions"].widget = CheckboxSelectMultiple()
         return form
 
