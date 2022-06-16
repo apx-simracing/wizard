@@ -17,7 +17,7 @@ from webgui.util import (
     run_apx_command,
     get_server_hash,
     get_key_root_path,
-    get_race weekend,
+    get_conditions_file_root,
     get_update_filename,
     get_livery_mask_root,
     get_random_string,
@@ -311,7 +311,7 @@ class RaceSessions(models.Model):
     )
 
     grip = models.FileField(
-        upload_to=get_race weekend, blank=True, null=True, default=None
+        upload_to=get_conditions_file_root, blank=True, null=True, default=None
     )
     grip_needle = models.CharField(
         default=None,
@@ -387,7 +387,7 @@ class RaceWeekend(models.Model):
 
     description = models.CharField(default="Add description", max_length=200)
     rfm = models.FileField(
-        upload_to=get_race weekend,
+        upload_to=get_conditions_file_root,
         storage=OverwriteStorage,
         blank=True,
         null=True,
@@ -409,7 +409,7 @@ class RaceWeekend(models.Model):
         template_path = join(BASE_DIR, "default.rfm")
         rfm_file = rF2RfM(template_path)
         relative_path = (
-            join("race weekend get_random_string(10) + ".rfm")
+            join("conditions", get_random_string(10) + ".rfm")
             if not self.rfm
             else self.rfm.name
         )
@@ -860,11 +860,11 @@ class Event(models.Model):
         help_text="The Name of the event. Will be used as Race name in the server.",
         validators=[event_name_validator],
     )
-    race weekend models.ForeignKey(
+    conditions = models.ForeignKey(
         RaceWeekend,
         on_delete=models.CASCADE,
         verbose_name="race weekend",
-        help_text="race weekend a bundle of session definitions, containing session lengths and grip information.",
+        help_text="Conditions is a bundle of session definitions, containing session lengths and grip information.",
     )
     entries = models.ManyToManyField(Entry, blank=True, verbose_name="Liveries")
     tracks = models.ManyToManyField(Track)
@@ -1234,7 +1234,7 @@ class Event(models.Model):
 
     skip_all_session_unless_configured = models.BooleanField(
         default=False,
-        help_text="Instead of using default values from the player.JSON/ multiplayer.JSON, skip all sessions unless the ones configured with the race weekend in APX.",
+        help_text="Instead of using default values from the player.JSON/ multiplayer.JSON, skip all sessions unless the ones configured with the conditions pack in APX.",
     )
 
     parc_ferme = models.CharField(
@@ -1396,53 +1396,53 @@ class Event(models.Model):
 
         blob["Game Options"]["Record Replays"] = self.replays
 
-        blob["Race race weekend = OrderedDict()
+        blob["Race Conditions"] = OrderedDict()
         """
         if self.real_weather:
-            blob["Race race weekendMULTI Weather"] = 5
-            blob["Race race weekendGPRIX Weather"] = 5
+            blob["Race Conditions"]["MULTI Weather"] = 5
+            blob["Race Conditions"]["GPRIX Weather"] = 5
         """
-        blob["Race race weekendMULTI Flag Rules"] = int(self.rules)
-        blob["Race race weekendRPLAY Flag Rules"] = int(self.rules)
-        blob["Race race weekendCHAMP Flag Rules"] = int(self.rules)
-        blob["Race race weekendCURNT Flag Rules"] = int(self.rules)
-        blob["Race race weekendGPRIX Flag Rules"] = int(self.rules)
+        blob["Race Conditions"]["MULTI Flag Rules"] = int(self.rules)
+        blob["Race Conditions"]["RPLAY Flag Rules"] = int(self.rules)
+        blob["Race Conditions"]["CHAMP Flag Rules"] = int(self.rules)
+        blob["Race Conditions"]["CURNT Flag Rules"] = int(self.rules)
+        blob["Race Conditions"]["GPRIX Flag Rules"] = int(self.rules)
 
-        blob["Race race weekendMULTI RaceTimeScale"] = int(self.race_multiplier)
-        blob["Race race weekendRPLAY RaceTimeScale"] = int(self.race_multiplier)
-        blob["Race race weekendCHAMP RaceTimeScale"] = int(self.race_multiplier)
-        blob["Race race weekendCURNT RaceTimeScale"] = int(self.race_multiplier)
-        blob["Race race weekendGPRIX RaceTimeScale"] = int(self.race_multiplier)
+        blob["Race Conditions"]["MULTI RaceTimeScale"] = int(self.race_multiplier)
+        blob["Race Conditions"]["RPLAY RaceTimeScale"] = int(self.race_multiplier)
+        blob["Race Conditions"]["CHAMP RaceTimeScale"] = int(self.race_multiplier)
+        blob["Race Conditions"]["CURNT RaceTimeScale"] = int(self.race_multiplier)
+        blob["Race Conditions"]["GPRIX RaceTimeScale"] = int(self.race_multiplier)
 
-        blob["Race race weekendMULTI Track Cuts Allowed"] = int(self.cuts_allowed)
-        blob["Race race weekendRPLAY Track Cuts Allowed"] = int(self.cuts_allowed)
-        blob["Race race weekendCHAMP Track Cuts Allowed"] = int(self.cuts_allowed)
-        blob["Race race weekendCURNT Track Cuts Allowed"] = int(self.cuts_allowed)
-        blob["Race race weekendGPRIX Track Cuts Allowed"] = int(self.cuts_allowed)
+        blob["Race Conditions"]["MULTI Track Cuts Allowed"] = int(self.cuts_allowed)
+        blob["Race Conditions"]["RPLAY Track Cuts Allowed"] = int(self.cuts_allowed)
+        blob["Race Conditions"]["CHAMP Track Cuts Allowed"] = int(self.cuts_allowed)
+        blob["Race Conditions"]["CURNT Track Cuts Allowed"] = int(self.cuts_allowed)
+        blob["Race Conditions"]["GPRIX Track Cuts Allowed"] = int(self.cuts_allowed)
 
-        blob["Race race weekendMULTI PrivateQualifying"] = int(self.qualy_mode)
-        blob["Race race weekendRPLAY PrivateQualifying"] = int(self.qualy_mode)
-        blob["Race race weekendCHAMP PrivateQualifying"] = int(self.qualy_mode)
-        blob["Race race weekendCURNT PrivateQualifying"] = int(self.qualy_mode)
-        blob["Race race weekendGPRIX PrivateQualifying"] = int(self.qualy_mode)
+        blob["Race Conditions"]["MULTI PrivateQualifying"] = int(self.qualy_mode)
+        blob["Race Conditions"]["RPLAY PrivateQualifying"] = int(self.qualy_mode)
+        blob["Race Conditions"]["CHAMP PrivateQualifying"] = int(self.qualy_mode)
+        blob["Race Conditions"]["CURNT PrivateQualifying"] = int(self.qualy_mode)
+        blob["Race Conditions"]["GPRIX PrivateQualifying"] = int(self.qualy_mode)
 
-        blob["Race race weekendMULTI BlueFlags"] = int(self.blue_flag_mode)
-        blob["Race race weekendRPLAY BlueFlags"] = int(self.blue_flag_mode)
-        blob["Race race weekendCHAMP BlueFlags"] = int(self.blue_flag_mode)
-        blob["Race race weekendCURNT BlueFlags"] = int(self.blue_flag_mode)
-        blob["Race race weekendGPRIX BlueFlags"] = int(self.blue_flag_mode)
+        blob["Race Conditions"]["MULTI BlueFlags"] = int(self.blue_flag_mode)
+        blob["Race Conditions"]["RPLAY BlueFlags"] = int(self.blue_flag_mode)
+        blob["Race Conditions"]["CHAMP BlueFlags"] = int(self.blue_flag_mode)
+        blob["Race Conditions"]["CURNT BlueFlags"] = int(self.blue_flag_mode)
+        blob["Race Conditions"]["GPRIX BlueFlags"] = int(self.blue_flag_mode)
 
-        blob["Race race weekendMULTI Reconnaissance"] = int(self.reconaissance_laps)
-        blob["Race race weekendRPLAY Reconnaissance"] = int(self.reconaissance_laps)
-        blob["Race race weekendCHAMP Reconnaissance"] = int(self.reconaissance_laps)
-        blob["Race race weekendCURNT Reconnaissance"] = int(self.reconaissance_laps)
-        blob["Race race weekendGPRIX Reconnaissance"] = int(self.reconaissance_laps)
+        blob["Race Conditions"]["MULTI Reconnaissance"] = int(self.reconaissance_laps)
+        blob["Race Conditions"]["RPLAY Reconnaissance"] = int(self.reconaissance_laps)
+        blob["Race Conditions"]["CHAMP Reconnaissance"] = int(self.reconaissance_laps)
+        blob["Race Conditions"]["CURNT Reconnaissance"] = int(self.reconaissance_laps)
+        blob["Race Conditions"]["GPRIX Reconnaissance"] = int(self.reconaissance_laps)
 
-        blob["Race race weekendMULTI ParcFerme"] = int(self.parc_ferme)
-        blob["Race race weekendRPLAY ParcFerme"] = int(self.parc_ferme)
-        blob["Race race weekendCHAMP ParcFerme"] = int(self.parc_ferme)
-        blob["Race race weekendCURNT ParcFerme"] = int(self.parc_ferme)
-        blob["Race race weekendGPRIX ParcFerme"] = int(self.parc_ferme)
+        blob["Race Conditions"]["MULTI ParcFerme"] = int(self.parc_ferme)
+        blob["Race Conditions"]["RPLAY ParcFerme"] = int(self.parc_ferme)
+        blob["Race Conditions"]["CHAMP ParcFerme"] = int(self.parc_ferme)
+        blob["Race Conditions"]["CURNT ParcFerme"] = int(self.parc_ferme)
+        blob["Race Conditions"]["GPRIX ParcFerme"] = int(self.parc_ferme)
 
         blob["Game Options"]["MULTI FreeSettings"] = int(self.free_settings)
         blob["Game Options"]["RPLAY FreeSettings"] = int(self.free_settings)
@@ -1456,11 +1456,11 @@ class Event(models.Model):
         blob["Game Options"]["Fixed Setups"] = self.fixed_setups
         blob["Game Options"]["Fixed Setups"] = self.fixed_setups
 
-        blob["Race race weekendMULTI Formation Lap"] = int(self.start_type)
-        blob["Race race weekendRPLAY Formation Lap"] = int(self.start_type)
-        blob["Race race weekendCHAMP Formation Lap"] = int(self.start_type)
-        blob["Race race weekendCURNT Formation Lap"] = int(self.start_type)
-        blob["Race race weekendGPRIX Formation Lap"] = int(self.start_type)
+        blob["Race Conditions"]["MULTI Formation Lap"] = int(self.start_type)
+        blob["Race Conditions"]["RPLAY Formation Lap"] = int(self.start_type)
+        blob["Race Conditions"]["CHAMP Formation Lap"] = int(self.start_type)
+        blob["Race Conditions"]["CURNT Formation Lap"] = int(self.start_type)
+        blob["Race Conditions"]["GPRIX Formation Lap"] = int(self.start_type)
 
         blob["Game Options"]["CURNT AI Driver Strength"] = int(self.ai_strength)
         blob["Game Options"]["GPRIX AI Driver Strength"] = int(self.ai_strength)
@@ -1501,7 +1501,8 @@ class Event(models.Model):
                         "Limit the line length of each line of the welcome text to 50!"
                     )
 
-
+        if self.parc_ferme == ParcFermeMode.O:
+            self.free_settings = -1
 class ServerStatus(models.TextChoices):
     STARTREQUESTED = "S+", "Start"
     STOPREQUESTED = "R-", "Stop"
