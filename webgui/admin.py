@@ -33,7 +33,7 @@ from django.http import HttpResponseRedirect
 from pydng import generate_name
 from django.forms.widgets import CheckboxSelectMultiple
 from threading import Thread
-
+from django.utils.html import mark_safe
 admin.site.site_url = None
 admin.site.site_title = "APX"
 
@@ -361,28 +361,40 @@ class EventAdmin(admin.ModelAdmin):
     def all_aids(self, obj):
         if not obj:
             return "-"
-        return "{}/{}/{}/{}/{}".format(
+        return "{}/{}/{}/{}/{}/{}".format(
             obj.allow_auto_clutch,
             obj.allow_ai_toggle,
             obj.allow_traction_control,
             obj.allow_anti_lock_brakes,
             obj.allow_stability_control,
+            obj.damage
         )
 
-    all_aids.short_description = "Auto clutch/ AI toggle/ TC/ ABS/ SC"
+    all_aids.short_description = "Auto clutch/ AI toggle/ TC/ ABS/ SC/ Damage"
+
+    def sessions(self, obj):
+        if not obj:
+            return "-"
+        sessions = RaceWeekend.objects.get(pk=obj.conditions.pk).sessions
+        session_str = ""
+        for session in sessions.all():
+            session_str += str(session) + "</br>"
+        if session_str == "":
+            return "No sessions"
+        return mark_safe(session_str)
+
+
+    sessions.short_description = "Sessions"
 
     list_display = (
         "name",
-        "damage",
         "all_clients",
         "all_aids",
+        "sessions",
         "rejoin",
         "real_name",
         "replays",
         "real_weather",
-        "temp_offset",
-        "weather_api",
-        "weather_key",
     )
 
     fieldsets = (
@@ -547,9 +559,11 @@ class RaceSessionsAdmin(admin.ModelAdmin):
 
 @admin.register(RaceWeekend)
 class RaceWeekendAdmin(admin.ModelAdmin):
+    filter_horizontal = (
+        "sessions",
+    )
     def get_form(self, request, obj=None, **kwargs):
         form = super(RaceWeekendAdmin, self).get_form(request, obj=None, **kwargs)
-        form.base_fields["sessions"].widget = CheckboxSelectMultiple()
         return form
 
 

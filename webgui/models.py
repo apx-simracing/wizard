@@ -341,7 +341,7 @@ class RaceSessions(models.Model):
 
     def clean(self):
         if "R" not in str(self.type) and self.race_finish_criteria:
-            raise ValidationError("This is only needed for a race session")
+            raise ValidationError("A race finish criteria is only needed for a race session")
         if self.length < 0 or self.laps < 0:
             raise ValidationError(
                 "Either length or laps is negative. Set to 0 to ignore."
@@ -884,7 +884,7 @@ class Event(models.Model):
         RaceWeekend,
         on_delete=models.CASCADE,
         verbose_name="race weekend",
-        help_text="Conditions is a bundle of session definitions, containing session lengths and grip information.",
+        help_text="The race weekend is a bundle of session definitions, containing session lengths and grip information.",
     )
     entries = models.ManyToManyField(Entry, blank=True, verbose_name="Liveries")
     tracks = models.ManyToManyField(Track)
