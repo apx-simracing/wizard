@@ -1538,6 +1538,7 @@ class ServerBranch(models.TextChoices):
     PR = "previous-release", "previous-release"
     V21 = "v1121", "v1121"
     V22 = "v1122", "v1122"
+    V25 = "v1125", "v1125"
     OLD = "old-ui", "old-ui"
 
 
