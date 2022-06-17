@@ -1,9 +1,4 @@
 from django.apps import AppConfig
-from django.core import management
-from django.core.management.commands import loaddata
-from threading import Thread
-from sys import argv
-from time import sleep
 from wizard.settings import USE_GLOBAL_STEAMCMD, BASE_DIR
 from requests import get
 from zipfile import ZipFile

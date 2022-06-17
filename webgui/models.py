@@ -1,15 +1,16 @@
+from csv import excel_tab
+from pathlib import Path
+from posixpath import pathsep
+from shutil import copyfile, move
+from black import E
 from django.db import models
 from django.core.exceptions import ValidationError
 from django.contrib.auth.models import User
-from django.conf import settings
-from django import forms
 from django.dispatch import receiver
 from os.path import isfile, basename
-from shutil import copy, rmtree
 from os import remove, linesep, unlink, system
 from collections import OrderedDict
 from json import loads
-from django.contrib import messages
 from django.core.validators import RegexValidator, MinValueValidator, MaxValueValidator
 from webgui.util import (
     livery_filename,
@@ -17,24 +18,19 @@ from webgui.util import (
     run_apx_command,
     get_server_hash,
     get_key_root_path,
-    get_logfile_root_path,
     get_conditions_file_root,
     get_update_filename,
-    get_hash,
     get_livery_mask_root,
     get_random_string,
     create_virtual_config,
     do_server_interaction,
-    get_component_file_root,
-    RECIEVER_COMP_INFO,
     get_plugin_root_path,
-    create_firewall_script,
     get_random_short_name,
     get_speedtest_result,
 )
+from webgui.utils.rFm import rF2RfM
 from wizard.settings import (
     BASE_DIR,
-    FAILURE_THRESHOLD,
     MEDIA_ROOT,
     STATIC_URL,
     BASE_DIR,
@@ -53,12 +49,10 @@ from os.path import exists, join, basename
 from os import mkdir, linesep
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from datetime import datetime, timedelta, time, date
-import pytz
+from datetime import datetime, timedelta
 from json import dumps
-
+from django.core.files import File
 status_map = {}
-state_map = {}
 session_map = {}
 
 USE_WAND = True
@@ -336,7 +330,6 @@ class RaceSessions(models.Model):
     length = models.IntegerField(
         default=0, help_text="Target length of the session in minutes"
     )
-    weather = models.TextField(blank=True, null=True, default=None)
     track = models.ForeignKey("Track", on_delete=models.CASCADE, blank=True, null=True)
     race_finish_criteria = models.CharField(
         max_length=3,
@@ -348,7 +341,7 @@ class RaceSessions(models.Model):
 
     def clean(self):
         if "R" not in str(self.type) and self.race_finish_criteria:
-            raise ValidationError("This is only needed for a race session")
+            raise ValidationError("A race finish criteria is only needed for a race session")
         if self.length < 0 or self.laps < 0:
             raise ValidationError(
                 "Either length or laps is negative. Set to 0 to ignore."
@@ -389,7 +382,7 @@ class RaceSessions(models.Model):
             return str
 
 
-class RaceConditions(models.Model):
+class RaceWeekend(models.Model):
     class Meta:
         verbose_name = "Race weekend"
 
@@ -404,7 +397,57 @@ class RaceConditions(models.Model):
         help_text="An rFm file to overwrite standards, speeds, pit boxes etc.",
     )
 
+    settings = models.TextField(
+        default=None,
+        null=True,
+        blank=True,
+        help_text="See https://wiki.apx.chmr.eu/doku.php?id=rfm_settings for details",
+    )
+
     sessions = models.ManyToManyField(RaceSessions, blank=True)
+
+    def save(self, *args, **kwargs):
+        template_path = join(BASE_DIR, "default.rfm")
+        rfm_file = rF2RfM(template_path)
+        relative_path = (
+            join("conditions", get_random_string(10) + ".rfm")
+            if not self.rfm
+            else self.rfm.name
+        )
+        target_path = join(join(MEDIA_ROOT, relative_path))
+
+        if self.settings:
+            lines = self.settings.split(linesep)
+            for section_name, section_content in rfm_file.sections.items():
+                for index, item in enumerate(section_content):
+                    key = item["key"]
+                    for line in lines:
+                        if line.startswith(key) and "PitGroup" not in line:
+                            parts = line.split("=")
+                            new_value = parts[1].strip()
+                            rfm_file.sections[section_name][index] = {
+                                "key": key,
+                                "value": new_value,
+                            }
+            for line in lines:
+                if "Group" in line:
+                    parts = line.split("=")
+                    group_number = parts[0].replace("Group", "")
+                    new_value = parts[1].strip()
+                    for index, item in enumerate(rfm_file.sections["PitGroupOrder"]):
+                        key = item["key"]
+                        value = item["value"]
+                        if f"Group{group_number}" in value:
+                            rfm_file.sections["PitGroupOrder"][index] = {
+                                "key": key,
+                                "value": f"{new_value}, Group{group_number}",
+                            }
+
+            rfm_file.write(target_path)
+
+            self.rfm = relative_path
+
+        super(RaceWeekend, self).save(*args, **kwargs)
 
     def __str__(self):
         sessions = self.sessions.all()
@@ -506,6 +549,25 @@ class Entry(models.Model):
                             line
                         )
                     )
+
+        # move the files of a entry if the entry component is being changed
+        if self.pk:
+            component_name = self.component.component_name
+            files = EntryFile.objects.filter(entry=self.pk)
+            for entry_file in files:
+                file_name = str(entry_file.file)
+                file_path_obj = Path(file_name)
+                expected = f"liveries/{component_name}/{file_path_obj.name}"
+                full_livery_path = join(MEDIA_ROOT, "liveries", component_name)
+                if not exists(full_livery_path):
+                    mkdir(full_livery_path)
+                full_src_file_path = join(MEDIA_ROOT, file_name)
+                full_file_path = join(full_livery_path, file_path_obj.name)
+                move(full_src_file_path, full_file_path)
+                entry_file.file = expected
+                entry_file.save()
+
+
 
     def __str__(self):
         return "[{}] {}#{}".format(self.component, self.team_name, self.vehicle_number)
@@ -660,7 +722,7 @@ class EvenStartType(models.TextChoices):
     FR = "4", "Fast rolling start"
 
 
-class ServerPlugin(models.Model):
+class ServerFile(models.Model):
     plugin_file = models.FileField(
         upload_to=get_plugin_root_path,
         help_text="The plugin file",
@@ -669,7 +731,7 @@ class ServerPlugin(models.Model):
         null=False,
     )
 
-    plugin_path = models.CharField(
+    target_file_path = models.CharField(
         blank=True,
         max_length=500,
         default=None,
@@ -819,10 +881,10 @@ class Event(models.Model):
         validators=[event_name_validator],
     )
     conditions = models.ForeignKey(
-        RaceConditions,
+        RaceWeekend,
         on_delete=models.CASCADE,
         verbose_name="race weekend",
-        help_text="Conditions is a bundle of session definitions, containing session lengths and grip information.",
+        help_text="The race weekend is a bundle of session definitions, containing session lengths and grip information.",
     )
     entries = models.ManyToManyField(Entry, blank=True, verbose_name="Liveries")
     tracks = models.ManyToManyField(Track)
@@ -909,7 +971,7 @@ class Event(models.Model):
         default=False, help_text="Disable any other voting"
     )
 
-    plugins = models.ManyToManyField(ServerPlugin, blank=True)
+    files = models.ManyToManyField(ServerFile, blank=True)
 
     timing_classes = models.TextField(
         default="{}",
@@ -1210,6 +1272,11 @@ class Event(models.Model):
         help_text="Use only if Parc Ferme is used: -1=use RFM/season/GDB default, or add to allow minor changes with fixed\/parc ferme setups: 1=steering lock, 2=brake pressure, 4=starting fuel, 8=fuel strategy 16=tire compound, 32=brake bias, 64=front wing, 128=engine settings",
     )
 
+    fixed_setups = models.BooleanField(
+        default=False,
+        help_text="Enforce to use fixed setups. You might need to use this to enforce a Parc Ferme setting even without uploading a fixed setup.",
+    )
+
     enable_auto_downloads = models.BooleanField(
         default=True,
         help_text="Whether to allow clients to autodownload files that they are missing.",
@@ -1396,12 +1463,18 @@ class Event(models.Model):
         blob["Race Conditions"]["CHAMP ParcFerme"] = int(self.parc_ferme)
         blob["Race Conditions"]["CURNT ParcFerme"] = int(self.parc_ferme)
         blob["Race Conditions"]["GPRIX ParcFerme"] = int(self.parc_ferme)
-        
+
         blob["Game Options"]["MULTI FreeSettings"] = int(self.free_settings)
         blob["Game Options"]["RPLAY FreeSettings"] = int(self.free_settings)
         blob["Game Options"]["CHAMP FreeSettings"] = int(self.free_settings)
         blob["Game Options"]["CURNT FreeSettings"] = int(self.free_settings)
         blob["Game Options"]["GPRIX FreeSettings"] = int(self.free_settings)
+
+        blob["Game Options"]["Fixed Setups"] = self.fixed_setups
+        blob["Game Options"]["Fixed Setups"] = self.fixed_setups
+        blob["Game Options"]["Fixed Setups"] = self.fixed_setups
+        blob["Game Options"]["Fixed Setups"] = self.fixed_setups
+        blob["Game Options"]["Fixed Setups"] = self.fixed_setups
 
         blob["Race Conditions"]["MULTI Formation Lap"] = int(self.start_type)
         blob["Race Conditions"]["RPLAY Formation Lap"] = int(self.start_type)
@@ -1448,7 +1521,8 @@ class Event(models.Model):
                         "Limit the line length of each line of the welcome text to 50!"
                     )
 
-
+        if self.parc_ferme == ParcFermeMode.O:
+            self.free_settings = -1
 class ServerStatus(models.TextChoices):
     STARTREQUESTED = "S+", "Start"
     STOPREQUESTED = "R-", "Stop"
@@ -1464,6 +1538,7 @@ class ServerBranch(models.TextChoices):
     PR = "previous-release", "previous-release"
     V21 = "v1121", "v1121"
     V22 = "v1122", "v1122"
+    V25 = "v1125", "v1125"
     OLD = "old-ui", "old-ui"
 
 
@@ -1515,11 +1590,10 @@ class Server(models.Model):
         default="",
         help_text="The secret for the communication with the APX reciever",
     )
-    public_secret = models.CharField(
+    local_path = models.CharField(
         blank=True,
-        max_length=500,
-        default=get_random_string(20),
-        help_text="The secret for the communication with the APX race control",
+        max_length=255,
+        help_text="The path where an APX created server is located inside server_children",
     )
     event = models.ForeignKey(
         Event,
@@ -1566,10 +1640,6 @@ class Server(models.Model):
         default=False,
         help_text="Decides if APX will call dedicated server update when refreshing the content",
     )
-    update_weather_on_start = models.BooleanField(
-        default=False,
-        help_text="Decides if APX will update the weather data on start if real weather is enabled",
-    )
     collect_results_replays = models.BooleanField(
         default=False,
         help_text="Decides if APX will allow the server to persist the result and replay files",
@@ -1597,13 +1667,11 @@ class Server(models.Model):
         help_text="APX Session Id",
     )
 
-    
     ignore_start_hook = models.BooleanField(
         default=True,
         help_text="Don't fire the Discord messages when the server starts",
     )
 
-        
     ignore_stop_hook = models.BooleanField(
         default=True,
         help_text="Don't fire the Discord messages when the server stops",
@@ -1612,6 +1680,14 @@ class Server(models.Model):
     ignore_updates_hook = models.BooleanField(
         default=True,
         help_text="Don't fire the Discord messages when the server was updated",
+    )
+
+    message = models.CharField(
+        blank=True,
+        null=True,
+        default=None,
+        max_length=50,
+        help_text="Submits a message or a command to the given server. Can't be longer than 50 chars",
     )
 
     @property
@@ -1626,25 +1702,8 @@ class Server(models.Model):
 
     @property
     def is_created_by_apx(self):
-        path = join(BASE_DIR, "server_children", self.public_secret)
+        path = join(BASE_DIR, "server_children", self.local_path)
         return exists(path)
-
-    @property
-    def firewall_rules(self):
-        rules = ""
-
-        name = self.public_secret
-        for port in [self.sim_port, self.http_port]:
-            rules = (
-                rules
-                + f'New-NetFirewallRule -DisplayName "APX RULE {name} ({port} TCP)" -Direction Inbound -LocalPort {port} -Protocol TCP -Action Allow\n'
-            )
-        for port in [self.sim_port, self.http_port + 1, self.http_port + 2]:
-            rules = (
-                rules
-                + f'New-NetFirewallRule -DisplayName "APX RULE {name} ({port} UDP)" -Direction Inbound -LocalPort {port} -Protocol UDP -Action Allow\n'
-            )
-        return rules
 
     @property
     def ports(self):
@@ -1657,16 +1716,127 @@ class Server(models.Model):
         )
 
     @property
-    def state_info(self):
-        if not self.pk or self.pk not in state_map:
-            return "-"
-        return state_map[self.pk]
-
-    @property
     def status_info(self):
+        # case 1: NO status (nothing running)
         if not self.pk or self.pk not in status_map:
-            return "-"
+            return "No status"
         status = status_map[self.pk]
+        if not status:
+            return "No status"
+
+        #  case 2: Status, but not running and not deploying
+        if (
+            not status["is_deploying"]
+            and "not_running" in status
+            and status["not_running"]
+        ):
+            return "Server is not running"
+
+        if "returned non-zero exit status 1" in status:
+            return status
+
+        if (
+            not status["is_deploying"]
+            and "not_running" not in status
+            and not status["is_deploying"]
+        ):
+            if "status" in status and status["status"] == "-":
+                return "No status"
+            return f"Server is running {status}"
+
+        if status and "startEventTime" in status["status"]:
+            flag_map = {
+                "GREEN": "🟩",
+                "BLUE": "🟦",
+                "YELLOW": "🟨"
+            }
+            sector_map = {
+                "SECTOR1": "①",
+                "SECTOR2": "②",
+                "SECTOR3": "③"
+            }
+            session = status["status"]["session"]
+            vehicle_text = ""
+            max_laps = status["status"]["maxLaps"]
+            current_time = str(
+                timedelta(seconds=int(status["status"]["currentEventTime"]))
+            )  # no ms, please
+            end_time = str(timedelta(seconds=status["status"]["endEventTime"]))
+
+            progress = None
+            if max_laps == 2147483647:
+                progress = "{}: {}/{}".format(session, current_time, end_time)
+            else:
+                lead_lap = None
+                for vehicle in status["status"]["vehicles"]:
+                    behind_leader = vehicle["lapsBehindLeader"]
+                    if behind_leader == 0:
+                        lead_lap = vehicle["lapsCompleted"]
+                        break
+
+                progress = "{}: {}/{}".format(session, lead_lap, max_laps)
+            vehicle_text = f"{progress}<br>"
+            vehicles = sorted(status["status"]["vehicles"], key=lambda x: x["position"])
+            vehicle_classes = {}
+            for vehicle in vehicles:
+                car_class = vehicle["carClass"]
+                if car_class not in vehicle_classes:
+                    vehicle_classes[car_class] = []
+                vehicle_classes[car_class].append(vehicle)
+            for car_class, vehicles in vehicle_classes.items():
+                vehicle_text += f"<span style='text-transform: uppercase; font-weight: bold; border-top: 1px solid black;'>{car_class}</span><br>"
+                for index, vehicle in enumerate(vehicles):
+                    flag = vehicle["flag"]
+                    flag_text = flag_map[flag] if flag in flag_map else ""
+                    if flag_text == "" and vehicle["underYellow"]:
+                        flag_text = flag_map["YELLOW"]
+                    pit_text = " Ⓟ " if vehicle["pitting"] else ""
+                    garage_text = " Ⓖ " if vehicle["inGarageStall"] else ""
+                    sector_text = sector_map[vehicle["sector"]]
+                    vehicle_entry_text = "<div>{}{}<b>P{}</b> (class: P{})@L{}-S{}|{}S: <b>{}</b> <code>#{}</code> - <i>{}</i> {}</br>".format(
+                        flag_text,
+                        pit_text if not garage_text else garage_text,
+                        vehicle["position"],
+                        index + 1,
+                        vehicle["lapsCompleted"],
+                        sector_text,
+                        vehicle["pitstops"],
+                        vehicle["fullTeamName"],
+                        vehicle["carNumber"],
+                        vehicle["driverName"],
+                        "<span style='color: darkred;'>{} PENALTIES</span>".format(vehicle["penalties"]) if vehicle["penalties"] > 0 else ""
+                    )
+                    best_lap = vehicle["bestLapTime"]
+                    last_lap = vehicle["lastLapTime"]
+                    best_laps_text = ""
+                    if best_lap > 0 and last_lap > 0:
+                        delta_lap = round(last_lap - best_lap,3)
+                        delta_lap_text = str(timedelta(seconds=delta_lap)).strip("0:")
+                        if delta_lap == 0:
+                            best_laps_text = "Last: {}</br>".format(str(timedelta(seconds=last_lap)).strip("0:"))
+                        else:
+                            best_laps_text = "Last: {} ({}{})</br>".format(str(timedelta(seconds=last_lap)).strip("0:"), "+" if delta_lap > 0 else "-", delta_lap_text)
+                    
+                    vehicle_text += f"{vehicle_entry_text}{best_laps_text}</div>"
+                
+            return mark_safe(vehicle_text)
+
+        if status and status["is_deploying"]:
+            if status["args"] is None:
+                return "Working: {}".format(status["status"])
+            else:
+                return "Working: {} {}".format(status["status"], status["args"])
+        # case 3: Status, Running
+
+        # case 4: Deploying at any stage
+        print(status)
+        return status
+        if status and "is_deploying" in status:
+            return (
+                "{0}: {1}".format(status["status"], status["args"])
+                if status["args"] is not None
+                else status["status"]
+            )
         # no status to report (e. g. new server)
         response = '<img src="{}admin/img/icon-no.svg" alt="Not Running"> Server is not running</br>'.format(
             STATIC_URL
@@ -1680,10 +1850,11 @@ class Server(models.Model):
             response = '<img src="{}admin/img/icon-no.svg" alt="Not Running"> The server is deploying</br>'.format(
                 STATIC_URL
             )
-        elif status and "not_running" not in status:
+        elif status and "not_running" not in status and "vehicles" in status:
             response = '<img src="{}admin/img/icon-yes.svg" alt="Running"> Server is running</br>'.format(
                 STATIC_URL
             )
+        elif status and "vehicles" in status:
             try:
                 content = loads(status.replace("'", '"'))
                 for vehicle in content["vehicles"]:
@@ -1706,147 +1877,162 @@ class Server(models.Model):
         return self.url if not self.name else self.name
 
     def clean(self):
-        status = status_map[self.pk] if self.pk and self.pk in status_map else None
-        if not self.server_key and self.action:
-            raise ValidationError(
-                "The server was not processed yet. Wait a short time until the key is present."
-            )
-        if status is not None and "not_running" in status and self.action == "R-":
-            raise ValidationError("The server is not running")
-
-        if status is not None and "not_running" not in status and self.action == "D":
-            raise ValidationError("Stop the server first")
-
-        if status is not None and "not_running" not in status and self.action == "S+":
-            raise ValidationError("Stop the server first")
-
-        if self.action == "D" and not self.event:
-            raise ValidationError("You have to add an event before deploying")
-
-        if status and "in_deploy" in status:
-            raise ValidationError("Wait until deployment is over")
-
-        if self.action == "W" and status and "in_deploy" in status:
-            raise ValidationError("Wait until deployment is over")
-
-        if self.action == "W" and status and "not_running" in status:
-            raise ValidationError("Start the server first")
-
-        if status is not None and "not_running" not in status and self.action == "WU":
-            raise ValidationError("Start the server first")
-
-        if not str(self.url).endswith("/"):
-            raise ValidationError("The server url must end with a slash!")
-
-        if self.remove_unused_mods and USE_GLOBAL_STEAMCMD:
-            raise ValidationError(
-                "You use a global steamcmd installation. Enabling this option will cause servers to remove the content for other servers."
-            )
-
-        other_servers = Server.objects.exclude(pk=self.pk)
-        occupied_ports_tcp = []
-        occupied_ports_udp = []
-
-        from urllib.parse import urlparse
-
-        server_url_parts = urlparse(self.url)
-        server_parts = server_url_parts.netloc.split(":")
-        server_host = server_parts[0]
-
-        for server in other_servers:
-            # locate host
-            url_parts = urlparse(server.url)
-            parts = url_parts.netloc.split(":")
-            host = parts[0]
-
-            if host == server_host:
-                occupied_ports_tcp.append(server.http_port)
-                occupied_ports_tcp.append(server.webui_port)
-                occupied_ports_udp.append(server.sim_port)
-
-        if (
-            self.http_port in occupied_ports_tcp
-            or self.webui_port in occupied_ports_tcp
-            or self.sim_port in occupied_ports_udp
-        ):
-            raise ValidationError(
-                "The ports of this server are already taken. TCP ports taken: {}, UDP ports taken: {}".format(
-                    occupied_ports_tcp, occupied_ports_tcp
-                )
-            )
-
-        if MAX_SERVERS is not None:
-            amount = Server.objects.count()
-            if amount >= MAX_SERVERS:
+        if self.message:
+            if self.action:
                 raise ValidationError(
-                    "You exceeded the maximum amount of available servers. You are allowed to use {} server instances. You won't be able to deploy until you not exceed that limit anymore".format(
-                        MAX_SERVERS
-                    )
+                    "Please deselect any action before writing chat messages"
                 )
-        steamcmd_bandwidth = 0
-        other_servers = Server.objects.all()
-        for server in other_servers:
-            if server.event:
-                if self.pk != server.pk:
-                    steamcmd_bandwidth = steamcmd_bandwidth + server.steamcmd_bandwidth
-
-        steamcmd_bandwidth = steamcmd_bandwidth + self.steamcmd_bandwidth
-
-        if MAX_STEAMCMD_BANDWIDTH is not None:
-            if self.steamcmd_bandwidth == 0:
+            # do only the message
+            background_thread = Thread(
+                target=background_action_chat,
+                args=(
+                    self.url,
+                    self.message,
+                ),
+                daemon=True,
+            )
+            background_thread.start()
+            self.message = ""
+        else:
+            status = status_map[self.pk] if self.pk and self.pk in status_map else None
+            if not self.server_key and self.action:
                 raise ValidationError(
-                    "Steamcmd bandwidth limits are enforced. Please set a limit for the steamcmd bandith. Available bandwidth: {} kbit/s".format(
-                        MAX_STEAMCMD_BANDWIDTH - steamcmd_bandwidth
-                    )
+                    "The server was not processed yet. Wait a short time until the key is present."
                 )
-            if steamcmd_bandwidth > MAX_STEAMCMD_BANDWIDTH:
+            if status is not None and "not_running" in status and self.action == "R-":
+                raise ValidationError("The server is not running")
+
+            if self.action == "D" and not self.event:
+                raise ValidationError("You have to add an event before deploying")
+
+            if status and "in_deploy" in status:
+                raise ValidationError("Wait until deployment is over")
+
+            if self.action == "W" and status and "in_deploy" in status:
+                raise ValidationError("Wait until deployment is over")
+
+            if self.action == "W" and status and "not_running" in status:
+                raise ValidationError("Start the server first")
+
+            if (
+                status is not None
+                and "not_running" not in status
+                and self.action == "WU"
+            ):
+                raise ValidationError("Start the server first")
+
+            if not str(self.url).endswith("/"):
+                raise ValidationError("The server url must end with a slash!")
+
+            if self.remove_unused_mods and USE_GLOBAL_STEAMCMD:
                 raise ValidationError(
-                    "Steamcmd bandwidth limits are enforced. You exceeded the available bandwidth by {} kbit/s".format(
-                        (MAX_STEAMCMD_BANDWIDTH - steamcmd_bandwidth) * -1
+                    "You use a global steamcmd installation. Enabling this option will cause servers to remove the content for other servers."
+                )
+
+            other_servers = Server.objects.exclude(pk=self.pk)
+            occupied_ports_tcp = []
+            occupied_ports_udp = []
+
+            from urllib.parse import urlparse
+
+            server_url_parts = urlparse(self.url)
+            server_parts = server_url_parts.netloc.split(":")
+            server_host = server_parts[0]
+
+            for server in other_servers:
+                # locate host
+                url_parts = urlparse(server.url)
+                parts = url_parts.netloc.split(":")
+                host = parts[0]
+
+                if host == server_host:
+                    occupied_ports_tcp.append(server.http_port)
+                    occupied_ports_tcp.append(server.webui_port)
+                    occupied_ports_udp.append(server.sim_port)
+
+            if (
+                self.http_port in occupied_ports_tcp
+                or self.webui_port in occupied_ports_tcp
+                or self.sim_port in occupied_ports_udp
+            ):
+                raise ValidationError(
+                    "The ports of this server are already taken. TCP ports taken: {}, UDP ports taken: {}".format(
+                        occupied_ports_tcp, occupied_ports_tcp
                     )
                 )
 
-        if self.event:
-            upstream_sum = 0
-            downstream_sum = 0
+            if MAX_SERVERS is not None:
+                amount = Server.objects.count()
+                if amount >= MAX_SERVERS:
+                    raise ValidationError(
+                        "You exceeded the maximum amount of available servers. You are allowed to use {} server instances. You won't be able to deploy until you not exceed that limit anymore".format(
+                            MAX_SERVERS
+                        )
+                    )
+            steamcmd_bandwidth = 0
             other_servers = Server.objects.all()
             for server in other_servers:
                 if server.event:
                     if self.pk != server.pk:
-                        upstream_sum = upstream_sum + server.event.upstream
-                        downstream_sum = downstream_sum + server.event.downstream
+                        steamcmd_bandwidth = (
+                            steamcmd_bandwidth + server.steamcmd_bandwidth
+                        )
 
-            upstream_sum = upstream_sum + self.event.upstream
-            downstream_sum = downstream_sum + self.event.downstream
-            if (
-                MAX_DOWNSTREAM_BANDWIDTH is not None
-                and MAX_DOWNSTREAM_BANDWIDTH <= downstream_sum
-            ):
-                raise ValidationError(
-                    "You exceeded the maximum downstream bandwidth. You are allowed to use {} kbit/s, you requested {} kbit/s".format(
-                        MAX_DOWNSTREAM_BANDWIDTH, downstream_sum
-                    )
-                )
-            if (
-                MAX_UPSTREAM_BANDWIDTH is not None
-                and MAX_UPSTREAM_BANDWIDTH <= upstream_sum
-            ):
-                raise ValidationError(
-                    "You exceeded the maximum upstream bandwidth. You are allowed to use {} kbit/s, you requested {} kbit/s".format(
-                        MAX_UPSTREAM_BANDWIDTH, upstream_sum
-                    )
-                )
-        if (
-            self.action != ""
-            or self.server_key is None
-            or self.server_unlock_key is not None
-        ):
-            background_thread = Thread(
-                target=background_action_server, args=(self,), daemon=True
-            )
-            background_thread.start()
+            steamcmd_bandwidth = steamcmd_bandwidth + self.steamcmd_bandwidth
 
-        create_firewall_script(self)
+            if MAX_STEAMCMD_BANDWIDTH is not None:
+                if self.steamcmd_bandwidth == 0:
+                    raise ValidationError(
+                        "Steamcmd bandwidth limits are enforced. Please set a limit for the steamcmd bandith. Available bandwidth: {} kbit/s".format(
+                            MAX_STEAMCMD_BANDWIDTH - steamcmd_bandwidth
+                        )
+                    )
+                if steamcmd_bandwidth > MAX_STEAMCMD_BANDWIDTH:
+                    raise ValidationError(
+                        "Steamcmd bandwidth limits are enforced. You exceeded the available bandwidth by {} kbit/s".format(
+                            (MAX_STEAMCMD_BANDWIDTH - steamcmd_bandwidth) * -1
+                        )
+                    )
+
+            if self.event:
+                upstream_sum = 0
+                downstream_sum = 0
+                other_servers = Server.objects.all()
+                for server in other_servers:
+                    if server.event:
+                        if self.pk != server.pk:
+                            upstream_sum = upstream_sum + server.event.upstream
+                            downstream_sum = downstream_sum + server.event.downstream
+
+                upstream_sum = upstream_sum + self.event.upstream
+                downstream_sum = downstream_sum + self.event.downstream
+                if (
+                    MAX_DOWNSTREAM_BANDWIDTH is not None
+                    and MAX_DOWNSTREAM_BANDWIDTH <= downstream_sum
+                ):
+                    raise ValidationError(
+                        "You exceeded the maximum downstream bandwidth. You are allowed to use {} kbit/s, you requested {} kbit/s".format(
+                            MAX_DOWNSTREAM_BANDWIDTH, downstream_sum
+                        )
+                    )
+                if (
+                    MAX_UPSTREAM_BANDWIDTH is not None
+                    and MAX_UPSTREAM_BANDWIDTH <= upstream_sum
+                ):
+                    raise ValidationError(
+                        "You exceeded the maximum upstream bandwidth. You are allowed to use {} kbit/s, you requested {} kbit/s".format(
+                            MAX_UPSTREAM_BANDWIDTH, upstream_sum
+                        )
+                    )
+            if (
+                self.action != ""
+                or self.server_key is None
+                or self.server_unlock_key is not None
+            ):
+                background_thread = Thread(
+                    target=background_action_server, args=(self,), daemon=True
+                )
+                background_thread.start()
 
 
 def background_action_server(server):
@@ -1862,7 +2048,7 @@ def remove_server_children(sender, instance, **kwargs):
 
 
 def remove_server_children_thread(instance):
-    id = instance.public_secret
+    id = instance.local_path
     server_children = join(BASE_DIR, "server_children", id)
     # lock the path to prevent the children management module to start stuff again
     lock_path = join(server_children, "delete.lock")
@@ -1870,44 +2056,17 @@ def remove_server_children_thread(instance):
         file.write("bye")
 
 
-def background_action_chat(chat):
+def background_action_chat(server_url, message):
     try:
-        key = get_server_hash(chat.server.url)
-        run_apx_command(key, "--cmd chat --args {} ".format(chat.message))
-        chat.success = True
+        key = get_server_hash(server_url)
+        run_apx_command(key, "--cmd chat --args {} ".format(message))
     except Exception as e:
-        chat.success = False
-    finally:
-        chat.save()
+        print(e)
 
 
 @receiver(post_save, sender=Server)
 def my_handler(sender, instance, **kwargs):
     create_virtual_config()
-
-
-class Chat(models.Model):
-    server = models.ForeignKey(Server, on_delete=models.CASCADE)
-    message = models.TextField(
-        blank=True,
-        null=True,
-        default=None,
-        max_length=50,
-        help_text="Submits a message or a command to the given server. Can't be longer than 50 chars",
-    )
-    success = models.BooleanField(default=False)
-    date = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return "{}@{}: {}".format(
-            self.server, self.date.strftime("%m/%d/%Y, %H:%M:%S"), self.message
-        )
-
-    def clean(self):
-        background_thread = Thread(
-            target=background_action_chat, args=(self,), daemon=True
-        )
-        background_thread.start()
 
 
 class ServerCron(models.Model):
@@ -2057,160 +2216,15 @@ def add_cron_to_windows(sender, instance, **kwargs):
                 diff_hours = 24 + diff_hours
 
             if diff_minutes < 0:
-                diff_minutes = 60 - start_minutes + end_Minutes
+                diff_minutes = 60 - start_minutes + end_minutes
 
             schedule_part = (
                 schedule_part + f" /ri {modifier} /du {diff_hours}:{diff_minutes}"
             )
         # https://stackoverflow.com/questions/6814075/windows-start-b-command-problem#6814111
-        run_command = f"start /d '{BASE_DIR}' /b 'apx' '{python_path}' manage.py cron_run {id}"
+        run_command = (
+            f"start /d '{BASE_DIR}' /b 'apx' '{python_path}' manage.py cron_run {id}"
+        )
         command_line = f'schtasks /create /tn {task_name} /st {start_time} /sc {schedule_part} /tr "cmd /c {run_command}"'
         print(command_line)
         system(command_line)
-
-
-class TickerMessageType(models.TextChoices):
-    PenaltyAdd = "P+", "PenaltyAdd"
-    PenaltyRemove = "P-", "Penaltyrevoke"
-    SlowCar = "V", "SlowCar"
-    PitEntry = "PI", "PitEntry"
-    PitExit = "PO", "PitExit"
-    GarageEntry = "GI", "GarageEntry"
-    GarageExit = "GO", "GarageExit"
-    StatusChange = "S", "StatusChange"
-    PositionChange = "P", "PositionChange"
-    PositionChangeUnderYellow = "PY", "PositionChangeUnderYellow"
-    BestLapChange = "PB", "BestLapChange"
-    PitStatusChange = "PS", "PitStatusChange"
-    Lag = "L", "Lag"
-    LapsCompletedChange = "LC", "LapsCompletedChange"
-    PittingStart = "PSS", "PittingStart"
-    PittingEnd = "PSE", "PittingEnd"
-    DriverSwap = "DS", "DriverSwap"
-    VLow = "VL", "VLow"
-
-
-class TickerMessage(models.Model):
-    class Meta:
-        verbose_name_plural = "Ticker messages"
-
-    server = models.ForeignKey(
-        Server, on_delete=models.CASCADE, blank=False, null=False, default=None
-    )
-
-    date = models.DateTimeField(auto_now_add=True)
-    message = models.CharField(
-        max_length=255,
-        blank=False,
-        null=False,
-        default=None,
-        help_text="Event description",
-    )
-
-    type = models.CharField(
-        max_length=3,
-        choices=TickerMessageType.choices,
-        blank=True,
-        default="",
-        help_text="Type",
-        verbose_name="Type",
-    )
-
-    event_time = models.IntegerField(default=0)
-    session_id = models.CharField(
-        max_length=255,
-        blank=True,
-        null=True,
-        default=None,
-        help_text="APX Session Id",
-    )
-    session = models.CharField(
-        max_length=255,
-        blank=True,
-        null=True,
-        default=None,
-        help_text="In game session identifier",
-    )
-
-    def __str__(self):
-        try:
-            data = loads(self.message)
-            if self.type == "P+":
-                return "Penalty added for {}".format(data["driver"])
-
-            if self.type == "P-":
-                return "Penalty revoked for {}".format(data["driver"])
-
-            if self.type == "V":
-                return "Slow car: {}".format(data["driver"])
-
-            if self.type == "PI":
-                return "Pit entry {}".format(data["driver"])
-
-            if self.type == "PO":
-                return "Pit exit {}".format(data["driver"])
-
-            if self.type == "GI":
-                return "Garage entry {}".format(data["driver"])
-
-            if self.type == "GO":
-                return "Garage exit {}".format(data["driver"])
-
-            if self.type == "S":
-                return "Status change {} (was: {} is: {})".format(
-                    data["driver"], data["old_status"], data["status"]
-                )
-
-            if self.type == "P":
-                return "New position for {}: P{} ({:+})".format(
-                    data["driver"], data["new_pos"], data["new_pos"] - data["old_pos"]
-                )
-
-            if self.type == "PY":
-                return "New position (possibly under yellow) for {}: P{} ({:+})".format(
-                    data["driver"],
-                    data["new_pos"],
-                    data["new_pos"] - data["old_pos"],
-                )
-
-            if self.type == "PB":
-                return "New personal best for {}: {}".format(
-                    data["driver"], data["new_best"]
-                )
-
-            if self.type == "DS":
-                return "Driver Swap: {} out, {} in".format(
-                    data["old_driver"], data["new_driver"]
-                )
-
-            if self.type == "PS":
-                return "Pit status change for {}: {} (was {})".format(
-                    data["driver"], data["status"], data["old_status"]
-                )
-
-            if self.type == "LC":
-                return "Driver {} now completed {} laps".format(
-                    data["driver"], data["laps"]
-                )
-
-            if self.type == "PSS":
-                return "Pitting start for {}".format(data["driver"])
-
-            if self.type == "PSE":
-                return "Pitting end for {}".format(data["driver"])
-
-            if self.type == "L":
-                return "Lag suspect for {}, nearby: {}. Speed difference was {}".format(
-                    data["driver"],
-                    "".join(data["nearby"]) if len(data["nearby"]) else "Nobody",
-                    data["old_speed"] - data["speed"],
-                )
-
-            if self.type == "VL":
-                return "Low speed or stationary car {}, nearby {}".format(
-                    data["driver"], data["nearby"]
-                )
-        except Exception as e:
-            print(e)
-            pass
-        return self.type

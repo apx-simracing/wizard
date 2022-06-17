@@ -7,45 +7,33 @@ from webgui.models import (
     Entry,
     EntryFile,
     Event,
-    RaceConditions,
+    RaceWeekend,
     Server,
-    Chat,
     RaceSessions,
     ServerCron,
-    TickerMessage,
-    ServerPlugin,
+    ServerFile,
     TrackFile,
     background_action_server,
 )
-from wizard.settings import OPENWEATHERAPI_KEY, RECIEVER_PORT_RANGE, EASY_MODE
+from wizard.settings import RECIEVER_PORT_RANGE, EASY_MODE
 from django.contrib import messages
-from django.utils.html import mark_safe
 from django.contrib.auth.models import Group, User
-from django import forms
 from django.contrib import admin
 from webgui.util import (
-    get_server_hash,
-    run_apx_command,
     get_random_string,
     get_secret,
-    RECIEVER_DOWNLOAD_FROM,
     get_free_tcp_port,
     bootstrap_reciever,
 )
-from json import loads
-from datetime import datetime, timedelta
-import pytz
-import tarfile
-from os import unlink, mkdir, linesep
-from os.path import join, exists
-from wizard.settings import MEDIA_ROOT, BASE_DIR
-from math import floor
+from os import mkdir
+from os.path import join
+from wizard.settings import BASE_DIR
 from django.urls import path
 from django.http import HttpResponseRedirect
 from pydng import generate_name
 from django.forms.widgets import CheckboxSelectMultiple
 from threading import Thread
-
+from django.utils.html import mark_safe
 admin.site.site_url = None
 admin.site.site_title = "APX"
 
@@ -232,18 +220,6 @@ class EntryAdmin(admin.ModelAdmin):
             fieldsets[1][1]["fields"] = ("team_name", "vehicle_number", "base_class")
         return fieldsets
 
-
-@admin.register(Chat)
-class ChatAdmin(admin.ModelAdmin):
-    readonly_fields = ("success", "date")
-    list_display = (
-        "server",
-        "message",
-        "success",
-        "date",
-    )
-
-
 @admin.register(ServerCron)
 class ServerCronAdmin(admin.ModelAdmin):
     ordering = ("server", "disabled", "start_time")
@@ -353,7 +329,7 @@ class EventAdmin(admin.ModelAdmin):
         "tracks",
         "entries",
         "signup_components",
-        "plugins",
+        "files",
     )
 
     def copy(self, request, queryset):
@@ -385,28 +361,40 @@ class EventAdmin(admin.ModelAdmin):
     def all_aids(self, obj):
         if not obj:
             return "-"
-        return "{}/{}/{}/{}/{}".format(
+        return "{}/{}/{}/{}/{}/{}".format(
             obj.allow_auto_clutch,
             obj.allow_ai_toggle,
             obj.allow_traction_control,
             obj.allow_anti_lock_brakes,
             obj.allow_stability_control,
+            obj.damage
         )
 
-    all_aids.short_description = "Auto clutch/ AI toggle/ TC/ ABS/ SC"
+    all_aids.short_description = "Auto clutch/ AI toggle/ TC/ ABS/ SC/ Damage"
+
+    def sessions(self, obj):
+        if not obj:
+            return "-"
+        sessions = RaceWeekend.objects.get(pk=obj.conditions.pk).sessions
+        session_str = ""
+        for session in sessions.all():
+            session_str += str(session) + "</br>"
+        if session_str == "":
+            return "No sessions"
+        return mark_safe(session_str)
+
+
+    sessions.short_description = "Sessions"
 
     list_display = (
         "name",
-        "damage",
         "all_clients",
         "all_aids",
+        "sessions",
         "rejoin",
         "real_name",
         "replays",
         "real_weather",
-        "temp_offset",
-        "weather_api",
-        "weather_key",
     )
 
     fieldsets = (
@@ -471,7 +459,7 @@ class EventAdmin(admin.ModelAdmin):
                     "upstream",
                     "collision_fade_threshold",
                     "enable_auto_downloads",
-                    "plugins",
+                    "files",
                     "force_versions",
                 ),
             },
@@ -526,6 +514,7 @@ class EventAdmin(admin.ModelAdmin):
                 "fields": (
                     "parc_ferme",
                     "free_settings",
+                    "fixed_setups",
                 )
             },
         ),
@@ -568,11 +557,13 @@ class RaceSessionsAdmin(admin.ModelAdmin):
     )
 
 
-@admin.register(RaceConditions)
-class RaceConditionsAdmin(admin.ModelAdmin):
+@admin.register(RaceWeekend)
+class RaceWeekendAdmin(admin.ModelAdmin):
+    filter_horizontal = (
+        "sessions",
+    )
     def get_form(self, request, obj=None, **kwargs):
-        form = super(RaceConditionsAdmin, self).get_form(request, obj=None, **kwargs)
-        form.base_fields["sessions"].widget = CheckboxSelectMultiple()
+        form = super(RaceWeekendAdmin, self).get_form(request, obj=None, **kwargs)
         return form
 
 
@@ -580,7 +571,7 @@ class RaceConditionsAdmin(admin.ModelAdmin):
 class ServerAdmin(admin.ModelAdmin):
     ordering = ["name"]
     change_list_template = (
-        "admin/server_list.html" if not EASY_MODE else "admin/server_list_easy.html"
+        "admin/server_list.html"
     )
     actions = [
         # "get_thumbnails", this is disabled  until work on the timing resumes.
@@ -608,7 +599,7 @@ class ServerAdmin(admin.ModelAdmin):
         if not exists(server_children):
             mkdir(server_children)
 
-        public_secret = get_random_string(20)
+        local_path = generate_name()
         secret = get_secret(20)
         servers = Server.objects.all()
         taken_ports = []
@@ -627,14 +618,14 @@ class ServerAdmin(admin.ModelAdmin):
             )
             return HttpResponseRedirect("../")
 
-        server_path = join(server_children, public_secret)
+        server_path = join(server_children, local_path)
         if not exists(server_path):
             mkdir(server_path)
             new_server = Server()
-            new_server.public_secret = public_secret
+            new_server.local_path = local_path
             new_server.secret = secret
             new_server.url = "http://localhost:{}/".format(port)
-            new_server.name = generate_name()
+            new_server.name = local_path
             new_server.state = "Created server element"
             new_server.save()
 
@@ -650,16 +641,6 @@ class ServerAdmin(admin.ModelAdmin):
                 request, "The server is already existing", level=messages.WARNING
             )
         return HttpResponseRedirect("../")
-
-    def delete_chats_and_messages(self, request, queryset):
-        for server in queryset:
-            TickerMessage.objects.filter(server=server).delete()
-            Chat.objects.filter(server=server).delete()
-            messages.success(
-                request, f"messages and chats are deleted for server {server}"
-            )
-
-    delete_chats_and_messages.short_description = "Delete all chat and messages"
 
     def start_server(self, request, queryset):
         for server in queryset:
@@ -719,7 +700,7 @@ class ServerAdmin(admin.ModelAdmin):
                     )
                 else:
                     path = join(
-                        BASE_DIR, "server_children", server.public_secret, "update.lock"
+                        BASE_DIR, "server_children", server.local_path, "update.lock"
                     )
                     with open(path, "w") as file:
                         file.write("update")
@@ -737,51 +718,9 @@ class ServerAdmin(admin.ModelAdmin):
                     ),
                 )
 
-    def get_thumbnails(self, request, queryset):
-        try:
-            for server in queryset:
-
-                url = server.url
-                key = get_server_hash(url)
-                media_thumbs_root = join(MEDIA_ROOT, "thumbs")
-                if not exists(media_thumbs_root):
-                    mkdir(media_thumbs_root)
-
-                server_thumbs_path = join(media_thumbs_root, key)
-                if not exists(server_thumbs_path):
-                    mkdir(server_thumbs_path)
-
-                # server may changed -> download thumbs
-                thumbs_command = run_apx_command(
-                    key,
-                    "--cmd thumbnails --args {}".format(
-                        join(server_thumbs_path, "thumbs.tar.gz")
-                    ),
-                )
-                # unpack the livery thumbnails, if needed
-                if not exists(join(MEDIA_ROOT, "thumbs")):
-                    mkdir(join(MEDIA_ROOT, "thumbs"))
-                server_key_path = join(MEDIA_ROOT, "thumbs", key)
-                if not exists(server_key_path):
-                    mkdir(server_key_path)
-
-                server_pack_path = join(server_key_path, "thumbs.tar.gz")
-                if exists(server_pack_path):
-                    # unpack liveries
-                    file = tarfile.open(server_pack_path)
-                    file.extractall(path=server_key_path)
-                    file.close()
-                    unlink(server_pack_path)
-            messages.success(request, "The thumbnails are saved")
-        except Exception as e:
-            messages.error(request, e)
-
-    get_thumbnails.short_description = "Get thumbnails"
-
     list_display = (
         "name",
         "event",
-        "state_info",
         "status_info",
         "is_created_by_apx",
         "ports",
@@ -800,7 +739,7 @@ class ServerAdmin(admin.ModelAdmin):
                         "ignore_stop_hook",
                         "ignore_updates_hook",
                         "secret",
-                        "public_secret",
+                        "local_path",
                         "session_id",
                         "sim_port",
                         "http_port",
@@ -821,12 +760,19 @@ class ServerAdmin(admin.ModelAdmin):
                     "fields": [
                         "action",
                         "status_info",
-                        "state_info",
                         "is_created_by_apx",
                         "update_on_build",
                         "remove_cbash_shaders",
                         "remove_settings",
                         "collect_results_replays",
+                    ]
+                },
+            ),
+            (
+                "Chatting and commands",
+                {
+                    "fields": [
+                        "message"
                     ]
                 },
             ),
@@ -838,7 +784,9 @@ class ServerAdmin(admin.ModelAdmin):
         if obj.is_created_by_apx:
             fieldsets[0][1]["fields"] = [
                 "name",
-                "public_secret",
+                "secret",
+                "url",
+                "local_path",
                 "session_id",
                 "sim_port",
                 "http_port",
@@ -850,14 +798,13 @@ class ServerAdmin(admin.ModelAdmin):
             fieldsets[0][1]["fields"].remove("remove_unused_mods")
             fieldsets[0][1]["fields"].remove("steamcmd_bandwidth")
             fieldsets[0][1]["fields"].remove("session_id")
-            fieldsets[0][1]["fields"].remove("public_secret")
+            fieldsets[0][1]["fields"].remove("local_path")
             fieldsets[0][1]["fields"].remove("webui_port")
             if "heartbeat_only" in fieldsets[0][1]["fields"]:
                 fieldsets[0][1]["fields"].remove("heartbeat_only")
             fieldsets[2][1]["fields"] = [
                 "action",
                 "status_info",
-                "state_info",
                 "is_created_by_apx",
                 "update_on_build",
                 "collect_results_replays",
@@ -865,49 +812,19 @@ class ServerAdmin(admin.ModelAdmin):
         return fieldsets
 
     def get_readonly_fields(self, request, obj):
-        if self.is_running(obj):
-            return self.readonly_fields + (
-                "event",
-                "status_info",
-                "state_info",
-                "is_created_by_apx",
-                "state",
-                "public_secret",
-                "logfile",
-            )
         return self.readonly_fields + (
-            "is_running",
             "status_info",
-            "state_info",
             "is_created_by_apx",
             "state",
-            "public_secret",
+            "local_path",
             "logfile",
         )
-
-    def is_running(self, obj):
-        if not obj:
-            return False
-        status = self.get_status(obj)
-        if not status or status == "-":
-            return False
-        return (
-            "Server is not running" not in status
-        )  # get_stauts returns the display text, not the status anymore.
-
-    is_running.short_description = "Running"
 
     def get_status(self, obj):
         return obj.status_info
 
-
-@admin.register(TickerMessage)
-class TickerMessageAdmin(admin.ModelAdmin):
-    list_display = ["date", "type", "session_id", "event_time", "session", "__str__"]
-
-
-@admin.register(ServerPlugin)
-class ServerPluginAdmin(admin.ModelAdmin):
+@admin.register(ServerFile)
+class ServerFileAdmin(admin.ModelAdmin):
     pass
 
 
@@ -924,4 +841,3 @@ admin.site.unregister(User)
 
 if EASY_MODE:
     admin.site.unregister(Component)
-    admin.site.unregister(TickerMessage)

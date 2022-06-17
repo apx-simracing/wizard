@@ -133,6 +133,8 @@ STATIC_ROOT = join(str(BASE_DIR), "static")
 
 STATIC_URL = f"http://localhost:{STATIC_PORT}/"
 
+LIBRARY_PATH = None
+
 MEDIA_PORT = 8282
 
 MEDIA_URL = f"http://localhost:{MEDIA_PORT}/"
@@ -146,14 +148,6 @@ MEDIA_ROOT = join(str(BASE_DIR), "uploads")
 APX_ROOT = join(str(BASE_DIR), "cli")
 
 PACKS_ROOT = join(str(BASE_DIR), "packs")
-
-USER_SIGNUP_ENABLED = False
-
-USER_SIGNUP_RULE_TEXT = ""
-
-INSTANCE_NAME = "APX Wizard"
-
-ENTRY_SIGNUP_ENABLED = False
 
 DISCORD_WEBHOOK = None
 

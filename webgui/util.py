@@ -1,50 +1,34 @@
-from wizard.settings import (
-    APX_ROOT,
-    MEDIA_ROOT,
-    PACKS_ROOT,
-    DISCORD_WEBHOOK,
-    DISCORD_WEBHOOK_NAME,
-    DISCORD_RACE_CONTROL_WEBHOOK,
-    DISCORD_RACE_CONTROL_WEBHOOK_NAME,
-    OPENWEATHERAPI_KEY,
-    BASE_DIR,
-    PUBLIC_URL,
-    BASE_DIR,
-    MAX_STEAMCMD_BANDWIDTH,
-    WEBUI_PORT_RANGE,
-    HTTP_PORT_RANGE,
-    SIM_PORT_RANGE,
-    MSG_LOGO,
-    USE_GLOBAL_STEAMCMD,
-    NON_WORKSHOP_PAYLOAD_TEXT,
-    WINE_DRIVE,
-    WINE_IMPLEMENTATION
-)
 import hashlib
-import subprocess
-from urllib.parse import urlparse
-from re import match
-from django.dispatch import receiver
-from os.path import join, exists, basename
-from os import mkdir, listdir, unlink, linesep
-from shutil import copyfile
-from . import models
-from json import loads, dumps
-import random
-from django.core.exceptions import ValidationError
-from django.db.models.signals import post_save
-import socket
-import discord
-from requests import post, get
-import secrets
-import string
-import socket
-import random
+import io
 import logging
-import zipfile, io
-from time import sleep
+import random
+import secrets
+import socket
+import string
+import subprocess
+import zipfile
 from collections import OrderedDict
+from json import dumps, loads
+from os import linesep, listdir, mkdir, unlink
+from os.path import basename, exists, join
+from re import match
+from shutil import copyfile, copytree
 from sys import platform
+from time import sleep
+from urllib.parse import urlparse
+
+from django.core.exceptions import ValidationError
+from requests import get, post
+from wizard.settings import (APX_ROOT, BASE_DIR, DISCORD_RACE_CONTROL_WEBHOOK,
+                             DISCORD_RACE_CONTROL_WEBHOOK_NAME,
+                             DISCORD_WEBHOOK, DISCORD_WEBHOOK_NAME,
+                             HTTP_PORT_RANGE, MEDIA_ROOT, MSG_LOGO,
+                             NON_WORKSHOP_PAYLOAD_TEXT, OPENWEATHERAPI_KEY,
+                             PACKS_ROOT, PUBLIC_URL, SIM_PORT_RANGE,
+                             USE_GLOBAL_STEAMCMD, WEBUI_PORT_RANGE, WINE_DRIVE,
+                             WINE_IMPLEMENTATION, LIBRARY_PATH, RECIEVER_DOWNLOAD_FROM)
+
+from . import models
 
 logger = logging.getLogger(__name__)
 
@@ -101,7 +85,6 @@ FILE_NAME_SUFFIXES_MEANINGS = [
 ]
 
 RECIEVER_COMP_INFO = open(join(BASE_DIR, "release")).read()
-RECIEVER_DOWNLOAD_FROM = "https://github.com/apx-simracing/reciever/releases/download/R89/reciever-2021R89.zip"
 
 
 def get_update_filename(instance, filename):
@@ -270,17 +253,25 @@ def get_free_tcp_port(
     return port
 
 
-def set_state(id, message):
-    models.state_map[id] = message
+def set_state(id, message, is_deploying=False):
+    models.status_map[id] = {
+        "status": message,
+        "args": None,
+        "is_deploying": is_deploying
+    }
 
 
 def bootstrap_reciever(root_path, server_obj, port, secret):
     try:
-        set_state(server_obj.pk, "Downloading reciever release")
-        r = get(RECIEVER_DOWNLOAD_FROM)
-        z = zipfile.ZipFile(io.BytesIO(r.content))
-        z.extractall(root_path)
-        set_state(server_obj.pk, "Extracted reciever release")
+        if exists(RECIEVER_DOWNLOAD_FROM):
+            set_state(server_obj.pk, "Copying reciever release")
+            copytree(RECIEVER_DOWNLOAD_FROM, root_path)
+        else:
+            set_state(server_obj.pk, "Downloading reciever release")
+            r = get(RECIEVER_DOWNLOAD_FROM)
+            z = zipfile.ZipFile(io.BytesIO(r.content))
+            z.extractall(root_path)
+            set_state(server_obj.pk, "Extracted reciever release")
     except:
         set_state(server_obj.pk, "Extracted reciever release")
         return False
@@ -540,7 +531,6 @@ def get_event_config(event_id: int):
                     "length": session.length,
                     "laps": session.laps,
                     "start": str(session.start) if session.start is not None else None,
-                    "weather": session.weather,
                     "grip_needle": session.grip_needle,
                     "grip_scale": grip_scale,
                 }
@@ -555,10 +545,12 @@ def get_event_config(event_id: int):
         start_type = 2
     if server.start_type == models.EvenStartType.FR:
         start_type = 4
+    # plugins are used here aswell as for DLL's as also for other files
     plugins = {}
-    for plugin in server.plugins.all():
+    for plugin in server.files.all():
         name = basename(str(plugin.plugin_file))
-        plugins[name] = loads(plugin.overwrites)
+        if  ".dll" in name: # don't use it for other files
+            plugins[name] = loads(plugin.overwrites)
     mod_version = (
         server.event_mod_version
         if server.event_mod_version
@@ -592,6 +584,7 @@ def get_event_config(event_id: int):
             "name": mod_name,
             "version": mod_version,
         },
+        "library_path": LIBRARY_PATH
     }
     return result
 
@@ -748,153 +741,6 @@ def get_clouds(raw, rain=False):
         return result + 4
 
 
-def update_weather(session):
-    from requests import get
-    import datetime
-    from math import floor
-
-    if session.start and session.track:
-        forecast = get(
-            "https://api.openweathermap.org/data/2.5/onecall?lat="
-            + str(session.track.lat)
-            + "&lon="
-            + str(session.track.lon)
-            + "&exclude=daily,current,minutely&appid="
-            + OPENWEATHERAPI_KEY
-            + "&units=metric"
-        ).json()
-
-        forecast_data = forecast["hourly"]
-        start = int(session.start.hour)
-        start_from_midnight = start * 60 + session.start.minute
-
-        duration = (
-            24 * 60
-        )  # TODO: DEBUG IF THIS CAUSES ISSUES TO ADD 24h on each session
-        end_time = start_from_midnight + duration
-
-        starting_index = 0
-        matching_forecast = []
-        for index, forecast_entry in enumerate(forecast_data):
-            # forecast is hourly, we only interested in the full hour numbers
-            hour = int(
-                datetime.datetime.fromtimestamp(forecast_entry["dt"]).strftime("%H")
-            )
-            if hour == start and starting_index == 0:
-                starting_index = index
-
-            if starting_index != 0 and len(matching_forecast) <= 24:
-                matching_forecast.append(forecast_entry)
-
-        last_rain = None
-        weather_blocks = []
-        for index, next_forecast in enumerate(matching_forecast):
-            temp = floor(next_forecast["temp"])
-            wind = floor(next_forecast["wind_speed"])
-            wind_direction = degrees_to_direction(next_forecast["wind_deg"])
-
-            block_length = (
-                60  # 60 minutes block length, as the api does not delivery ynthing more
-            )
-
-            rain_volume = 0
-            maximum_rain_volume = (
-                300  # we assume that 30cm/hr ist the maximum amount of rain possible
-            )
-            # unit: mm per hour
-            rain_percentage = 0
-            if "rain" in next_forecast:
-                rain_volume = next_forecast["rain"]["1h"]
-                rain_percentage = floor(100 / (maximum_rain_volume / rain_volume))
-
-            humidity = floor(next_forecast["humidity"])
-
-            clouds = get_clouds(next_forecast["clouds"], rain_percentage > 20)
-            start_time = start_from_midnight + index * 60
-            day_max = 24 * 60
-            if start_time > day_max:
-                start_time = start_time - day_max
-
-            rain_density = 0
-            probability = next_forecast["pop"] * 100  # 0.0 > 1
-
-            # as there is no propability -> randomize
-            # 20 -> random 5 -> rain
-            # 20 -> random 21 -> no rain
-
-            match = random.randint(0, 100)
-
-            # if the random number larger than the number, reset it
-            # if the random number is lower than the one, let it rain!
-            if match >= probability:
-                rain_density = 0
-                rain_percentage = 0
-
-            if next_forecast["clouds"] > 80 and rain_percentage > 80:
-                rain_density = 2
-            block = {
-                "HumanDate": str(datetime.datetime.fromtimestamp(next_forecast["dt"])),
-                "Probability": floor(probability),
-                "MatchedProbability": match,
-                "StartTime": start_time,
-                "Duration": block_length,
-                "Sky": clouds,
-                "RainChange": rain_percentage,
-                "RainDensity": rain_density,
-                "Temperature": temp,
-                "Humidity": humidity,
-                "WindSpeed": wind,
-                "WindDirection": wind_direction,
-            }
-            last_rain = rain_percentage
-            weather_blocks.append(block)
-
-        wet_file_content = []
-        for block in weather_blocks:
-            wet_file_content.append("//Weather block real date: " + block["HumanDate"])
-            wet_file_content.append("//POP=" + str(block["Probability"]))
-            wet_file_content.append("//SERVERPOP=" + str(block["MatchedProbability"]))
-            for line in [
-                "StartTime",
-                "Duration",
-                "Sky",
-                "RainChange",
-                "RainDensity",
-                "Temperature",
-                "Humidity",
-                "WindSpeed",
-                "WindDirection",
-            ]:
-                wet_file_content.append(line + "=(" + str(block[line]) + ")")
-        session.weather = linesep.join(wet_file_content)
-        session.save()
-
-
-def create_firewall_script(server):
-    content = 'Remove-NetFirewallRule -DisplayName "APX RULE {}*"'.format(
-        server.public_secret
-    )
-
-    content = content + "\n" + server.firewall_rules
-    firewall_paths = join(BASE_DIR, "firewall_rules")
-    if not exists(firewall_paths):
-        mkdir(firewall_paths)
-    path = join(BASE_DIR, firewall_paths, "firewall" + server.public_secret + ".ps1")
-    with open(path, "w") as file:
-        file.write(content)
-
-    path = join(
-        BASE_DIR, firewall_paths, "invoke_firewall" + server.public_secret + ".bat"
-    )
-    with open(path, "w") as file:
-        content = (
-            "@echo off\npowershell .\\firewall"
-            + server.public_secret
-            + ".ps1\necho Done adding rules\npause"
-        )
-        file.write(content)
-
-
 def get_component_blob_for_discord(
     entry, is_vehicle, is_update=False, additional_text=""
 ):
@@ -963,7 +809,7 @@ def do_server_interaction(server):
     if server.action == "U":
         try:
 
-            set_state(server.pk, "Steam update requested")
+            set_state(server.pk, "Steam update requested", True)
             run_apx_command(key, "--cmd update --args {}".format(server.branch))
         except Exception as e:
             print(e)
@@ -975,27 +821,6 @@ def do_server_interaction(server):
     if server.action == "S+":
         set_state(server.pk, "Start requested")
         try:
-            # update weather, if needed
-            if server.event and server.event.real_weather:
-                conditions = server.event.conditions
-                for session in conditions.sessions.all():
-                    update_weather(session)
-
-                if server.update_weather_on_start:
-                    event_config = get_event_config(server.event.pk)
-                    event_config["branch"] = server.branch
-                    event_config["update_on_build"] = server.update_on_build
-                    event_config["callback_target"] = (
-                        "{}addmessage/{}".format(PUBLIC_URL, server.public_secret)
-                        if PUBLIC_URL
-                        else None
-                    )
-                    config_path = join(APX_ROOT, "configs", key + ".json")
-                    with open(config_path, "w") as file:
-                        file.write(dumps(event_config))
-                    command_line = "--cmd weatherupdate --args {}".format(config_path)
-
-                    run_apx_command(key, command_line)
             run_apx_command(key, "--cmd start")
             # build the discord embed message
             json_blob = {
@@ -1085,7 +910,7 @@ def do_server_interaction(server):
             event_config["branch"] = server.branch
             event_config["update_on_build"] = server.update_on_build
             event_config["callback_target"] = (
-                "{}addmessage/{}".format(PUBLIC_URL, server.public_secret)
+                "{}addstatus/{}".format(PUBLIC_URL, server.secret)
                 if PUBLIC_URL
                 else None
             )
@@ -1135,7 +960,7 @@ def do_server_interaction(server):
             set_state(server.pk, "-")
 
     if server.action == "D" or server.action == "D+F":
-        set_state(server.pk, "Attempting to create event configuration")
+        set_state(server.pk, "Attempting to create event configuration", True)
         # save event json
         event_config = get_event_config(server.event.pk)
         # add ports
@@ -1161,7 +986,7 @@ def do_server_interaction(server):
         event_config["heartbeat_only"] = server.heartbeat_only
         event_config["update_on_build"] = server.update_on_build
         event_config["callback_target"] = (
-            "{}addmessage/{}".format(PUBLIC_URL, server.public_secret)
+            "{}addstatus/{}".format(PUBLIC_URL, server.secret)
             if PUBLIC_URL
             else None
         )
@@ -1194,35 +1019,36 @@ def do_server_interaction(server):
                     files_to_attach.append(file_name)
                 # only add skin files if needed
                 if len(files_to_attach) > 0:
-                    set_state(server.pk, "Pushing track update to the server")
+                    set_state(server.pk, "Pushing track update to the server", True)
                     command_line = "--cmd build_track --args {} {}".format(
                         track.component.component_name, " ".join(files_to_attach)
                     )
                     run_apx_command(key, command_line)
 
-            set_state(server.pk, "Pushing skins (if any) to the server")
+            set_state(server.pk, "Pushing skins (if any) to the server", True)
             command_line = "--cmd build_skins --args {} {}".format(
                 config_path, rfm_path
             )
             run_apx_command(key, command_line)
 
-            set_state(server.pk, "Asking server for deployment")
+            set_state(server.pk, "Asking server for deployment", True)
             command_line = "--cmd deploy --args {} {}".format(config_path, rfm_path)
             run_apx_command(key, command_line)
             # push plugins, if needed
             plugin_args = ""
-            for plugin in server.event.plugins.all():
+            for plugin in server.event.files.all():
                 plugin_path = plugin.plugin_file.path
-                target_path = plugin.plugin_path
+                target_path = plugin.target_file_path
                 additional_path_arg = '"|' + target_path + '"' if target_path else ""
                 plugin_args = plugin_args + " " + plugin_path + additional_path_arg
             if len(plugin_args) > 0:
-                set_state(server.pk, "Installing plugins")
+                set_state(server.pk, "Installing plugins", True)
                 run_apx_command(key, "--cmd plugins --args " + plugin_args)
         except Exception as e:
             set_state(server.pk, str(e))
         finally:
             # build the discord embed message
+            set_state(server.pk, "Deployment finished", True)
             json_blob = {
                 "avatar_url": MSG_LOGO,
                 "embeds": [

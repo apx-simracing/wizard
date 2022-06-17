@@ -3,6 +3,8 @@ from subprocess import Popen, PIPE
 import signal
 from sys import exit
 from os.path import join, exists
+from termcolor import colored
+from psutil import process_iter
 from wizard.settings import (
     MEDIA_PORT,
     STATIC_PORT,
@@ -55,6 +57,15 @@ def start(cmd_line):
     opened_processes.append(child)
 
 
+def is_steam_running():
+    for process in process_iter():
+        try:
+            path = process.exe()
+            if "steam.exe" in path:
+               return True
+        except Exception as e:
+            pass  # there will be a lot of access dened messages
+    return False
 def exit_handler(signum, frame):
     print("Recieved exit")
     for process in opened_processes:
@@ -92,6 +103,17 @@ start("python.exe manage.py children")
 start("python.exe manage.py collectstatic --noinput")
 start(f"python.exe -m http.server {STATIC_PORT} --directory ./static")
 start(f"python.exe -m http.server {MEDIA_PORT} --directory ./uploads")
+
+if is_steam_running():
+    print("{}: We detected a running Steam client. Follow this steps if Server and Game are located on the same PC.".format(colored("Warning", "red")))
+    print("1. Close Steam")
+    print("2. Start APX (AND your servers)")
+    print("3. Start steam and rFactor 2")
+    print(colored("APX will exit now.", "red"))
+    exit_handler(None, None)
+    exit(1)
+else:
+    print(colored("No steam running. No actions needed", "green"))
 print("Ready")
 
 try:
