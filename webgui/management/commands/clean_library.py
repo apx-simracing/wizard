@@ -22,10 +22,8 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
       server_children_root = join(BASE_DIR, "server_children")
       servers = listdir(server_children_root)
-      #for server in servers:
-      #  self.investigate_server(join(server_children_root, server))
-      self.investigate_server("C:\\Users\\chm\\Documents\\rfactor-server\\server")
-
+      for server in servers:
+        self.investigate_server(join(server_children_root, server))
     def investigate_server(self, server_path):
       installed_root = join(server_path, "Installed")
       types = ["Vehicles", "Locations"]
@@ -48,11 +46,12 @@ class Command(BaseCommand):
       library_mods = listdir(LIBRARY_PATH)
       removal_candidates = []
       for mod in library_mods:
-        versions = listdir(join(LIBRARY_PATH, mod))
-        for version in versions:
-          needle = join(mod, version)
-          if needle not in used:
-            removal_candidates.append(join(mod, version))
+        if mod != "server": # ignore the server template
+          versions = listdir(join(LIBRARY_PATH, mod))
+          for version in versions:
+            needle = join(mod, version)
+            if needle not in used:
+              removal_candidates.append(join(mod, version))
       for removal_canidate in removal_candidates:
         full_path = join(LIBRARY_PATH, removal_canidate)
         rmtree(full_path)

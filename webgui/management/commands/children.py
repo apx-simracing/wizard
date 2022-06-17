@@ -1,14 +1,9 @@
-from django.core.management.base import BaseCommand, CommandError
+from django.core.management.base import BaseCommand
 from webgui.models import Server
 from os.path import join, exists
 from shutil import rmtree
-from os import mkdir, listdir, unlink
+from os import listdir, unlink
 from wizard.settings import (
-    APX_ROOT,
-    MEDIA_ROOT,
-    PACKS_ROOT,
-    FAILURE_THRESHOLD,
-    INSTANCE_NAME,
     BASE_DIR,
 )
 import subprocess
