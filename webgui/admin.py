@@ -1,3 +1,4 @@
+import json
 from django.contrib import admin
 from django.core import management
 from django.shortcuts import redirect
@@ -17,34 +18,33 @@ from webgui.models import (
     TrackFile,
     background_action_server,
 )
-from wizard.settings import OPENWEATHERAPI_KEY, RECIEVER_PORT_RANGE, EASY_MODE
+from wizard.settings import RECIEVER_PORT_RANGE, EASY_MODE  # , OPENWEATHERAPI_KEY
 from django.contrib import messages
-from django.utils.html import mark_safe
+from django.contrib.admin.views.main import ChangeList
+
+# from django.utils.html import mark_safe
 from django.contrib.auth.models import Group, User
-from django import forms
-from django.contrib import admin
 from webgui.util import (
     get_server_hash,
     run_apx_command,
     get_random_string,
     get_secret,
-    RECIEVER_DOWNLOAD_FROM,
+    # RECIEVER_DOWNLOAD_FROM,
     get_free_tcp_port,
     bootstrap_reciever,
 )
-from json import loads
-from datetime import datetime, timedelta
-import pytz
 import tarfile
-from os import unlink, mkdir, linesep
+from os import unlink, mkdir
 from os.path import join, exists
 from wizard.settings import MEDIA_ROOT, BASE_DIR
-from math import floor
 from django.urls import path
 from django.http import HttpResponseRedirect
 from pydng import generate_name
-from django.forms.widgets import CheckboxSelectMultiple
+from django.forms.widgets import CheckboxSelectMultiple, Textarea
 from threading import Thread
+import logging
+
+logger = logging.getLogger(__name__)
 
 admin.site.site_url = None
 admin.site.site_title = "APX"
@@ -106,15 +106,12 @@ class ComponentAdmin(admin.ModelAdmin):
         return fieldsets
 
 
-from django.contrib.admin.views.main import ChangeList
-
-
 class TrackChangelist(ChangeList):
     def get_results(self, request):
         super(TrackChangelist, self).get_results(request)
         totals = self.result_list
         self.fack = "fasf"
-        print(totals)
+        logger.info(totals)
 
 
 @admin.register(Track)
@@ -337,6 +334,19 @@ class EntryFileAdmin(admin.ModelAdmin):
         return fieldsets
 
 
+class PrettyJSONWidget(Textarea):
+    def format_value(self, value):
+        try:
+            value = json.dumps(json.loads(value), indent=2, sort_keys=True)
+            row_lengths = [len(r) for r in value.split("\n")]
+            self.attrs["rows"] = min(max(len(row_lengths) + 2, 10), 30)
+            self.attrs["cols"] = min(max(max(row_lengths) + 2, 40), 120)
+            return value
+        except Exception as e:
+            logger.warning("Error while formatting JSON: {}".format(e))
+            return super(PrettyJSONWidget, self).format_value(value)
+
+
 @admin.register(Event)
 class EventAdmin(admin.ModelAdmin):
     ordering = ["name"]
@@ -364,6 +374,11 @@ class EventAdmin(admin.ModelAdmin):
         pass
 
     copy.short_description = "Copy event"
+
+    def formfield_for_dbfield(self, db_field, **kwargs):
+        if db_field.name in ["player_overwrites", "multiplayer_overwrites"]:
+            kwargs["widget"] = PrettyJSONWidget
+        return super(EventAdmin, self).formfield_for_dbfield(db_field, **kwargs)
 
     def get_form(self, request, obj=None, **kwargs):
         form = super(EventAdmin, self).get_form(request, obj=None, **kwargs)
@@ -529,6 +544,10 @@ class EventAdmin(admin.ModelAdmin):
                 )
             },
         ),
+        (
+            "Additional overwrites",
+            {"fields": ("player_overwrites", "multiplayer_overwrites")},
+        ),
     )
 
 
@@ -576,6 +595,7 @@ class RaceConditionsAdmin(admin.ModelAdmin):
         return form
 
 
+# TODO: move as much logic as possible to Reciever class in recievers.py
 @admin.register(Server)
 class ServerAdmin(admin.ModelAdmin):
     ordering = ["name"]
@@ -583,7 +603,7 @@ class ServerAdmin(admin.ModelAdmin):
         "admin/server_list.html" if not EASY_MODE else "admin/server_list_easy.html"
     )
     actions = [
-        # "get_thumbnails", this is disabled  until work on the timing resumes.
+        # "get_thumbnails", this is disabled until work on the timing resumes.
         "apply_reciever_update",
         "delete_chats_and_messages",
         "start_server",
@@ -601,8 +621,6 @@ class ServerAdmin(admin.ModelAdmin):
 
     def run_wizard(self, request):
         root = BASE_DIR
-        from os.path import exists, join
-        from json import dumps
 
         server_children = join(root, "server_children")
         if not exists(server_children):
@@ -752,15 +770,23 @@ class ServerAdmin(admin.ModelAdmin):
                     mkdir(server_thumbs_path)
 
                 # server may changed -> download thumbs
-                thumbs_command = run_apx_command(
-                    key,
-                    "--cmd thumbnails --args {}".format(
-                        join(server_thumbs_path, "thumbs.tar.gz")
-                    ),
+                # OLD thumbs_command = run_apx_command(
+                #     key,
+                #     "--cmd thumbnails --args {}".format(
+                #         join(server_thumbs_path, "thumbs.tar.gz")
+                #     ),
+                # )
+
+                run_apx_command(
+                    key=key,
+                    cmd="thumbnails",
+                    args=[join(server_thumbs_path, "thumbs.tar.gz")],
                 )
+
                 # unpack the livery thumbnails, if needed
                 if not exists(join(MEDIA_ROOT, "thumbs")):
                     mkdir(join(MEDIA_ROOT, "thumbs"))
+
                 server_key_path = join(MEDIA_ROOT, "thumbs", key)
                 if not exists(server_key_path):
                     mkdir(server_key_path)
@@ -774,6 +800,7 @@ class ServerAdmin(admin.ModelAdmin):
                     unlink(server_pack_path)
             messages.success(request, "The thumbnails are saved")
         except Exception as e:
+            logger.error(e, exc_info=1)
             messages.error(request, e)
 
     get_thumbnails.short_description = "Get thumbnails"

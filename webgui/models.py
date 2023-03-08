@@ -1,32 +1,34 @@
 from django.db import models
 from django.core.exceptions import ValidationError
-from django.contrib.auth.models import User
-from django.conf import settings
-from django import forms
-from django.dispatch import receiver
-from os.path import isfile, basename
-from shutil import copy, rmtree
-from os import remove, linesep, unlink, system
+
+# from django.conf import settings
+# from django import forms
+# from shutil import copy, rmtree
+from os import remove, linesep, unlink, system, mkdir
+from os.path import exists, join, basename, isfile
 from collections import OrderedDict
-from json import loads
-from django.contrib import messages
+import json
+from json.decoder import JSONDecodeError
+
+# from django.contrib import messages
 from django.core.validators import RegexValidator, MinValueValidator, MaxValueValidator
 from webgui.util import (
+    merge_dicts,
     livery_filename,
     track_filename,
     run_apx_command,
     get_server_hash,
     get_key_root_path,
-    get_logfile_root_path,
+    # get_logfile_root_path,
     get_conditions_file_root,
     get_update_filename,
-    get_hash,
+    # get_hash,
     get_livery_mask_root,
     get_random_string,
     create_virtual_config,
     do_server_interaction,
-    get_component_file_root,
-    RECIEVER_COMP_INFO,
+    # get_component_file_root,
+    # RECIEVER_COMP_INFO,
     get_plugin_root_path,
     create_firewall_script,
     get_random_short_name,
@@ -34,10 +36,9 @@ from webgui.util import (
 )
 from wizard.settings import (
     BASE_DIR,
-    FAILURE_THRESHOLD,
+    # FAILURE_THRESHOLD,
     MEDIA_ROOT,
     STATIC_URL,
-    BASE_DIR,
     MAX_SERVERS,
     MAX_UPSTREAM_BANDWIDTH,
     MAX_DOWNSTREAM_BANDWIDTH,
@@ -49,17 +50,16 @@ from wizard.settings import (
 from webgui.storage import OverwriteStorage
 from django.utils.html import mark_safe
 import re
-from os.path import exists, join, basename
-from os import mkdir, linesep
+from re import match
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from datetime import datetime, timedelta, time, date
-import pytz
-from json import dumps
 
-status_map = {}
-state_map = {}
-session_map = {}
+# from datetime import datetime
+from threading import Thread
+
+import logging
+
+logger = logging.getLogger(__name__)
 
 USE_WAND = True
 try:
@@ -68,18 +68,19 @@ try:
     from wand.color import Color
 except ImportError:
     USE_WAND = False
-    print("Wand will not be available.")
+    logger.info("Wand will not be available.")
 
-from threading import Thread
-from croniter import croniter
-from re import match
+status_map = {}
+state_map = {}
+session_map = {}
+
 
 MOD_WARNINGS = {
-    "1737056846": "The Nordschleife DLC is more than 2.8 Gigabytes large. Due to steamcmd, downloads of these sizes tend to abort. Consider uploading this mod by hand to the server and use it as a file based item: https://wiki.apx.chmr.eu/doku.php?id=file_based_content",
-    "2141682966": "The Portland DLC is more than 1.2 Gigabytes large. Due to steamcmd, downloads of these sizes tend to abort. Consider uploading this mod by hand to the server and use it as a file based item: https://wiki.apx.chmr.eu/doku.php?id=file_based_content",
-    "2121171862": "The GDB files of this mod are flawed with the issue that slashes for comments and quotes are included within names. Some layouts might not work which affects the addition of grip settings.",
-    "788866138": "This mod is quite large (apparently 5 gigabytes). Steamcmd won't be able to download this reliable. Consider uploading this mod by hand to the server and use it as a file based item: https://wiki.apx.chmr.eu/doku.php?id=file_based_content",
-    "2188673436": "This mod has 4.2 Gigabyte download. Due to steamcmd, downloads of these sizes tend to abort. Consider uploading this mod by hand to the server and use it as a file based item: https://wiki.apx.chmr.eu/doku.php?id=file_based_content",
+    "1737056846": "The Nordschleife DLC is more than 2.8 Gigabytes large. Due to steamcmd, downloads of these sizes tend to abort. Consider uploading this mod by hand to the server and use it as a file based item: https://wiki.apx.chmr.eu/doku.php?id=file_based_content",  # noqa: E501
+    "2141682966": "The Portland DLC is more than 1.2 Gigabytes large. Due to steamcmd, downloads of these sizes tend to abort. Consider uploading this mod by hand to the server and use it as a file based item: https://wiki.apx.chmr.eu/doku.php?id=file_based_content",  # noqa: E501
+    "2121171862": "The GDB files of this mod are flawed with the issue that slashes for comments and quotes are included within names. Some layouts might not work which affects the addition of grip settings.",  # noqa: E501
+    "788866138": "This mod is quite large (apparently 5 gigabytes). Steamcmd won't be able to download this reliable. Consider uploading this mod by hand to the server and use it as a file based item: https://wiki.apx.chmr.eu/doku.php?id=file_based_content",  # noqa: E501
+    "2188673436": "This mod has 4.2 Gigabyte download. Due to steamcmd, downloads of these sizes tend to abort. Consider uploading this mod by hand to the server and use it as a file based item: https://wiki.apx.chmr.eu/doku.php?id=file_based_content",  # noqa: E501
 }
 
 
@@ -178,7 +179,7 @@ class Component(models.Model):
     )
     is_official = models.BooleanField(
         default=False,
-        help_text="Is official content which follows the even version and uneven version scheme (APX will select versions for you). If not checked, we will use the version you've selected.",
+        help_text="Is official content which follows the even version and uneven version scheme (APX will select versions for you). If not checked, we will use the version you've selected.",  # noqa: E501
     )
     short_name = models.CharField(
         default=get_random_short_name,
@@ -243,7 +244,7 @@ class Component(models.Model):
             raise ValidationError("Only vehicle components can get an Update.ini file")
 
     def save(self, *args, **kwargs):
-        needles = ["number", "name", "description"]
+        # needles = ["number", "name", "description"]
         root_path = join(MEDIA_ROOT, "templates")
         if not exists(root_path):
             mkdir(root_path)
@@ -272,7 +273,7 @@ class Component(models.Model):
             for line in templateLines:
                 hadReplacement = False
                 for key, value in replacementMap.items():
-                    pattern = r"(" + key + '\s{0,}=\s{0,}"?([^"^\n^\r]+)"?)'
+                    pattern = rf'({key}\s{0,}=\s{0,}"?([^"^\n^\r]+)"?)'
                     matches = re.match(pattern, line, re.MULTILINE)
                     replacement = "{}={}\n".format(key, value)
                     if matches:
@@ -325,7 +326,7 @@ class RaceSessions(models.Model):
         null=True,
         blank=True,
         max_length=100,
-        help_text="If you want to use the mod provided grip, add a filename/ and or part of the rrbin filename. You can also add 'autosave' to use the autosave file, which must be existing (also keep settings folder in the server options). If found, the uploaded grip file will be ignored. You can also use the constants 'natural' or 'green' to define grip levels",
+        help_text="If you want to use the mod provided grip, add a filename/ and or part of the rrbin filename. You can also add 'autosave' to use the autosave file, which must be existing (also keep settings folder in the server options). If found, the uploaded grip file will be ignored. You can also use the constants 'natural' or 'green' to define grip levels",  # noqa: E501
     )
     start = models.TimeField(
         blank=True,
@@ -378,13 +379,16 @@ class RaceSessions(models.Model):
 
         if self.grip:
             str = str + ", gripfile: {}".format(basename(self.grip.name))
+
         if self.grip_needle:
             str = str + ", preset grip: {}".format(self.grip_needle)
 
         if self.grip or self.grip_needle:
             str = str + " " + self.real_road_time_scale + "x grip"
+
         if self.start:
             return str + ", start: {}".format(self.start)
+
         else:
             return str
 
@@ -463,7 +467,7 @@ class Entry(models.Model):
         null=True,
         blank=True,
         max_length=200,
-        help_text="On which class is the car based? If empty, APX will pick the first car as a basis. If the mod does not have multiple classes, you don't need this."
+        help_text="On which class is the car based? If empty, APX will pick the first car as a basis. If the mod does not have multiple classes, you don't need this."  # noqa: E501
         if EASY_MODE
         else "If no component template is used, name the class of the car suitable to be used as a base. Otherwise the first veh file will be used.",
     )
@@ -600,7 +604,7 @@ class EntryFile(models.Model):
 
             numberplate_template_r.compression = "dxt5"
             numberplate_template_l.compression = "dxt5"
-            numberplates = loads(self.entry.component.mask_positions)
+            numberplates = json.loads(self.entry.component.mask_positions)
             if numberplates is not None:
                 for numberplate in numberplates:
                     side = numberplate["side"]
@@ -695,19 +699,12 @@ class ServerPlugin(models.Model):
 
     def clean(self):
         try:
-            loads(self.overwrites)
-        except:
-            raise ValidationError("This JSON is not valid.")
+            json.loads(self.overwrites)
+        except JSONDecodeError as e:
+            raise ValidationError(f"This JSON is not valid. Reason: {str(e)}")
 
         if ".dll" not in self.plugin_file.path.lower() and self.overwrites != "{}":
             raise ValidationError("The overwrites are only valid for DLL files.")
-
-
-class EventRejoinRules(models.TextChoices):
-    N = "0", "No rejoin"
-    F = "1", "yes with fresh vehicle"
-    S = "2", "yes with vehicle in same physical condition"
-    SI = "3", "yes including setup"
 
 
 class EventRejoinRules(models.TextChoices):
@@ -724,9 +721,10 @@ class EventFlagRules(models.TextChoices):
     EDQ = "3", "Everything except DQs"
 
 
+# NOTE: https://github.com/scipy/scipy/issues/8389
 class QualyMode(models.TextChoices):
     A = "0", "all cars qualify visibly on track together"
-    O = "1", "only one car is visible at a time"
+    O = "1", "only one car is visible at a time"  # noqa: #741
     R = "2", "use default from RFM, season, or track entry"
 
 
@@ -755,13 +753,13 @@ class EventFailureRates(models.TextChoices):
 
 
 class QualyJoinMode(models.TextChoices):
-    O = "0", "Open to all"
+    O = "0", "Open to all"  # noqa: #741
     P = "1", "Open but drivers will be pending an open session"
     C = "2", "closed"
 
 
 class ParcFermeMode(models.TextChoices):
-    O = "0", "Off"
+    O = "0", "Off"  # noqa: #741
     P = (
         "1",
         "no setup changes allowed between qual and race except for 'Free Settings')",
@@ -844,7 +842,7 @@ class Event(models.Model):
 
     real_weather = models.BooleanField(
         default=False,
-        help_text="Decides if real weather should be used. This will be using https://forum.studio-397.com/index.php?threads/weatherplugin.58614/ in the background.",
+        help_text="Decides if real weather should be used. This will be using https://forum.studio-397.com/index.php?threads/weatherplugin.58614/ in the background.",  # noqa: E501
     )
     weather_api = models.CharField(
         max_length=20,
@@ -1176,7 +1174,7 @@ class Event(models.Model):
     delay_between_sessions = models.IntegerField(
         default=30,
         validators=[MinValueValidator(0)],
-        help_text="Dedicated server delay before switching sessions automatically (after hotlaps are completed, if option is enabled), previously hardcoded to 45",
+        help_text="Dedicated server delay before switching sessions automatically (after hotlaps are completed, if option is enabled), previously hardcoded to 45",  # noqa: E501
     )
 
     collision_fade_threshold = models.FloatField(
@@ -1192,7 +1190,7 @@ class Event(models.Model):
 
     skip_all_session_unless_configured = models.BooleanField(
         default=False,
-        help_text="Instead of using default values from the player.JSON/ multiplayer.JSON, skip all sessions unless the ones configured with the conditions pack in APX.",
+        help_text="Instead of using default values from the player.JSON/ multiplayer.JSON, skip all sessions unless the ones configured with the conditions pack in APX.",  # noqa: E501
     )
 
     parc_ferme = models.CharField(
@@ -1207,7 +1205,7 @@ class Event(models.Model):
     free_settings = models.IntegerField(
         default=-1,
         validators=[MinValueValidator(-1), MaxValueValidator(1000000)],
-        help_text="Use only if Parc Ferme is used: -1=use RFM/season/GDB default, or add to allow minor changes with fixed\/parc ferme setups: 1=steering lock, 2=brake pressure, 4=starting fuel, 8=fuel strategy 16=tire compound, 32=brake bias, 64=front wing, 128=engine settings",
+        help_text="Use only if Parc Ferme is used: -1=use RFM/season/GDB default, or add to allow minor changes with fixed/parc ferme setups: 1=steering lock, 2=brake pressure, 4=starting fuel, 8=fuel strategy 16=tire compound, 32=brake bias, 64=front wing, 128=engine settings",  # noqa: E501
     )
 
     enable_auto_downloads = models.BooleanField(
@@ -1224,8 +1222,22 @@ class Event(models.Model):
         help_text="Versioning scheme",
     )
 
-    @property
-    def multiplayer_json(self):
+    player_overwrites = models.TextField(
+        default="{}",
+        help_text="Additional player.JSON overwrites (values here will get a priority, don't leave trailing commas).",
+        blank=True,
+        verbose_name="Player.JSON overwrites",
+    )
+
+    multiplayer_overwrites = models.TextField(
+        default="{}",
+        help_text="Additional multiplayer.JSON overwrites (values here will get a priority, don't leave trailing commas).",
+        blank=True,
+        verbose_name="Multiplayer.JSON overwrites",
+    )
+
+    def get_multiplayer_json_dict(self):
+        # TODO: why OrderedDict?
         blob = OrderedDict()
         blob["Multiplayer Server Options"] = OrderedDict()
         blob["Multiplayer Server Options"]["Join Password"] = self.password
@@ -1317,10 +1329,16 @@ class Event(models.Model):
             self.forced_driving_view
         )
 
-        return dumps(blob)
+        result = json.loads(json.dumps(blob))
 
-    @property
-    def player_json(self):
+        if self.multiplayer_overwrites != "{}":
+            ow = json.loads(self.multiplayer_overwrites)
+            result = merge_dicts(result, ow)
+
+        return result
+
+    def get_player_json_dict(self):
+        # TODO: why OrderedDict?
         blob = OrderedDict()
         blob["Game Options"] = OrderedDict()
         blob["Game Options"]["MULTI Damage Multiplier"] = self.damage
@@ -1415,12 +1433,32 @@ class Event(models.Model):
         blob["Game Options"]["RPLAY AI Driver Strength"] = int(self.ai_strength)
         blob["Game Options"]["CHAMP AI Driver Strength"] = int(self.ai_strength)
 
-        return dumps(blob)
+        result = json.loads(json.dumps(blob))
+
+        if self.player_overwrites != "{}":
+            ow = json.loads(self.player_overwrites)
+            result = merge_dicts(result, ow)
+
+        return result
 
     def __str__(self):
         return "{}".format(self.name)
 
     def clean(self, *args, **kwargs):
+
+        for ow_field in ["player_overwrites", "multiplayer_overwrites"]:
+
+            ow_value = getattr(self, ow_field)
+
+            if not ow_value:
+                setattr(self, ow_field, "{}")
+
+            elif ow_value != "{}":
+                try:
+                    json.loads(ow_value)
+                except JSONDecodeError:
+                    raise ValidationError(f'"{ow_field}" is not a valid JSON.')
+
         if (
             self.real_weather
             and not self.weather_api
@@ -1428,8 +1466,10 @@ class Event(models.Model):
             and not self.weather_key
         ):
             raise ValidationError("Check your weather settings")
+
         if self.admin_password == "apx":
             raise ValidationError("Please set the admin password.")
+
         if self.upstream == 0 and self.downstream == 0:
             got = get_speedtest_result()
             if got is not None:
@@ -1597,13 +1637,11 @@ class Server(models.Model):
         help_text="APX Session Id",
     )
 
-    
     ignore_start_hook = models.BooleanField(
         default=True,
         help_text="Don't fire the Discord messages when the server starts",
     )
 
-        
     ignore_stop_hook = models.BooleanField(
         default=True,
         help_text="Don't fire the Discord messages when the server stops",
@@ -1667,6 +1705,7 @@ class Server(models.Model):
         if not self.pk or self.pk not in status_map:
             return "-"
         status = status_map[self.pk]
+        status = json.loads(status.replace("'", '"'))
         # no status to report (e. g. new server)
         response = '<img src="{}admin/img/icon-no.svg" alt="Not Running"> Server is not running</br>'.format(
             STATIC_URL
@@ -1676,17 +1715,20 @@ class Server(models.Model):
             response = '<img src="{}admin/img/icon-no.svg" alt="Not Running"> Server did not return a status yet</br>'.format(
                 STATIC_URL
             )
-        elif status and "in_deploy" in status:
+        elif status and status["in_deploy"] is True:
             response = '<img src="{}admin/img/icon-no.svg" alt="Not Running"> The server is deploying</br>'.format(
                 STATIC_URL
             )
-        elif status and "not_running" not in status:
+        elif status and status["running"] is False:
+            response = '<img src="{}admin/img/icon-no.svg" alt="Not Running"> Server is not running</br>'.format(
+                STATIC_URL
+            )
+        elif status and status["running"] is True:
             response = '<img src="{}admin/img/icon-yes.svg" alt="Running"> Server is running</br>'.format(
                 STATIC_URL
             )
             try:
-                content = loads(status.replace("'", '"'))
-                for vehicle in content["vehicles"]:
+                for vehicle in status.get("vehicles", []):
                     vehicle_text = (
                         "[{}, Pit {}] {}: {} (SteamID:{}), penalties: {}".format(
                             vehicle["carClass"],
@@ -1698,41 +1740,43 @@ class Server(models.Model):
                         )
                     )
                     response = response + vehicle_text + "</br>"
-            except Exception as e:
+            except JSONDecodeError as e:
+                logger.error(e, exc_info=1)
                 response = str(e)
         return mark_safe(response)
 
     def __str__(self):
         return self.url if not self.name else self.name
 
+    # TODO: too many checks here
     def clean(self):
         status = status_map[self.pk] if self.pk and self.pk in status_map else None
         if not self.server_key and self.action:
             raise ValidationError(
                 "The server was not processed yet. Wait a short time until the key is present."
             )
-        if status is not None and "not_running" in status and self.action == "R-":
+        if status is not None and status["running"] is False and self.action == "R-":
             raise ValidationError("The server is not running")
 
-        if status is not None and "not_running" not in status and self.action == "D":
+        if status is not None and status["running"] is True and self.action == "D":
             raise ValidationError("Stop the server first")
 
-        if status is not None and "not_running" not in status and self.action == "S+":
+        if status is not None and status["running"] is True and self.action == "S+":
             raise ValidationError("Stop the server first")
 
         if self.action == "D" and not self.event:
             raise ValidationError("You have to add an event before deploying")
 
-        if status and "in_deploy" in status:
+        if status and status["in_deploy"] in True:
             raise ValidationError("Wait until deployment is over")
 
-        if self.action == "W" and status and "in_deploy" in status:
+        if self.action == "W" and status and status["in_deploy"] is True:
             raise ValidationError("Wait until deployment is over")
 
-        if self.action == "W" and status and "not_running" in status:
+        if self.action == "W" and status and status["running"] is False:
             raise ValidationError("Start the server first")
 
-        if status is not None and "not_running" not in status and self.action == "WU":
+        if status is not None and status["running"] is False and self.action == "WU":
             raise ValidationError("Start the server first")
 
         if not str(self.url).endswith("/"):
@@ -1779,7 +1823,7 @@ class Server(models.Model):
             amount = Server.objects.count()
             if amount >= MAX_SERVERS:
                 raise ValidationError(
-                    "You exceeded the maximum amount of available servers. You are allowed to use {} server instances. You won't be able to deploy until you not exceed that limit anymore".format(
+                    "You exceeded the maximum amount of available servers. You are allowed to use {} server instances. You won't be able to deploy until you not exceed that limit anymore".format(  # noqa: E501
                         MAX_SERVERS
                     )
                 )
@@ -1866,16 +1910,22 @@ def remove_server_children_thread(instance):
     server_children = join(BASE_DIR, "server_children", id)
     # lock the path to prevent the children management module to start stuff again
     lock_path = join(server_children, "delete.lock")
-    with open(lock_path, "w") as file:
-        file.write("bye")
+    # folder could be already removed
+    if exists(server_children):
+        with open(lock_path, "w") as file:
+            file.write("bye")
 
 
 def background_action_chat(chat):
     try:
         key = get_server_hash(chat.server.url)
-        run_apx_command(key, "--cmd chat --args {} ".format(chat.message))
+
+        run_apx_command(key=key, cmd="chat", args=[chat.message])
+
+        # OLD run_apx_command(key, "--cmd chat --args {} ".format(chat.message))
         chat.success = True
     except Exception as e:
+        logger.error(e, exc_info=1)
         chat.success = False
     finally:
         chat.save()
@@ -2013,7 +2063,7 @@ def remove_cron_from_windows(sender, instance, **kwargs):
     id = instance.pk
     task_name = f"apx_task_{id}"
     delete_command_line = f"schtasks /delete /tn {task_name} /f"
-    print(delete_command_line)
+    logger.info(delete_command_line)
     system(delete_command_line)
 
 
@@ -2022,7 +2072,7 @@ def add_cron_to_windows(sender, instance, **kwargs):
     id = instance.pk
     task_name = f"apx_task_{id}"
     delete_command_line = f"schtasks /delete /tn {task_name} /f"
-    print(delete_command_line)
+    logger.info(delete_command_line)
     system(delete_command_line)
     if not instance.disabled:
         python_path = (
@@ -2031,7 +2081,7 @@ def add_cron_to_windows(sender, instance, **kwargs):
             else "python.exe"
         )
 
-        today = datetime.today().strftime("%Y-%m-%d")
+        # today = datetime.today().strftime("%Y-%m-%d")
         schedule_part = ""
         start_time = instance.start_time
         end_time = instance.end_time
@@ -2057,15 +2107,17 @@ def add_cron_to_windows(sender, instance, **kwargs):
                 diff_hours = 24 + diff_hours
 
             if diff_minutes < 0:
-                diff_minutes = 60 - start_minutes + end_Minutes
+                diff_minutes = 60 - start_minutes + end_minutes
 
             schedule_part = (
                 schedule_part + f" /ri {modifier} /du {diff_hours}:{diff_minutes}"
             )
         # https://stackoverflow.com/questions/6814075/windows-start-b-command-problem#6814111
-        run_command = f"start /d '{BASE_DIR}' /b 'apx' '{python_path}' manage.py cron_run {id}"
+        run_command = (
+            f"start /d '{BASE_DIR}' /b 'apx' '{python_path}' manage.py cron_run {id}"
+        )
         command_line = f'schtasks /create /tn {task_name} /st {start_time} /sc {schedule_part} /tr "cmd /c {run_command}"'
-        print(command_line)
+        logger.info(command_line)
         system(command_line)
 
 
@@ -2134,7 +2186,7 @@ class TickerMessage(models.Model):
 
     def __str__(self):
         try:
-            data = loads(self.message)
+            data = json.loads(self.message)
             if self.type == "P+":
                 return "Penalty added for {}".format(data["driver"])
 
@@ -2211,6 +2263,6 @@ class TickerMessage(models.Model):
                     data["driver"], data["nearby"]
                 )
         except Exception as e:
-            print(e)
+            logger.error(e, exc_info=1)
             pass
         return self.type

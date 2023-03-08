@@ -15,7 +15,7 @@ from os.path import join
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-
+CHILDREN_DIR = join(BASE_DIR, "server_children")
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/3.1/howto/deployment/checklist/
@@ -26,7 +26,7 @@ SECRET_KEY = "DEMO"
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["localhost"]
+ALLOWED_HOSTS = ["*"]
 
 
 # Application definition
@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
 ]
+
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -49,6 +50,54 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} [{module}|{funcName}] {message}',
+            'style': '{',
+        }
+    },
+    'handlers': {
+        'file': {
+            'level': 'DEBUG',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'maxBytes': 15728640,
+            'backupCount': 10,
+            'filename': join(BASE_DIR, "apx.log"),
+            'formatter': 'verbose'
+        }
+    },
+    'loggers': {
+        '': {
+            'handlers': ['file'],
+            'propagate': True,
+            'level': 'INFO',
+        },
+        'django': {
+            'handlers': ['file'],
+            'propagate': True,
+            'level': 'INFO',
+        },
+        'django.request': {
+            'handlers': ['file'],
+            'propagate': True,
+            'level': 'WARNING',
+        },
+        'django.server': {
+            'handlers': ['file'],
+            'propagate': True,
+            'level': 'WARNING',
+        },
+        'root': {
+            'handlers': ['file'],
+            'propagate': False,
+            'level': 'INFO',
+        },
+    }
+}
 
 FILE_UPLOAD_HANDLERS = ("django.core.files.uploadhandler.TemporaryFileUploadHandler",)
 
@@ -81,7 +130,7 @@ DATABASES = {
         "ENGINE": "django.db.backends.sqlite3",
         "NAME": BASE_DIR / "db.sqlite3",        
         "OPTIONS": {
-            "timeout": 10,
+            "timeout": 20,
         },
     }
 }
@@ -144,6 +193,10 @@ FAILURE_THRESHOLD = 500
 MEDIA_ROOT = join(str(BASE_DIR), "uploads")
 
 APX_ROOT = join(str(BASE_DIR), "cli")
+
+RECIEVER_ROOT = join(str(BASE_DIR), "reciever-2021R87")
+
+RECIEVER_USE_LOCAL = True
 
 PACKS_ROOT = join(str(BASE_DIR), "packs")
 

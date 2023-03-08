@@ -1,4 +1,6 @@
 from wizard.settings import (
+    RECIEVER_ROOT,
+    RECIEVER_USE_LOCAL,
     APX_ROOT,
     MEDIA_ROOT,
     PACKS_ROOT,
@@ -9,8 +11,7 @@ from wizard.settings import (
     OPENWEATHERAPI_KEY,
     BASE_DIR,
     PUBLIC_URL,
-    BASE_DIR,
-    MAX_STEAMCMD_BANDWIDTH,
+    # MAX_STEAMCMD_BANDWIDTH,
     WEBUI_PORT_RANGE,
     HTTP_PORT_RANGE,
     SIM_PORT_RANGE,
@@ -18,13 +19,13 @@ from wizard.settings import (
     USE_GLOBAL_STEAMCMD,
     NON_WORKSHOP_PAYLOAD_TEXT,
     WINE_DRIVE,
-    WINE_IMPLEMENTATION
+    WINE_IMPLEMENTATION,
 )
+from cli.helpers import run_apx_package_command
 import hashlib
 import subprocess
 from urllib.parse import urlparse
 from re import match
-from django.dispatch import receiver
 from os.path import join, exists, basename
 from os import mkdir, listdir, unlink, linesep
 from shutil import copyfile
@@ -32,16 +33,17 @@ from . import models
 from json import loads, dumps
 import random
 from django.core.exceptions import ValidationError
-from django.db.models.signals import post_save
+
+# from django.dispatch import receiver
+# from django.db.models.signals import post_save
+# import discord
 import socket
-import discord
 from requests import post, get
 import secrets
 import string
-import socket
-import random
 import logging
-import zipfile, io
+import zipfile
+import io
 from time import sleep
 from collections import OrderedDict
 from sys import platform
@@ -103,6 +105,48 @@ FILE_NAME_SUFFIXES_MEANINGS = [
 RECIEVER_COMP_INFO = open(join(BASE_DIR, "release")).read()
 RECIEVER_DOWNLOAD_FROM = "https://github.com/apx-simracing/reciever/releases/download/R89/reciever-2021R89.zip"
 
+# def run_apx_command(hashed_url, commandline):
+#     apx_path = join(APX_ROOT, "cli.py")
+#     python_path = "python.exe"
+#     local_python_path = join(BASE_DIR, "python.exe")
+
+#     if exists(local_python_path):
+#         python_path = local_python_path
+
+#     command_line = f'"{python_path}" "{apx_path}" --server {hashed_url} {commandline}'
+#     got = subprocess.check_output(command_line, cwd=APX_ROOT, shell=True).decode("utf-8")
+#     return got
+
+
+def merge_dicts(dict1, dict2):
+    for key, val in dict1.items():
+        if type(val) == dict:
+            if key in dict2 and type(dict2[key] == dict):
+                merge_dicts(dict1[key], dict2[key])
+        else:
+            if key in dict2:
+                dict1[key] = dict2[key]
+
+    for key, val in dict2.items():
+        if key not in dict1:
+            dict1[key] = val
+
+    return dict1
+
+
+def run_apx_command(key=None, cmd=None, args=None):
+    run_apx_package_command(key, cmd, args)
+
+
+def sanitize_subprocess_path(cmd):
+    if not isinstance(cmd, str):
+        raise ValidationError(f"{str(cmd)} is not a valid subprocess command")
+    if " " not in cmd:
+        return cmd
+    if not cmd.startswith("'") or not cmd.startswith('"'):
+        return f'"{cmd}"'
+    return cmd
+
 
 def get_update_filename(instance, filename):
     component_name = instance.component_name
@@ -146,7 +190,7 @@ def get_conditions_file_root(instance, filename):
 
 
 def track_filename(instance, filename):
-    component_short_name = instance.track.component.short_name
+    # component_short_name = instance.track.component.short_name
     component_name = instance.track.component.component_name
     path = join(MEDIA_ROOT, "tracks", component_name)
 
@@ -265,27 +309,55 @@ def get_free_tcp_port(
             s.connect(("localhost", int(port)))
             s.shutdown(2)
             port = random.randint(port, maximum)
-        except:
+        except Exception:
             break
     return port
 
 
 def set_state(id, message):
+    logger.info(f'Server state set {id} "{message}"')
     models.state_map[id] = message
 
 
+def run_subprocess_command_with_logging(cmd):
+    process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+
+    for line in iter(process.stdout.readline, b""):
+        logger.info(line.rstrip().decode("utf-8"))
+
+    return process.poll()
+
+
 def bootstrap_reciever(root_path, server_obj, port, secret):
-    try:
-        set_state(server_obj.pk, "Downloading reciever release")
-        r = get(RECIEVER_DOWNLOAD_FROM)
-        z = zipfile.ZipFile(io.BytesIO(r.content))
-        z.extractall(root_path)
-        set_state(server_obj.pk, "Extracted reciever release")
-    except:
-        set_state(server_obj.pk, "Extracted reciever release")
-        return False
+
+    if not RECIEVER_USE_LOCAL:
+        try:
+            set_state(
+                server_obj.pk, f"Downloading reciever from {RECIEVER_DOWNLOAD_FROM}"
+            )
+            r = get(RECIEVER_DOWNLOAD_FROM)
+            z = zipfile.ZipFile(io.BytesIO(r.content))
+            z.extractall(root_path)
+            set_state(server_obj.pk, f"Extracted reciever to {root_path}")
+        except Exception as e:
+            logger.error(str(e), exc_info=1)
+            set_state(server_obj.pk, "Failed to download and extract reciever")
+            return False
+
+    else:
+        from distutils.dir_util import copy_tree
+
+        if not exists(RECIEVER_ROOT):
+            msg = f"Can't find local recever in {RECIEVER_ROOT}"
+            set_state(server_obj.pk, msg)
+            logger.error(msg, exc_info=1)
+            return False
+
+        copy_tree(RECIEVER_ROOT, root_path)
+        set_state(server_obj.pk, f"Extracted local reciever to {root_path}")
 
     reciever_path = join(root_path, "reciever")
+
     config = {
         "auth": secret,
         "debug": False,
@@ -299,13 +371,20 @@ def bootstrap_reciever(root_path, server_obj, port, secret):
     if platform == "linux":
         config["wine_root_path"] = WINE_DRIVE + ":\\" + root_path.replace("/", "\\")
         config["abstractionlayer"] = WINE_IMPLEMENTATION
+
     set_state(server_obj.pk, "Doing APX reciever bootstrap")
+
+    cmd = sanitize_subprocess_path(join(reciever_path, "reciever.bat"))
+    cwd = sanitize_subprocess_path(reciever_path)
+    logger.info(f"Running {cmd} cwd={cwd}")
+
     try:
         # TODO: find solution for admin issue
-        got = subprocess.check_output(
-            join(reciever_path, "reciever.bat"), cwd=reciever_path, shell=True
-        ).decode("utf-8")
+        # got = subprocess.check_output(cmd, cwd=cwd, shell=True).decode("utf-8")
+        got = run_subprocess_command_with_logging(cmd)
+        logger.info(f"Result: {got}")
     except Exception as e:
+        logger.error(e, exc_info=1)
         # Exceptions can't really handled at this point, so we are ignoring them
         set_state(server_obj.pk, str(e))
 
@@ -342,7 +421,9 @@ def bootstrap_reciever(root_path, server_obj, port, secret):
     # create server.json
     set_state(server_obj.pk, "Done with bootstrap")
     server_obj.save()
-    config_path = join(reciever_path, "server.json" if platform != "linux" else "server_linux.json")
+    config_path = join(
+        reciever_path, "server.json" if platform != "linux" else "server_linux.json"
+    )
 
     # try to inject keypair
     key_file = join(BASE_DIR, "uploads", "keys")
@@ -366,9 +447,9 @@ def bootstrap_reciever(root_path, server_obj, port, secret):
                 mkdir(key_root_path)
             key_path = join(key_root_path, "ServerKeys.bin")
             relative_path = join("keys", key, "ServerKeys.bin")
-            download_key_command = run_apx_command(
-                key, "--cmd lockfile --args {}".format(key_path)
-            )
+
+            run_apx_command(key=key, cmd="lockfile", args=[key_path])
+
             if exists(key_path):
                 server_obj.server_key = relative_path
                 server_obj.save()
@@ -378,6 +459,7 @@ def bootstrap_reciever(root_path, server_obj, port, secret):
                 break
             sleep(2)
         except Exception as e:
+            logger.error(e, exc_info=1)
             set_state(server_obj.pk, f"Key collect try {i} of 10 failed: {e}")
 
 
@@ -392,27 +474,12 @@ def get_server_hash(url):
     return get_hash(url)
 
 
-def run_apx_command(hashed_url, commandline):
-    apx_path = join(APX_ROOT, "apx.py")
-    python_path = "python.exe"
-    local_python_path = join(BASE_DIR, "python.exe")
-    if exists(local_python_path):
-        python_path = local_python_path
-    command_line = '"{}" "{}" --server {} {}'.format(
-        python_path, apx_path, hashed_url, commandline
-    )
-    got = subprocess.check_output(command_line, cwd=APX_ROOT, shell=True).decode(
-        "utf-8"
-    )
-    return got
-
-
 def get_event_config(event_id: int):
-    server = models.Event.objects.get(pk=event_id)
-    ungrouped_vehicles = server.entries.all()
-    signup_components = server.signup_components.all()
+    event = models.Event.objects.get(pk=event_id)
+    ungrouped_vehicles = event.entries.all()
+    signup_components = event.signup_components.all()
     vehicle_groups = {}
-    entry_based_components_seen = []
+    # entry_based_components_seen = []
     for vehicle in ungrouped_vehicles:
         component = vehicle.component
         key = component.pk
@@ -487,9 +554,9 @@ def get_event_config(event_id: int):
                     "numberplates": [],
                 },
             }
-    tracks = server.tracks.all().order_by("-id")
+    tracks = event.tracks.all().order_by("-id")
 
-    conditions = server.conditions
+    conditions = event.conditions
 
     track_groups = OrderedDict()
     for track in tracks:
@@ -513,10 +580,10 @@ def get_event_config(event_id: int):
                 "official": track_component.is_official,
             },
         }
-    if not server.mod_name or len(server.mod_name) == 0:
-        mod_name = "apx_{}".format(get_server_hash(server.name)[:8])
+    if not event.mod_name or len(event.mod_name) == 0:
+        mod_name = "apx_{}".format(get_server_hash(event.name)[:8])
     else:
-        mod_name = server.mod_name
+        mod_name = event.mod_name
     # grip settings
 
     sessions = conditions.sessions.all()
@@ -549,50 +616,55 @@ def get_event_config(event_id: int):
         session_list = None
 
     start_type = 0
-    if server.start_type == models.EvenStartType.FLS:
+    if event.start_type == models.EvenStartType.FLS:
         start_type = 1
-    if server.start_type == models.EvenStartType.SCR:
+    if event.start_type == models.EvenStartType.SCR:
         start_type = 2
-    if server.start_type == models.EvenStartType.FR:
+    if event.start_type == models.EvenStartType.FR:
         start_type = 4
     plugins = {}
-    for plugin in server.plugins.all():
+    for plugin in event.plugins.all():
         name = basename(str(plugin.plugin_file))
         plugins[name] = loads(plugin.overwrites)
     mod_version = (
-        server.event_mod_version
-        if server.event_mod_version
+        event.event_mod_version
+        if event.event_mod_version
         else "1.0.{}".format(get_random_string(5))
     )
+
+    multiplayer_json = event.get_multiplayer_json_dict()
+    player_json = event.get_player_json_dict()
+
     result = {
         "server": {
             "overwrites": {
-                "Multiplayer.JSON": loads(server.multiplayer_json),
-                "Player.JSON": loads(server.player_json),
+                "Multiplayer.JSON": multiplayer_json,
+                "Player.JSON": player_json,
             }
         },
-        "include_stock_skins": server.include_stock_skins,
-        "skip_all_session_unless_configured": server.skip_all_session_unless_configured,
+        "include_stock_skins": event.include_stock_skins,
+        "skip_all_session_unless_configured": event.skip_all_session_unless_configured,
         "conditions": session_list,
         "sessions": session_setting_list,
         "cars": vehicle_groups,
         "track": track_groups,
         "start_type": start_type,
-        "real_weather": server.real_weather,
-        "weather_api": server.weather_api,
-        "weather_key": server.weather_key,
-        "weather_uid": server.pk,
-        "temp_offset": server.temp_offset,
+        "real_weather": event.real_weather,
+        "weather_api": event.weather_api,
+        "weather_key": event.weather_key,
+        "weather_uid": event.pk,
+        "temp_offset": event.temp_offset,
         "comp": RECIEVER_COMP_INFO,
         "plugins": plugins,
         "race_finish_criteria": race_finish_criteria,
-        "welcome_message": server.welcome_message,
-        "force_versions": int(server.force_versions),
+        "welcome_message": event.welcome_message,
+        "force_versions": int(event.force_versions),
         "mod": {
             "name": mod_name,
             "version": mod_version,
         },
     }
+
     return result
 
 
@@ -600,7 +672,7 @@ def do_post(message):
     if not message or len(message) == 0:
         return
     if DISCORD_WEBHOOK is not None and DISCORD_WEBHOOK_NAME is not None:
-        got = post(
+        post(
             DISCORD_WEBHOOK,
             json={
                 "username": DISCORD_WEBHOOK_NAME,
@@ -622,7 +694,7 @@ def do_embed_post(message, alternative_url=None):
         message["embeds"] = message["embeds"][:chunk_size]
 
     if alternative_url is not None and len(alternative_url) > 0:
-        got = post(
+        post(
             alternative_url,
             json=message,
             headers={"Content-type": "application/json"},
@@ -633,13 +705,13 @@ def do_embed_post(message, alternative_url=None):
                 new_embed = additional_embeds[:chunk_size]
                 additional_embeds = additional_embeds[chunk_size:]
                 new_message = {"avatar_url": MSG_LOGO, "embeds": new_embed}
-                got = post(
+                post(
                     alternative_url,
                     json=new_message,
                     headers={"Content-type": "application/json"},
                 )
     if DISCORD_WEBHOOK is not None and DISCORD_WEBHOOK_NAME is not None:
-        got = post(
+        post(
             DISCORD_WEBHOOK,
             json=message,
             headers={"Content-type": "application/json"},
@@ -648,7 +720,7 @@ def do_embed_post(message, alternative_url=None):
             new_embed = additional_embeds[:chunk_size]
             additional_embeds = additional_embeds[chunk_size:]
             new_message = {"avatar_url": MSG_LOGO, "embeds": new_embed}
-            got = post(
+            post(
                 DISCORD_WEBHOOK,
                 json=new_message,
                 headers={"Content-type": "application/json"},
@@ -660,7 +732,7 @@ def do_rc_post(message):
         DISCORD_RACE_CONTROL_WEBHOOK is not None
         and DISCORD_RACE_CONTROL_WEBHOOK_NAME is not None
     ):
-        got = post(
+        post(
             DISCORD_RACE_CONTROL_WEBHOOK,
             json={
                 "username": DISCORD_RACE_CONTROL_WEBHOOK_NAME,
@@ -768,10 +840,11 @@ def update_weather(session):
         start = int(session.start.hour)
         start_from_midnight = start * 60 + session.start.minute
 
-        duration = (
-            24 * 60
-        )  # TODO: DEBUG IF THIS CAUSES ISSUES TO ADD 24h on each session
-        end_time = start_from_midnight + duration
+        # duration = (
+        #     24 * 60
+        # )
+        # TODO: DEBUG IF THIS CAUSES ISSUES TO ADD 24h on each session
+        # end_time = start_from_midnight + duration
 
         starting_index = 0
         matching_forecast = []
@@ -786,7 +859,7 @@ def update_weather(session):
             if starting_index != 0 and len(matching_forecast) <= 24:
                 matching_forecast.append(forecast_entry)
 
-        last_rain = None
+        # last_rain = None
         weather_blocks = []
         for index, next_forecast in enumerate(matching_forecast):
             temp = floor(next_forecast["temp"])
@@ -846,7 +919,7 @@ def update_weather(session):
                 "WindSpeed": wind,
                 "WindDirection": wind_direction,
             }
-            last_rain = rain_percentage
+            # last_rain = rain_percentage
             weather_blocks.append(block)
 
         wet_file_content = []
@@ -945,7 +1018,7 @@ def get_component_blob_for_discord(
 
 
 def do_server_interaction(server):
-    secret = server.secret
+    # secret = server.secret
     url = server.url
     discord_url = server.discord_url
     set_state(server.pk, "-")
@@ -953,9 +1026,9 @@ def do_server_interaction(server):
     key = get_server_hash(url)
     if server.action == "W":
         try:
-            run_apx_command(key, "--cmd new_weekend")
+            run_apx_command(key=key, cmd="new_weekend")
         except Exception as e:
-            print(e)
+            logger.error(e, exc_info=1)
         finally:
             server.action = ""
             server.save()
@@ -964,9 +1037,13 @@ def do_server_interaction(server):
         try:
 
             set_state(server.pk, "Steam update requested")
-            run_apx_command(key, "--cmd update --args {}".format(server.branch))
+
+            # OLD run_apx_command(key, "--cmd update --args {}".format(server.branch))
+
+            run_apx_command(key=key, cmd="update", args=[server.branch])
+
         except Exception as e:
-            print(e)
+            logger.error(e, exc_info=1)
             set_state(server.pk, str(e))
         finally:
             server.action = ""
@@ -974,6 +1051,11 @@ def do_server_interaction(server):
 
     if server.action == "S+":
         set_state(server.pk, "Start requested")
+
+        if server.event is None:
+            set_state(server.pk, "Event not set for server. Start failed.")
+            return
+
         try:
             # update weather, if needed
             if server.event and server.event.real_weather:
@@ -993,10 +1075,16 @@ def do_server_interaction(server):
                     config_path = join(APX_ROOT, "configs", key + ".json")
                     with open(config_path, "w") as file:
                         file.write(dumps(event_config))
-                    command_line = "--cmd weatherupdate --args {}".format(config_path)
 
-                    run_apx_command(key, command_line)
-            run_apx_command(key, "--cmd start")
+                    # command_line = '--cmd weatherupdate --args "{}"'.format(config_path)
+                    # OLD run_apx_command(key, command_line)
+
+                    run_apx_command(key=key, cmd="weatherupdate", args=[config_path])
+
+            # OLD run_apx_command(key, "--cmd start")
+
+            run_apx_command(key=key, cmd="start")
+
             # build the discord embed message
             json_blob = {
                 "avatar_url": MSG_LOGO,
@@ -1051,7 +1139,7 @@ def do_server_interaction(server):
             for component in seen_components:
                 additional_text = ""
                 if component.pk in entry_map:
-                    addtional_text = "\n"
+                    # addtional_text = "\n"
                     for entry in entry_map[component.pk]:
                         additional_text = additional_text + "\n" + entry
                 json_blob["embeds"].append(
@@ -1071,7 +1159,7 @@ def do_server_interaction(server):
             if not server.ignore_start_hook:
                 do_embed_post(json_blob, discord_url)
         except Exception as e:
-            print(e)
+            logger.error(e, exc_info=1)
             set_state(server.pk, str(e))
             server.save()
         finally:
@@ -1092,10 +1180,13 @@ def do_server_interaction(server):
             config_path = join(APX_ROOT, "configs", key + ".json")
             with open(config_path, "w") as file:
                 file.write(dumps(event_config))
-            command_line = "--cmd weatherupdate --args {}".format(config_path)
-            run_apx_command(key, command_line)
+            # command_line = '--cmd weatherupdate --args "{}"'.format(config_path)
+            # OLD run_apx_command(key, command_line)
+
+            run_apx_command(key=key, cmd="weatherupdate", args=[config_path])
 
         except Exception as e:
+            logger.error(e, exc_info=1)
             set_state(server.pk, str(e))
             server.save()
         finally:
@@ -1104,7 +1195,10 @@ def do_server_interaction(server):
     if server.action == "R-":
         set_state(server.pk, "Stop requested")
         try:
-            run_apx_command(key, "--cmd stop")
+            # OLD run_apx_command(key, "--cmd stop")
+
+            run_apx_command(key=key, cmd="stop")
+
             json_blob = {
                 "avatar_url": MSG_LOGO,
                 "embeds": [
@@ -1122,10 +1216,11 @@ def do_server_interaction(server):
                     }
                 ],
             }
-            
+
             if not server.ignore_stop_hook:
                 do_embed_post(json_blob, discord_url)
         except Exception as e:
+            logger.error(e, exc_info=1)
             set_state(server.pk, str(e))
             server.save()
         finally:
@@ -1136,6 +1231,9 @@ def do_server_interaction(server):
 
     if server.action == "D" or server.action == "D+F":
         set_state(server.pk, "Attempting to create event configuration")
+        if server.event is None:
+            set_state(server.pk, "Event not set for server. Update failed.")
+            return
         # save event json
         event_config = get_event_config(server.event.pk)
         # add ports
@@ -1195,32 +1293,58 @@ def do_server_interaction(server):
                 # only add skin files if needed
                 if len(files_to_attach) > 0:
                     set_state(server.pk, "Pushing track update to the server")
-                    command_line = "--cmd build_track --args {} {}".format(
-                        track.component.component_name, " ".join(files_to_attach)
+
+                    # command_line = "--cmd build_track --args {} {}".format(
+                    #     track.component.component_name, " ".join(
+                    #         files_to_attach)
+                    # )
+                    # run_apx_command(key, command_line)
+
+                    run_apx_command(
+                        key=key,
+                        cmd="build_track",
+                        args=[[track.component.component_name] + files_to_attach],
                     )
-                    run_apx_command(key, command_line)
 
             set_state(server.pk, "Pushing skins (if any) to the server")
-            command_line = "--cmd build_skins --args {} {}".format(
-                config_path, rfm_path
-            )
-            run_apx_command(key, command_line)
+
+            # OLD command_line = '--cmd build_skins --args "{}" "{}"'.format(
+            #     config_path, rfm_path
+            # )
+            # run_apx_command(key, command_line)
+
+            run_apx_command(key=key, cmd="build_skins", args=[config_path, rfm_path])
 
             set_state(server.pk, "Asking server for deployment")
-            command_line = "--cmd deploy --args {} {}".format(config_path, rfm_path)
-            run_apx_command(key, command_line)
+
+            # OLD command_line = '--cmd deploy --args "{}" "{}"'.format(config_path, rfm_path)
+            # run_apx_command(key, command_line)
+
+            run_apx_command(key=key, cmd="deploy", args=[config_path, rfm_path])
+
             # push plugins, if needed
             plugin_args = ""
+            apx_args = []
+
             for plugin in server.event.plugins.all():
                 plugin_path = plugin.plugin_file.path
                 target_path = plugin.plugin_path
                 additional_path_arg = '"|' + target_path + '"' if target_path else ""
                 plugin_args = plugin_args + " " + plugin_path + additional_path_arg
+
+                apx_args.append(f"{plugin_path}{additional_path_arg}")
+
             if len(plugin_args) > 0:
                 set_state(server.pk, "Installing plugins")
-                run_apx_command(key, "--cmd plugins --args " + plugin_args)
+
+                # OLD run_apx_command(key, "--cmd plugins --args " + plugin_args)
+
+                run_apx_command(key=key, cmd="plugins", args=apx_args)
+
         except Exception as e:
+            logger.error(e, exc_info=1)
             set_state(server.pk, str(e))
+
         finally:
             # build the discord embed message
             json_blob = {
@@ -1240,7 +1364,7 @@ def do_server_interaction(server):
                     }
                 ],
             }
-            
+
             if not server.ignore_updates_hook:
                 do_embed_post(json_blob, discord_url)
             server.action = ""
@@ -1254,14 +1378,19 @@ def do_server_interaction(server):
                 mkdir(key_root_path)
             key_path = join(key_root_path, "ServerKeys.bin")
             relative_path = join("keys", key, "ServerKeys.bin")
-            download_key_command = run_apx_command(
-                key, "--cmd lockfile --args {}".format(key_path)
-            )
+
+            # OLD run_apx_command(
+            #     key, '--cmd lockfile --args "{}"'.format(key_path)
+            # )
+
+            run_apx_command(key=key, cmd="lockfile", args=[key_path])
+
             if exists(key_path):
                 server.server_key = relative_path
                 server.save()
-        except:
-            print("{} does not offer a key".format(server.pk))
+        except Exception as e:
+            logger.error(str(e))
+            logger.error("{} does not offer a key".format(server.pk))
 
     # if an unlock key is present - attempt unlock!
     if server.server_unlock_key:
@@ -1269,13 +1398,17 @@ def do_server_interaction(server):
             key_root_path = join(MEDIA_ROOT, "keys", key)
             if not exists(key_root_path):
                 mkdir(key_root_path)
+
             key_path = join(key_root_path, "ServerUnlock.bin")
-            download_key_command = run_apx_command(
-                key, "--cmd unlock --args {}".format(key_path)
-            )
+            # OLD run_apx_command(
+            #     key, '--cmd unlock --args "{}"'.format(key_path)
+            # )
+
+            run_apx_command(key=key, cmd="unlock", args=[key_path])
+
             server.server_unlock_key = None
         except Exception as e:
-            print("{} unlock failed".format(server.pk))
+            logger.error(f"{server.pk} unlock failed, reason: {str(e)}", exc_info=1)
 
         finally:
             server.save()

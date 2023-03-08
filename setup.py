@@ -1,11 +1,12 @@
 from pwinput import pwinput
 from subprocess import check_output
-from os import environ, getcwd, unlink
-from os.path import join, exists
+from os import path, environ
 import random
 import string
 
 SECRET_KEY_LENGTH = 50
+BASE_DIR = path.dirname(path.realpath(__file__))
+MANAGE_PATH = path.join(BASE_DIR, "manage.py")
 
 questions = [
     {
@@ -14,6 +15,7 @@ questions = [
         "key": "easy_mode",
         "values": ["yes", "no"],
         "is_hidden": False,
+        "skip": True,
     },
     {
         "text": "Name your username to be used",
@@ -30,11 +32,12 @@ questions = [
         "is_hidden": True,
     },
     {
-        "text": "Should APX use a global steamcmd instead of one per server?",
+        "text": "Should APX use a global steamcmd instead of one per server? no - recommended",
         "default": "no",
         "key": "global_steam",
         "values": ["yes", "no"],
         "is_hidden": False,
+        "skip": True,
     },
     {
         "text": "Do you want to support the project with adding the prefix '[APX]' to the server names?",
@@ -44,14 +47,15 @@ questions = [
         "is_hidden": False,
     },
     {
-        "text": "What database should be used? sqlite or mariadb?",
+        "text": "What database should be used? sqlite or mariadb? sqlite - recommended",
         "default": "sqlite",
         "key": "add_prefix",
         "values": ["sqlite", "mariadb"],
         "is_hidden": False,
+        "skip": True,
     },
     {
-        "text": "Is APX allowed to to speedtest to identify the bandwith (will be done once on startup). Uses speedtest.net in the background.",
+        "text": "Is APX allowed to speedtest to identify the bandwith (will be done once on startup). Uses speedtest.net in the background.",
         "default": "yes",
         "key": "allow_speedtest",
         "values": ["yes", "no"],
@@ -67,8 +71,11 @@ for question in questions:
     values = question["values"]
     question_text = question["text"] + ": "
     is_hidden = question["is_hidden"]
+    skip = question.get("skip", False)
 
     reinsert_needed = False
+    if skip:
+        got = default
     if len(values) > 0:
         got = input(question["text"] + f" {values}: ")
     else:
@@ -113,10 +120,10 @@ for question in questions:
     answers[key] = got
 
 
-settings_path = join(getcwd(), "wizard", "settings.py.tpl")
+settings_tpl_path = path.join(BASE_DIR, "wizard", "settings.py.tpl")
 
 new_content = []
-with open(settings_path, "r", encoding="utf-8") as file:
+with open(settings_tpl_path, "r", encoding="utf-8") as file:
     content = file.readlines()
     easy_mode = answers["easy_mode"] == "yes"
     global_steam = answers["global_steam"] == "yes"
@@ -136,8 +143,8 @@ with open(settings_path, "r", encoding="utf-8") as file:
                 '"', ""
             )  # make sure we have no string delimiters in there
             line = f'SECRET_KEY = "{random_key}"\n'
-        if "DEBUG" in line:
-            line = f"DEBUG = False\n"
+        if "DEBUG" in line and "'DEBUG'" not in line:
+            line = "DEBUG = False\n"
         if "EASY_MODE" in line:
             line = f"EASY_MODE = {easy_mode}\n"
         if "USE_GLOBAL_STEAMCMD" in line:
@@ -149,7 +156,7 @@ with open(settings_path, "r", encoding="utf-8") as file:
         new_content.append(line)
 
 
-settings_path = join(getcwd(), "wizard", "settings.py")
+settings_path = path.join(BASE_DIR, "wizard", "settings.py")
 
 with open(settings_path, "w", encoding="utf-8") as file:
     for line in new_content:
@@ -163,7 +170,7 @@ django_env = dict(
 )
 
 got = check_output(
-    "python.exe manage.py createsuperuser --noinput --email apx@localhost",
+    f'python.exe "{MANAGE_PATH}" createsuperuser --noinput --email apx@localhost',
     env=django_env,
     shell=True,
 ).decode("utf-8")
